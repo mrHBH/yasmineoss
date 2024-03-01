@@ -1,0 +1,64 @@
+version: '3.9'
+services:
+  pythonbackend:
+    container_name: pythonbackend
+    build:
+      context: ./backend/python/
+      dockerfile: dockerfile.GPU 
+    restart: unless-stopped
+    volumes:
+      - ./:/pythonbackend
+    ports:
+      - '8000:8000'
+    networks:
+      - yasminenet
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # bunbackend:
+  #   container_name: bunbackend
+  #   build:
+  #     context: ./backend/bun/
+  #     dockerfile: dockerfile
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./:/app
+  #   ports:
+  #     - '3001:3001'
+  #   networks:
+  #     - yasminenet
+
+  browserfrontend:
+    container_name: browserfrontend
+    build:
+      context: ./frontend/
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./:/frontend
+    ports:
+      - '3001:3001'
+    networks:
+      - yasminenet
+
+  cppbackend:
+    container_name: cppbackend
+    build:
+      context: ./backend/c++/
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./:/cppbackend
+    ports:
+      - '8080:8080'
+    networks:
+      - yasminenet
+ 
+networks:
+  yasminenet:
+

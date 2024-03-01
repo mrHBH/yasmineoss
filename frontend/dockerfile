@@ -1,0 +1,21 @@
+# Use the official bun image as base
+FROM oven/bun:1-debian
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the package.json file into the container
+COPY package.json .
+
+# Install dependencies
+RUN bun install
+
+# Copy the rest of the application into the container
+COPY . .
+
+# Expose the port
+EXPOSE 3001
+# Start the server
+#install the dependencies
+RUN bun install
+CMD ["bun", "run", "dev"]

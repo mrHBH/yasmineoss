@@ -1,4 +1,4 @@
- import os
+import os
 import logging
 import asyncio
 import importlib
@@ -53,7 +53,12 @@ logger.addHandler(consoleHandler)
 
  
 
- 
+"""This function that chesks if torch gpu is available""" 
+@app.post("/capa/")
+async def capa():
+    import torch
+    return torch.cuda.is_available()
+
 
 @app.websocket("/ws/realtimelogs/")
 async def websocket_endpoint(websocket: WebSocket):

@@ -1,0 +1,8 @@
+guidance
+python-dotenv
+asyncio
+pylint
+fastapi-cors
+
+fastapi-socketio
+uvicorn[standard]
