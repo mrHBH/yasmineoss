@@ -1,0 +1,35 @@
+# Use the official Python image as base
+FROM python:latest
+# Install system packages required by the application
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install git -y --no-install-recommends \
+    build-essential \
+    cmake \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+# Set the working directory 
+WORKDIR /app
+
+# Copy the requirements file into the container
+COPY requirements.txt .
+ 
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+COPY requirementsruntime.txt .
+RUN pip install --no-cache-dir -r requirementsruntime.txt --upgrade
+
+RUN pip install --force-reinstall charset-normalizer==3.1.0
+
+
+#copy the contents   of the foloder src in current directory to /app
+COPY . .
+CMD ["python", "main.py"]
+
+ 
+
+
+ 
+ 
+
+ 
