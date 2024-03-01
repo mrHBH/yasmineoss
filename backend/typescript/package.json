@@ -1,0 +1,14 @@
+{
+  "name": "bunbabckend",
+  "module": "src/server.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "scripts": {
+    "dev": "bun run src/server.ts"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

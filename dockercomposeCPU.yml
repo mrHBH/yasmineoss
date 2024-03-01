@@ -13,6 +13,20 @@ services:
     networks:
       - yasminenet
 
+
+  tsbackend:
+    container_name: tsbackend
+    build:
+      context: ./backend/typescript/
+      dockerfile: dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./:/tsbackend
+    ports:
+      - '8089:8089'
+    networks:
+      - yasminenet
+
   cppbackend:
     container_name: cppbackend
     build:
