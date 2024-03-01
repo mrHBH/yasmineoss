@@ -13,18 +13,19 @@ services:
     networks:
       - yasminenet
 
-  # bunbackend:
-  #   container_name: bunbackend
-  #   build:
-  #     context: ./backend/bun/
-  #     dockerfile: dockerfile
-  #   restart: unless-stopped
-  #   volumes:
-  #     - ./:/app
-  #   ports:
-  #     - '3001:3001'
-  #   networks:
-  #     - yasminenet
+  cppbackend:
+    container_name: cppbackend
+    build:
+      context: ./backend/c++/
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./:/cppbackend
+    ports:
+      - '8080:8080'
+    networks:
+      - yasminenet
+ 
 
   browserfrontend:
     container_name: browserfrontend

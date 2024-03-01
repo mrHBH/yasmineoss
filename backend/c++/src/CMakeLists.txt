@@ -3,8 +3,10 @@ find_package(Threads REQUIRED)
 
 set(TARGET simplehttpserver)
 
+# Add request_handler.cpp to the list of sources
 add_executable(${TARGET}
-        main.cpp)
+        main.cpp
+        request_handler.cpp) # Add this line
 
 target_compile_features(${TARGET} PUBLIC
         cxx_std_17)
