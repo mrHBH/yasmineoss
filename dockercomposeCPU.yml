@@ -39,6 +39,19 @@ services:
       - '8080:8080'
     networks:
       - yasminenet
+
+  rustbackend:
+    container_name: rustbackend
+    build:
+      context: ./backend/rust/
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./:/rustbackend
+    ports:
+      - '8420:8420'
+    networks:
+      - yasminenet
  
 
   browserfrontend:
