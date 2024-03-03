@@ -2,16 +2,14 @@ import './style.css';
 import * as THREE from 'three';
 import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
 
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-//import { InfiniteGridHelper } from "./utils/InfiniteGridHelper";
-import { uniform, skinning, PointsNodeMaterial  } from 'three/nodes';
-
+ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { InfiniteGridHelper } from "./utils/InfiniteGridHelper";
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Entity } from './utils/Entity';
-import { Component } from './utils/Component';
 import { BasicComponent } from './utils/Components/BasicComponent';
 import { EntityManager } from './utils/EntityManager';
-
+import {LoadingManager} from './utils/LoadingManager';
+// InfiniteGridHelper class definition ends here
 
 class Main {
   private camera: THREE.PerspectiveCamera;
@@ -20,7 +18,7 @@ class Main {
   private clock: THREE.Clock;
   private mixers: THREE.AnimationMixer[];
   private entityManager: EntityManager;
-
+  grid: InfiniteGridHelper;
   constructor() {
     this.mixers = [];
     this.init().catch((error) => {
@@ -37,9 +35,9 @@ class Main {
     this.sceneMain = new THREE.Scene();
     this.sceneMain.background = new THREE.Color(0x222222);
 
-    // let grid = new InfiniteGridHelper( 10, 10, new THREE.Color(0x888888), new THREE.Color(0x444444) );
-    // this.sceneMain.add(grid);
 
+
+ 
 
 
 
@@ -58,48 +56,15 @@ class Main {
     light.position.set(0, 1, 5);
     this.sceneMain.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
     this.sceneMain.add(light);
+ 
 
-    // const gridHelper = new WebGPUInfiniteGridHelper();
-    // this.sceneMain.add(gridHelper);
-
-    const loader = new GLTFLoader();
-    const gltf = await loader.loadAsync('models/gltf/ybot2.glb')
-    const animationwalk = await loader.loadAsync('animations/gltf/ybot2@walking.glb')
-    const animationClip = animationwalk.animations[0]; // Get the first animation clip
-    const model = gltf.scene;
-
-
-    model.traverse(function (child:any) {
-      if (child.isMesh) {
-         const materialPoints = new THREE.PointsMaterial({ size: 0.05, color: new THREE.Color(0x0011ff) });
-        child.updateMatrixWorld(true); // Force update matrix and children
-        //materialPoints.positionNode = skinning(child)
-        const pointCloud = new THREE.Points(child.geometry, materialPoints);
-   
-        pointCloud.position.copy(child.position);
-        pointCloud.rotation.copy(child.rotation);
-        pointCloud.scale.copy(child.scale); 
-
-        this.sceneMain.add(pointCloud);
-      }
-    }.bind(this));
-
-
-
-
-    model.position.set(0, 0, 0);
-    this.sceneMain.add(model);
-    const mixer = new THREE.AnimationMixer(model);
-    this.mixers.push(mixer); // Add the mixer to the mixers array so it can be updated
-    // Create an action for the animation clip
-    const action = mixer.clipAction(animationClip);
-    action.play(); // Play the action
     this.renderer = new WebGPURenderer({ antialias: true });
     await this.renderer.init();
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-    this.renderer.sha
+    this.grid= new InfiniteGridHelper(  this.camera , 10, 100, new THREE.Color(0x888888), new THREE.Color(0x444444));
+    this.sceneMain.add(this.grid);
     document.body.appendChild(this.renderer.domElement);
     const controls = new OrbitControls(this.camera, this.renderer.domElement);
     controls.target.set(0, 1, 0);
@@ -107,9 +72,53 @@ class Main {
     window.addEventListener('resize', () => this.onWindowResize());
 
 
+    const model = await LoadingManager.loadGLTF('models/gltf/ybot2.glb');
+      const model2 = await LoadingManager.loadGLTF('models/gltf/ybot2.glb');
+      const model6 = await LoadingManager.loadGLTF('models/gltf/ybot2.glb');
+
+    const animations = await LoadingManager.loadGLTFAnimation('animations/gltf/ybot2@walking.glb');
+    
+    // Here, instead of cloning, you could replicate necessary parts or setups as needed.
+    // For instance, applying materials or setting up points could be redone here:
+    
+    model.traverse(child => {
+      if ((child as THREE.Mesh).isMesh) {
+        const materialPoints = new THREE.PointsMaterial({ size: 0.05, color: new THREE.Color(0x0011ff) });
+        child.updateMatrixWorld(true);
+        const pointCloud = new THREE.Points((child as THREE.Mesh).geometry, materialPoints);
+        pointCloud.position.copy(child.position);
+        pointCloud.rotation.copy(child.rotation);
+        pointCloud.scale.copy(child.scale);
+        this.sceneMain.add(pointCloud);
+      }
+    });
+    
+    this.sceneMain.add(model);
+    this.sceneMain.add(model2);
+    this.sceneMain.add(model6);
+    const mixer = new THREE.AnimationMixer(model);
+    const mixer2 = new THREE.AnimationMixer(model2);
+    const mixer6 = new THREE.AnimationMixer(model6);
+    this.mixers.push(mixer);
+    this.mixers.push(mixer2);
+    this.mixers.push(mixer6);
 
 
+    const animationClip = animations[0];  // Assuming you want the first animation
+    const action = mixer.clipAction(animationClip);
+    action.play();
 
+    const animationClip2 = animations[0];  // Assuming you want the first animation
+    const action2 = mixer2.clipAction(animationClip2);
+    action2.play();
+
+    const animationClip6 = animations[0];  // Assuming you want the first animation
+    const action6 = mixer6.clipAction(animationClip6);
+    setTimeout(() => {
+      action6.play();
+    } , 5000);
+
+   
     this.animate();
   }
 
@@ -123,7 +132,7 @@ class Main {
     requestAnimationFrame(() => this.animate());
 
     const delta = this.clock.getDelta();
-
+    this.grid.update( );
     for (const mixer of this.mixers) {
       mixer.update(delta);
     }
