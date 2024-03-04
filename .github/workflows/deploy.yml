@@ -3,20 +3,23 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
     - name: Execute SSH commands
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        password: ${{ secrets.SSH_PASSWORD }} 
         script: |
           cd /home/dev/Yasmineoss/yasmineoss/
           git pull
-          docker-compose -f dockercomposeCPU.yml up --build
+          docker-compose -f docker-compose-CPU.yml up --build
