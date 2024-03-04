@@ -29,7 +29,7 @@ import { EntityManager } from './utils/EntityManager';
   ws.onopen = function open() {
     setInterval(() => {
     ws.send('something for ts');
-    } , 1000);
+    } , 1500);
     
   };
   ws.onmessage = function incoming(event) {
