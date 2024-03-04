@@ -16,15 +16,18 @@ class Component {
     }
 
 
-    Destroy() {
+    async Destroy() {
         //Destroy the component
     }
 
-    InitComponent(entity : Entity ) {
+    async InitComponent(entity : Entity ) {
         this._entity = entity;
+        console.log("InitComponent " + this._name);
+      
+        
     }
 
-	InitEntity() {
+	async InitEntity() {
         console.log("InitEntity BasicComponent");
 
     }

@@ -22,15 +22,18 @@ class BasicComponent  extends Component {
 
       
     }
-    Destroy() {
+    async Destroy() {
         //Destroy the component
     }
 
-    InitComponent() {
-        console.log("InitComponent BasicComponent");
+    InitComponent(entity: Entity): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this._entity = entity;
+            resolve();
+        });
     }
 
-    InitEntity() {
+    async InitEntity(): Promise<void> {
         console.log("InitEntity BasicComponent");
     }
 

@@ -9,23 +9,31 @@ class EntityManager {
         this._ids = 0;
         this._entities = [];
         this._entitiesMap = new Map<number, Entity>();
+
+        setInterval(() => {
+            console.log("Entities: ", this._entities.length);
+            console.log("EntitiesMap: ", this._entitiesMap.size);
+        }  , 1000);
     }
 
     get Entities() {
         return this._entities;
     }
 
-    AddEntity(entity: Entity , name: string) {
-        entity.name = name;           
+    async AddEntity(entity: Entity , name: string) {
+        entity.name = name;
+        entity.id = this._ids;          
         this._entities.push(entity);
         this._entitiesMap.set(this._ids, entity);
         this._ids++;
-        entity.Initialize();
+        await entity.Initialize();
  
        
     }
  
     Update(deltaTime: number) {
+
+    
         // Schedule each entity's update as a microtask, allowing the main thread to remain responsive
         this._entities.forEach(entity => {
             if (entity.alive) {
@@ -33,6 +41,22 @@ class EntityManager {
                     entity.Update(deltaTime).catch(err => {
                         console.error("Error during entity update:", err);
                     });
+                });
+            }
+
+            else {
+                queueMicrotask(() => {
+                    entity.Destroy().catch(err => {
+                        console.error("Error during entity destruction:", err);
+                    }).then(() => {
+                        //get the entity id
+                        
+                        this._entities = this._entities.filter(e => e !== entity);
+                        this._entitiesMap.delete(entity.id);
+                    }   );
+                   
+
+                       
                 });
             }
         });

@@ -9,6 +9,10 @@ const server = Bun.serve({
     hostname: hostname,
     fetch(request, server) {
         // Use the HttpHandler instance to respond to HTTP requests
+        if (server.upgrade(request)) {
+            return; // do not return a Response
+          }
+         
         return httpHandler.handleRequest(request);
     },
     websocket: {
@@ -20,3 +24,6 @@ const server = Bun.serve({
 });
 
 console.log(`Listening on ${hostname}:${port}`);
+
+
+ 

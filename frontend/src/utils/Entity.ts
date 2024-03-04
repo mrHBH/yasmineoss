@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { Component } from "./Component";
 class Entity {
     _name: string;
+    id: number;
     _position: THREE.Vector3;
     _rotation: THREE.Quaternion;
     _components: Component[] = [];
@@ -35,6 +36,10 @@ class Entity {
         return this._alive;
     }
 
+    kill() {
+        this._alive = false;
+    }
+
     set name(name: string) {
         this._name = name;
     }
@@ -50,16 +55,16 @@ class Entity {
     }
 
 
-    Initialize() {
+    async Initialize() {
 
         for (const component of this._components) {
-            component.InitEntity();
+            await component.InitEntity();
         }
        
     }
 
-    AddComponent(component: Component) {        
-        component.InitComponent( this); 
+    async AddComponent(component: Component) {        
+        await component.InitComponent( this); 
         this._components.push(component);
     }
 
@@ -80,16 +85,18 @@ class Entity {
         this._handlers[topic].push(h);
     }
 
-    Broadcast(msg: { topic: string, data: unknown }) {
+    async Broadcast(msg: { topic: string, data: unknown }) {
 
         //  console.log(this.Name + msg);
         if (!(msg.topic in this._handlers)) {
             return;
         }
         for (const curHandler of this._handlers[msg.topic]) {
-            curHandler(msg);
+            await curHandler(msg);
         }
     }
+
+
 
 
     async Update(deltaTime: number) {
@@ -113,8 +120,11 @@ class Entity {
         return this._updatePromise;
     }
     
-    Destroy() {
-        this._alive = false;
+    async Destroy() {
+    
+        for (const component of this._components) {
+            component.Destroy();
+        }
     }
 
 

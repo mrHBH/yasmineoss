@@ -14,6 +14,8 @@
 #include <thread>
 #include <vector>
 #include "request_handler.hpp"
+#include <boost/beast/websocket.hpp>
+#include "WebSocketHandler.hpp"
 
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -146,6 +148,16 @@ public:
 
     void on_read(beast::error_code ec, std::size_t bytes_transferred) {
         boost::ignore_unused(bytes_transferred);
+
+
+        if (ec) return fail(ec, "read");
+
+            // Check if it is a WebSocket upgrade
+            if (websocket::is_upgrade(req_)) {
+                // Make the session a WebSocket session
+                std::make_shared<WebSocketSession>(std::move(stream_.release_socket()))->run();
+                return; // We are done with HTTP handling, now it's a WebSocket session
+            }
 
         // This means they closed the connection
         if (ec == http::error::end_of_stream) return do_close();

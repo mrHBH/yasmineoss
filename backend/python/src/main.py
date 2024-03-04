@@ -14,10 +14,13 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
+import uvicorn
  
-
 load_dotenv()
 app = FastAPI()
+
+logging.basicConfig(level=logging.INFO)
+logging.log(logging.INFO, "Starting server" , exc_info=True)
 
 
 connectedClients: List[WebSocket] = []
@@ -31,25 +34,7 @@ app.add_middleware(
 )
 
 
-class WebSocketLogHandler(logging.Handler):
-    """A custom logging handler that sends log messages to all connected WebSocket clients."""
 
-    def emit(self, record):
-        log_entry = self.format(record)
-        for wsClient in connectedClients:  # Iterate over connected clients
-            asyncio.create_task(wsClient.send_text(log_entry))  # Non-blocking send
-
-
-logger = logging.getLogger("file_processor_logger")
-logger.setLevel(logging.INFO)
-consoleHandler = logging.StreamHandler()
-
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-consoleHandler.setFormatter(formatter)
-# log_handler = WebSocketLogHandler()
-# log_handler.setFormatter(formatter)
-# logger.addHandler(log_handler)
-logger.addHandler(consoleHandler)
 
  
 
@@ -60,7 +45,7 @@ async def capa():
     return torch.cuda.is_available()
 
 
-@app.websocket("/ws/realtimelogs/")
+@app.websocket("/ws/rtd/")
 async def websocket_endpoint(websocket: WebSocket):
     """This function is a websocket endpoint that sends log messages to connected clients."""
     await websocket.accept()
@@ -68,11 +53,14 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             # Keep the connection alive
-            await websocket.receive_text()
+            res = await websocket.receive_text()
+            logging.info(res)
+            await websocket.send_text("pong " + res)
     except WebSocketDisconnect:
         connectedClients.remove(websocket)
 
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    

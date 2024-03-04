@@ -54,19 +54,19 @@ services:
       - yasminenet
  
 
-  browserfrontend:
-    container_name: browserfrontend
-    build:
-      context: ./frontend/
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    volumes:
-      - ./:/frontend
+  # browserfrontend:
+  #   container_name: browserfrontend
+  #   build:
+  #     context: ./frontend/
+  #     dockerfile: Dockerfile
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./:/frontend
  
-    ports:
-      - '3001:3001'
-    networks:
-      - yasminenet
+  #   ports:
+  #     - '3001:3001'
+  #   networks:
+  #     - yasminenet
 
 networks:
   yasminenet:

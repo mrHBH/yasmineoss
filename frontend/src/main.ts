@@ -4,23 +4,68 @@ import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
 
  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { InfiniteGridHelper } from "./utils/InfiniteGridHelper";
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { Entity } from './utils/Entity';
+ import { Entity } from './utils/Entity';
 import { BasicComponent } from './utils/Components/BasicComponent';
+import { CharacterComponent } from './utils/Components/CharacterComponent';
 import { EntityManager } from './utils/EntityManager';
-import {LoadingManager} from './utils/LoadingManager';
-// InfiniteGridHelper class definition ends here
+ // InfiniteGridHelper class definition ends here
+
+
+ //define a structire that holds the address of the backends. it is a collection of ports and addresses
+
+  const backends = {
+    "rustbackend": "http://localhost:8420",
+    "pythonbackend": "http://localhost:8000",
+    "pythonbackendws": "ws://localhost:8000/ws/rtd/",
+    "cppbackend": "http://localhost:8080",
+    "cppbackendws": "ws://localhost:8080/ ",
+    "tsbackend": "http://localhost:8089",
+    "tsbackendws": "ws://localhost:8089"
+  }
+
+  //create to ts backend , over websockets and send periodic messages to the backend
+  const ws = new WebSocket(backends.tsbackendws);
+  
+  ws.onopen = function open() {
+    setInterval(() => {
+    ws.send('something for ts');
+    } , 1000);
+    
+  };
+  ws.onmessage = function incoming(event) {
+    console.log('received from ts backend:', event.data);
+  }
+
+  const ws2 = new WebSocket(backends.pythonbackendws);
+  ws2.onopen = function open() {
+    setInterval(() => {
+    ws2.send('something for python');
+    } , 1000);
+  };
+  ws2.onmessage = function incoming(event) {
+    console.log('received from python backend:', event.data);
+  }
+
+ const ws3 = new WebSocket(backends.cppbackendws);
+  ws3.onopen = function open() {
+    setInterval(() => {
+    ws3.send('something for cpp');
+    } , 1000);
+  }
+  ws3.onmessage = function incoming(event) {
+    console.log('received from cpp backend:', event.data);
+  }
 
 class Main {
   private camera: THREE.PerspectiveCamera;
   private sceneMain: THREE.Scene;
   private renderer: WebGPURenderer;
   private clock: THREE.Clock;
-  private mixers: THREE.AnimationMixer[];
   private entityManager: EntityManager;
   grid: InfiniteGridHelper;
+
+
   constructor() {
-    this.mixers = [];
     this.init().catch((error) => {
       console.error('Failed to initialize the scene:', error);
     });
@@ -30,14 +75,58 @@ class Main {
     this.entityManager = new EntityManager();
     const entity = new Entity();
     const basicComponent = new BasicComponent();
-    entity.AddComponent(basicComponent);
+    await entity.AddComponent(basicComponent);
     this.entityManager.AddEntity(entity, "Entity1");
     this.sceneMain = new THREE.Scene();
     this.sceneMain.background = new THREE.Color(0x222222);
 
 
 
+    const bob = new Entity();
+    const bobcontroller = new CharacterComponent({
+      modelpath: 'models/gltf/ybot2.glb',
+      animationspath: 'animations/gltf/ybot2@walking.glb',
+      scene: this.sceneMain
+    
+    });
+
+    const sydney = new Entity();
+    sydney.position.set(2, 0, 2);
+    const sydneycontroller = new CharacterComponent({
+      modelpath: 'models/gltf/Xbot.glb',
+      animationspath: 'animations/gltf/ybot2@walking.glb',
+      scene: this.sceneMain
+    });
+
+
+    await sydney.AddComponent(sydneycontroller);
+    await this.entityManager.AddEntity(sydney, "Sydney");
+
+    await bob.AddComponent(bobcontroller);
+    await this.entityManager.AddEntity(bob, "Bob");
+
+    //add 50 random entities at random positions either bob or sydney all walking
+    for (let i = 0; i < 100; i++) {
+      let entity = new Entity();
+      let randoemclass = Math.random() < 0.5 ? 'models/gltf/ybot2.glb' :  'models/gltf/Xbot.glb';
+      let randomposition = new THREE.Vector3(Math.random() * 20, 0, Math.random() * 50);
+      let randomcontroller = new CharacterComponent({
+        modelpath: randoemclass,
+        animationspath: 'animations/gltf/ybot2@walking.glb',
+        scene: this.sceneMain
+      });
+      entity.position.set(randomposition.x, randomposition.y, randomposition.z);
+      await entity.AddComponent(randomcontroller);
+      await this.entityManager.AddEntity(entity, "RandomEntity" + i);
+      let deathtimeout = Math.random() * 16000 +2000
+      setTimeout(() => {
+        entity.kill()
+      } , deathtimeout);
+    }
+
+
  
+
 
 
 
@@ -72,53 +161,6 @@ class Main {
     window.addEventListener('resize', () => this.onWindowResize());
 
 
-    const model = await LoadingManager.loadGLTF('models/gltf/ybot2.glb');
-      const model2 = await LoadingManager.loadGLTF('models/gltf/ybot2.glb');
-      const model6 = await LoadingManager.loadGLTF('models/gltf/ybot2.glb');
-
-    const animations = await LoadingManager.loadGLTFAnimation('animations/gltf/ybot2@walking.glb');
-    
-    // Here, instead of cloning, you could replicate necessary parts or setups as needed.
-    // For instance, applying materials or setting up points could be redone here:
-    
-    model.traverse(child => {
-      if ((child as THREE.Mesh).isMesh) {
-        const materialPoints = new THREE.PointsMaterial({ size: 0.05, color: new THREE.Color(0x0011ff) });
-        child.updateMatrixWorld(true);
-        const pointCloud = new THREE.Points((child as THREE.Mesh).geometry, materialPoints);
-        pointCloud.position.copy(child.position);
-        pointCloud.rotation.copy(child.rotation);
-        pointCloud.scale.copy(child.scale);
-        this.sceneMain.add(pointCloud);
-      }
-    });
-    
-    this.sceneMain.add(model);
-    this.sceneMain.add(model2);
-    this.sceneMain.add(model6);
-    const mixer = new THREE.AnimationMixer(model);
-    const mixer2 = new THREE.AnimationMixer(model2);
-    const mixer6 = new THREE.AnimationMixer(model6);
-    this.mixers.push(mixer);
-    this.mixers.push(mixer2);
-    this.mixers.push(mixer6);
-
-
-    const animationClip = animations[0];  // Assuming you want the first animation
-    const action = mixer.clipAction(animationClip);
-    action.play();
-
-    const animationClip2 = animations[0];  // Assuming you want the first animation
-    const action2 = mixer2.clipAction(animationClip2);
-    action2.play();
-
-    const animationClip6 = animations[0];  // Assuming you want the first animation
-    const action6 = mixer6.clipAction(animationClip6);
-    setTimeout(() => {
-      action6.play();
-    } , 5000);
-
-   
     this.animate();
   }
 
@@ -131,11 +173,7 @@ class Main {
   private async animate(): Promise<void> {
     requestAnimationFrame(() => this.animate());
 
-    const delta = this.clock.getDelta();
-    this.grid.update( );
-    for (const mixer of this.mixers) {
-      mixer.update(delta);
-    }
+    const delta = this.clock.getDelta(); 
     await this.entityManager.Update(delta);
     await this.renderer.renderAsync(this.sceneMain, this.camera);
 
