@@ -19,4 +19,4 @@ jobs:
         script: |
           cd /home/dev/Yasmineoss/yasmineoss/
           git pull
-          docker-compose -f docker-compose-CPU.yml up --build
+          docker-compose -f docker-compose-CPU.yml up --build 
