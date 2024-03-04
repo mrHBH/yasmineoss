@@ -33,7 +33,8 @@ import { EntityManager } from './utils/EntityManager';
     
   };
   ws.onmessage = function incoming(event) {
-    console.log('received from ts backend:', event.data);
+    console.log('received from ts backend :', event.data);
+     
   }
 
   const ws2 = new WebSocket(backends.pythonbackendws);
