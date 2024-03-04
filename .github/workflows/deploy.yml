@@ -5,21 +5,10 @@ on:
     branches:
       - master
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Execute SSH commands
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USERNAME }}
-        password: ${{ secrets.SSH_PASSWORD }} 
-        script: |
-          cd /home/dev/Yasmineoss/yasmineoss/
-          git pull
-          docker-compose -f docker-compose-CPU.yml up --build
+uses: appleboy/ssh-action@v1.0.3
+  with:
+    host: ${{ secrets.HOST }}
+    username: ${{ secrets.USERNAME }}
+    password: ${{ secrets.PASSWORD }}
+    port: ${{ secrets.PORT }}
+    script: whoami
