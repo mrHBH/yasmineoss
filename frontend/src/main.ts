@@ -12,8 +12,9 @@ import { EntityManager } from './utils/EntityManager';
 
 
  //define a structire that holds the address of the backends. it is a collection of ports and addresses
-
-  const backends = {
+  let backends ;
+  if (window.location.hostname === "localhost") {
+   backends = {
     "rustbackend": "http://localhost:8420",
     "pythonbackend": "http://localhost:8000",
     "pythonbackendws": "ws://localhost:8000/ws/rtd/",
@@ -22,6 +23,19 @@ import { EntityManager } from './utils/EntityManager';
     "tsbackend": "http://localhost:8089",
     "tsbackendws": "ws://localhost:8089"
   }
+} else {
+  let hostname = window.location.hostname;
+  backends = {
+    "rustbackend": "http://" + hostname + ":8420",
+    "pythonbackend": "http://" + hostname + ":8000",
+    "pythonbackendws": "ws://" + hostname + ":8000/ws/rtd/",
+    "cppbackend": "http://" + hostname + ":8080",
+    "cppbackendws": "ws://" + hostname + ":8080/ ",
+    "tsbackend": "http://" + hostname + ":8089",
+    "tsbackendws": "ws://" + hostname + ":8089"
+  }
+}
+
 
   //create to ts backend , over websockets and send periodic messages to the backend
   const ws = new WebSocket(backends.tsbackendws);
