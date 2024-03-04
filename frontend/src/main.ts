@@ -13,6 +13,7 @@ import { EntityManager } from './utils/EntityManager';
 
  //define a structire that holds the address of the backends. it is a collection of ports and addresses
   let backends ;
+  let protocol = window.location.protocol;
   if (window.location.hostname === "localhost") {
    backends = {
     "rustbackend": "http://localhost:8420",
@@ -25,6 +26,9 @@ import { EntityManager } from './utils/EntityManager';
   }
 } else {
   let hostname = window.location.hostname;
+  //check if secure or not
+  if (window.location.protocol === "http:") {
+
   backends = {
     "rustbackend": "http://" + hostname + ":8420",
     "pythonbackend": "http://" + hostname + ":8000",
@@ -34,6 +38,19 @@ import { EntityManager } from './utils/EntityManager';
     "tsbackend": "http://" + hostname + ":8089",
     "tsbackendws": "ws://" + hostname + ":8089"
   }
+}
+else {
+  backends = {
+    "rustbackend": "https://" + hostname + ":8420",
+    "pythonbackend": "https://" + hostname + ":8000",
+    "pythonbackendws": "wss://" + hostname + ":8000/ws/rtd/",
+    "cppbackend": "https://" + hostname + ":8080",
+    "cppbackendws": "wss://" + hostname + ":8080/ ",
+    "tsbackend": "https://" + hostname + ":8089",
+    "tsbackendws": "wss://" + hostname + ":8089"
+  }
+
+}
 }
 
 
