@@ -9,7 +9,7 @@ import { BasicComponent } from './utils/Components/BasicComponent';
 import { CharacterComponent } from './utils/Components/CharacterComponent';
 import { EntityManager } from './utils/EntityManager';
  // InfiniteGridHelper class definition ends here
-
+ import TWEEN from '@tweenjs/tween.js'
 
  //define a structire that holds the address of the backends. it is a collection of ports and addresses
   let backends ;
@@ -54,39 +54,39 @@ else {
 }
 
 
-  //create to ts backend , over websockets and send periodic messages to the backend
-  const ws = new WebSocket(backends.tsbackendws);
+//   //create to ts backend , over websockets and send periodic messages to the backend
+//   const ws = new WebSocket(backends.tsbackendws);
   
-  ws.onopen = function open() {
-    setInterval(() => {
-    ws.send('something for ts');
-    } , 1500);
+//   ws.onopen = function open() {
+//     setInterval(() => {
+//     ws.send('something for ts');
+//     } , 1500);
     
-  };
-  ws.onmessage = function incoming(event) {
-    console.log('received from ts backend :', event.data);
+//   };
+//   ws.onmessage = function incoming(event) {
+//     console.log('received from ts backend :', event.data);
      
-  }
+//   }
 
-  const ws2 = new WebSocket(backends.pythonbackendws);
-  ws2.onopen = function open() {
-    setInterval(() => {
-    ws2.send('something for python');
-    } , 1000);
-  };
-  ws2.onmessage = function incoming(event) {
-    console.log('received from python backend:', event.data);
-  }
+//   const ws2 = new WebSocket(backends.pythonbackendws);
+//   ws2.onopen = function open() {
+//     setInterval(() => {
+//     ws2.send('something for python');
+//     } , 1000);
+//   };
+//   ws2.onmessage = function incoming(event) {
+//     console.log('received from python backend:', event.data);
+//   }
 
- const ws3 = new WebSocket(backends.cppbackendws);
-  ws3.onopen = function open() {
-    setInterval(() => {
-    ws3.send('something for cpp');
-    } , 1000);
-  }
-  ws3.onmessage = function incoming(event) {
-    console.log('received from cpp backend:', event.data);
-  }
+//  const ws3 = new WebSocket(backends.cppbackendws);
+//   ws3.onopen = function open() {
+//     setInterval(() => {
+//     ws3.send('something for cpp');
+//     } , 1000);
+//   }
+//   ws3.onmessage = function incoming(event) {
+//     console.log('received from cpp backend:', event.data);
+//   }
 
 class Main {
   private camera: THREE.PerspectiveCamera;
@@ -95,6 +95,7 @@ class Main {
   private clock: THREE.Clock;
   private entityManager: EntityManager;
   grid: InfiniteGridHelper;
+  orbitcontrols: OrbitControls;
 
 
   constructor() {
@@ -105,10 +106,7 @@ class Main {
 
   private async init(): Promise<void> {
     this.entityManager = new EntityManager();
-    const entity = new Entity();
-    const basicComponent = new BasicComponent();
-    await entity.AddComponent(basicComponent);
-    this.entityManager.AddEntity(entity, "Entity1");
+  
     this.sceneMain = new THREE.Scene();
     this.sceneMain.background = new THREE.Color(0x222222);
 
@@ -137,28 +135,31 @@ class Main {
     await bob.AddComponent(bobcontroller);
     await this.entityManager.AddEntity(bob, "Bob");
 
-    //add 50 random entities at random positions either bob or sydney all walking
-    for (let i = 0; i < 100; i++) {
-      let entity = new Entity();
-      let randoemclass = Math.random() < 0.5 ? 'models/gltf/ybot2.glb' :  'models/gltf/Xbot.glb';
-      let randomposition = new THREE.Vector3(Math.random() * 20, 0, Math.random() * 50);
-      let randomcontroller = new CharacterComponent({
-        modelpath: randoemclass,
-        animationspath: 'animations/gltf/ybot2@walking.glb',
-        scene: this.sceneMain
-      });
-      entity.position.set(randomposition.x, randomposition.y, randomposition.z);
-      await entity.AddComponent(randomcontroller);
-      await this.entityManager.AddEntity(entity, "RandomEntity" + i);
-      let deathtimeout = Math.random() * 16000 +2000
-      setTimeout(() => {
-        entity.kill()
-      } , deathtimeout);
-    }
+    // //add 50 random entities at random positions either bob or sydney all walking
+    // for (let i = 0; i < 100; i++) {
+    //   let entity = new Entity();
+    //   let randoemclass = Math.random() < 0.5 ? 'models/gltf/ybot2.glb' :  'models/gltf/Xbot.glb';
+    //   let randomposition = new THREE.Vector3(Math.random() * 20, 0, Math.random() * 50);
+    //   let randomcontroller = new CharacterComponent({
+    //     modelpath: randoemclass,
+    //     animationspath: 'animations/gltf/ybot2@walking.glb',
+    //     scene: this.sceneMain
+    //   });
+    //   entity.position.set(randomposition.x, randomposition.y, randomposition.z);
+    //   await entity.AddComponent(randomcontroller);
+    //   await this.entityManager.AddEntity(entity, "RandomEntity" + i);
+    //   let deathtimeout = Math.random() * 16000 +2000
+    //   setTimeout(() => {
+    //     entity.kill()
+    //   } , deathtimeout);
+    // }
+
+
+
 
 
  
-
+    
 
 
 
@@ -187,12 +188,12 @@ class Main {
     this.grid= new InfiniteGridHelper(  this.camera , 10, 100, new THREE.Color(0x888888), new THREE.Color(0x444444));
     this.sceneMain.add(this.grid);
     document.body.appendChild(this.renderer.domElement);
-    const controls = new OrbitControls(this.camera, this.renderer.domElement);
-    controls.target.set(0, 1, 0);
-    controls.update();
+    this.orbitcontrols = new OrbitControls(this.camera, this.renderer.domElement);
+    this.orbitcontrols.target.set(0, 1, 0);
+    this.orbitcontrols.update();
     window.addEventListener('resize', () => this.onWindowResize());
 
-
+    document.addEventListener('dblclick', (event) => this.onDoubleClick(event) , false);
     this.animate();
   }
 
@@ -204,11 +205,78 @@ class Main {
 
   private async animate(): Promise<void> {
     requestAnimationFrame(() => this.animate());
+    TWEEN.update();
 
     const delta = this.clock.getDelta(); 
+
     await this.entityManager.Update(delta);
     await this.renderer.renderAsync(this.sceneMain, this.camera);
 
   }
+
+  private onDoubleClick(event: MouseEvent): void {
+    console.log('double click');
+    const raycaster = new THREE.Raycaster()
+    raycaster.setFromCamera( 
+      new THREE.Vector2(
+        (event.clientX / this.renderer.domElement.clientWidth) * 2 - 1,
+        -(event.clientY / this.renderer.domElement.clientHeight) * 2 + 1
+      ),
+       
+        this.camera
+    )
+     const intersects = raycaster.intersectObjects(this.sceneMain.children, true)
+
+    if (intersects.length > 0) {
+      const p = intersects[0].point
+      console.log('point:', p)
+
+      new TWEEN.Tween(this.orbitcontrols.target)
+          .to(
+              {
+                  x: p.x,
+                  y: p.y,
+                  z: p.z,
+              },
+              500
+          )
+          .easing(TWEEN.Easing.Cubic.Out).onUpdate(() => {
+              this.orbitcontrols.update();
+          })
+          .start().onComplete
+          (() => {
+              console.log('done')
+          })
+
+
+      new TWEEN.Tween(this.camera.position)
+          .to(
+              {
+                  x: p.x + 2,
+                  y: p.y + 2,
+                  z: p.z + 2,
+              },
+              500
+          )
+          .easing(TWEEN.Easing.Cubic.Out).onUpdate(() => {
+              this.orbitcontrols.update();
+          })
+          .start().onComplete
+          (() => {
+              console.log('done')
+          })
+
+          
+
+
+  }
+}
+
+
+
+  
+
+
 }
 new Main();
+ 

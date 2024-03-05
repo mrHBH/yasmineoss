@@ -10,10 +10,7 @@ class EntityManager {
         this._entities = [];
         this._entitiesMap = new Map<number, Entity>();
 
-        setInterval(() => {
-            console.log("Entities: ", this._entities.length);
-            console.log("EntitiesMap: ", this._entitiesMap.size);
-        }  , 1000);
+       
     }
 
     get Entities() {
