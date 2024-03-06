@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/Addons.js';
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
+
 import WebGPURenderer from 'three/examples/jsm/renderers/webgpu/WebGPURenderer.js';
 import { InfiniteGridHelper } from "./InfiniteGridHelper";
 import TWEEN from '@tweenjs/tween.js'
@@ -9,41 +11,72 @@ import * as EssentialsPlugin from '@tweakpane/plugin-essentials';
 
 class MainController {
     camera: THREE.PerspectiveCamera;
-    orbitcontrols: OrbitControls;
+    orbitControls: OrbitControls;
     scene: THREE.Scene;
     renderer: WebGPURenderer;
-    sceneMain: THREE.Scene;
+    css2dRenderer: CSS2DRenderer;
+
+    webgpuScene: THREE.Scene;
     clock: THREE.Clock;
     grid: any;
     fpsGraph: any;
     constructor() {
 
 
-        this.sceneMain = new THREE.Scene();
-        this.sceneMain.background = new THREE.Color(0x222222);
+        this.webgpuScene = new THREE.Scene();
+        //  this.webgpuScene.background = new THREE.Color(0x222222);
 
 
         this.renderer = new WebGPURenderer({ antialias: true });
         this.renderer.init().then(() => {
             this.renderer.setPixelRatio(window.devicePixelRatio);
             this.renderer.setSize(window.innerWidth, window.innerHeight);
+
         });
+        this.css2dRenderer = new CSS2DRenderer();
+        this.css2dRenderer.setSize(window.innerWidth, window.innerHeight);
+        this.css2dRenderer.domElement.style.position = "absolute";
+        this.css2dRenderer.domElement.style.top = "0px";
+        this.css2dRenderer.domElement.style.pointerEvents = "auto";
+        this.css2dRenderer.domElement.style.zIndex = "2";
+
+
+        this.renderer.domElement.style.position = "absolute";
+        this.renderer.domElement.style.top = "0px";
+        this.renderer.domElement.style.zIndex = "40";
+        this.renderer.domElement.style.pointerEvents = "none";
+        this.renderer.domElement.style.zIndex = "1";
+
+        document.body.appendChild(this.css2dRenderer.domElement);
+        document.body.appendChild(this.renderer.domElement);
+        //document.body.appendChild(this.css2dRenderer.domElement);
+
+
+
+
+
+
 
         this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 2000);
         this.camera.position.set(2.5, 1, 3);
         this.camera.position.multiplyScalar(0.8);
         this.camera.lookAt(0, 1, 0);
-        this.sceneMain.add(this.camera);
+        this.webgpuScene.add(this.camera);
 
         const pane = new Pane({
 
         });
         //makesure the pane is at the bottom left corner
         pane.element.style.position = "fixed";
-        pane.element.style.zIndex = "10000000000000000";
+        pane.element.style.zIndex = "3";
         pane.element.style.bottom = "0px";
         pane.element.style.left = "0px";
         pane.element.style.width = "150px";
+        pane.element.style.pointerEvents = "none";
+        //not selectable
+        pane.element.style.userSelect = "none";
+
+
         //opacity
         pane.element.style.opacity = "0.5";
         pane.registerPlugin(EssentialsPlugin);
@@ -67,9 +100,9 @@ class MainController {
 
 
 
-        this.orbitcontrols = new OrbitControls(this.camera, this.renderer.domElement);
-        this.orbitcontrols.target.set(0, 1, 0);
-        this.orbitcontrols.update();
+        this.orbitControls = new OrbitControls(this.camera, this.css2dRenderer.domElement);
+        this.orbitControls.target.set(0, 1, 0);
+        this.orbitControls.update();
         window.addEventListener('resize', () => this.onWindowResize());
 
         document.addEventListener('dblclick', (event) => this.onDoubleClick(event), false);
@@ -79,24 +112,24 @@ class MainController {
 
         const light = new THREE.PointLight(0xffffff, 1);
         light.position.set(0, 1, 5);
-        this.sceneMain.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
-        this.sceneMain.add(light);
+        this.webgpuScene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
+        this.webgpuScene.add(light);
 
 
         this.grid = new InfiniteGridHelper(this.camera, 10, 100, new THREE.Color(0x888888), new THREE.Color(0x444444));
-        this.sceneMain.add(this.grid);
-        document.body.appendChild(this.renderer.domElement);
+        this.webgpuScene.add(this.grid);
     }
 
 
 
     async update(delta: number) {
-   
-        await this.renderer.renderAsync(this.sceneMain, this.camera);
+
+        await this.renderer.renderAsync(this.webgpuScene, this.camera);
         TWEEN.update();
         this.fpsGraph?.begin();
-		this.fpsGraph?.end();
-         
+        this.fpsGraph?.end();
+        this.css2dRenderer.render(this.webgpuScene, this.camera);
+
 
         // this.camera.position.x += 0.01;
     }
@@ -105,10 +138,11 @@ class MainController {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.css2dRenderer.setSize(window.innerWidth, window.innerHeight);
     }
 
     private onDoubleClick(event: MouseEvent): void {
-        console.log('double click');
+
         const raycaster = new THREE.Raycaster()
         raycaster.setFromCamera(
             new THREE.Vector2(
@@ -118,11 +152,23 @@ class MainController {
 
             this.camera
         )
-        const intersects = raycaster.intersectObjects(this.sceneMain.children, true)
+        const intersectionobjects = this.webgpuScene.children.filter((child) => {
+
+
+            //only groups can be intersected
+            if (child.type === "Group") {
+                return true;
+            }
+            return false;
+
+        }
+        );
+        const intersects = raycaster.intersectObjects(intersectionobjects, true)
 
         if (intersects.length > 0) {
             const p = intersects[0].point; // Point where the user double clicked.
 
+            console.log(intersects[0].object);
             // Calculate the current offset between the camera and the target
             let offset = new THREE.Vector3().copy(this.camera.position).sub(p);
             let spherical = new THREE.Spherical().setFromVector3(offset);
@@ -144,14 +190,14 @@ class MainController {
                 .start();
 
             // Update controls target to the new point (if using orbit controls)
-            new TWEEN.Tween(this.orbitcontrols.target)
+            new TWEEN.Tween(this.orbitControls.target)
                 .to({
                     x: p.x,
                     y: p.y,
                     z: p.z
                 }, 500)
                 .easing(TWEEN.Easing.Cubic.Out)
-                .onUpdate(() => this.orbitcontrols.update())
+                .onUpdate(() => this.orbitControls.update())
                 .start();
         }
 

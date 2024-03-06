@@ -1,4 +1,10 @@
 import './style.css';
+import UIkit from 'uikit';
+import Icons from 'uikit/dist/js/uikit-icons';
+import 'uikit/dist/css/uikit.css';
+UIkit.use(Icons);
+
+
 import * as THREE from 'three';
 import { Entity } from './utils/Entity';
 import { CharacterComponent } from './utils/Components/CharacterComponent';
@@ -105,7 +111,7 @@ class Main {
     const bobcontroller = new CharacterComponent({
       modelpath: 'models/gltf/ybot2.glb',
       animationspath: 'animations/gltf/ybot2@walking.glb',
-      scene: this.maincController.sceneMain
+      scene: this.maincController.webgpuScene
 
     });
 
@@ -114,7 +120,7 @@ class Main {
     const sydneycontroller = new CharacterComponent({
       modelpath: 'models/gltf/Xbot.glb',
       animationspath: 'animations/gltf/ybot2@walking.glb',
-      scene: this.maincController.sceneMain
+      scene: this.maincController.webgpuScene
     });
 
 
@@ -132,7 +138,7 @@ class Main {
       let randomcontroller = new CharacterComponent({
         modelpath: randoemclass,
         animationspath: 'animations/gltf/ybot2@walking.glb',
-        scene: this.maincController.sceneMain
+        scene: this.maincController. webgpuScene
       });
       entity.position.set(randomposition.x, randomposition.y, randomposition.z);
       await entity.AddComponent(randomcontroller);

@@ -5,6 +5,7 @@ class Entity {
     id: number;
     _position: THREE.Vector3;
     _rotation: THREE.Quaternion;
+    _group: THREE.Group;
     _components: Component[] = [];
     _handlers: {
         [topic: string]: ((message: unknown) => void)[];
@@ -15,12 +16,17 @@ class Entity {
     private _updatePromise: Promise<void> | null = null; // Store the current update promise
 
 
-    constructor() { 
+    constructor() {
         this._position = new THREE.Vector3();
         this._rotation = new THREE.Quaternion();
         this._alive = true;
 
     }
+
+    get group() {
+        return this._group;
+    }
+
     get name() {
         return this._name;
     }
@@ -60,11 +66,11 @@ class Entity {
         for (const component of this._components) {
             await component.InitEntity();
         }
-       
+
     }
 
-    async AddComponent(component: Component) {        
-        await component.InitComponent( this); 
+    async AddComponent(component: Component) {
+        await component.InitComponent(this);
         this._components.push(component);
     }
 
@@ -119,9 +125,9 @@ class Entity {
 
         return this._updatePromise;
     }
-    
+
     async Destroy() {
-    
+
         for (const component of this._components) {
             component.Destroy();
         }

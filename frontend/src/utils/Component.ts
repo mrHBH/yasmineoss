@@ -1,13 +1,13 @@
 
 import { Entity } from './Entity';
-class Component {	
-    _entity:  Entity;
-    _name: string;
+class Component {
+    _entity: Entity;
+    _componentname: string;
 
-    constructor( ) {
+    constructor() {
 
-        
-        
+
+
     }
 
 
@@ -20,27 +20,27 @@ class Component {
         //Destroy the component
     }
 
-    async InitComponent(entity : Entity ) {
+    async InitComponent(entity: Entity) {
         this._entity = entity;
-        console.log("InitComponent " + this._name);
-      
-        
+        console.log("InitComponent " + this._componentname);
+
+
     }
 
-	async InitEntity() {
+    async InitEntity() {
         console.log("InitEntity BasicComponent");
 
     }
 
 
-    Broadcast(m : {topic: string , data: unknown}) {
-		this._entity.Broadcast(m);
-	}
+    Broadcast(m: { topic: string, data: unknown }) {
+        this._entity.Broadcast(m);
+    }
 
-    
+
 }
 export { Component };
 
 
 
- 
+

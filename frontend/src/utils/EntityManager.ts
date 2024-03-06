@@ -18,7 +18,7 @@ class EntityManager {
     }
 
     async AddEntity(entity: Entity , name: string) {
-        entity.name = name;
+        entity._name = name;
         entity.id = this._ids;          
         this._entities.push(entity);
         this._entitiesMap.set(this._ids, entity);
