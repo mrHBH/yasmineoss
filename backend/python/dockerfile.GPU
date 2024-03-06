@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install git -y --no-install-recommends \
 ENV CMAKE_ARGS="-DLLAMA_OPENBLAS=on -DLLAMA_CUBLAS=on"
 ENV FORCE_CMAKE="1"
 # Install llama-cpp-python with the specified CMake options
-RUN pip install llama-cpp-python
+RUN pip   install llama-cpp-python==0.2.38
 # Install runtime dependencies if necessary (not applicable if all done in build stage)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt --upgrade  
@@ -32,7 +32,9 @@ ENV TRANSFORMERS_CACHE="/app/cache" \
     LANG=C.UTF-8    
 RUN pip install --force-reinstall charset-normalizer==3.1.0
 EXPOSE 8000
+RUN conda install -c conda-forge typing-extensions
+
 WORKDIR /app 
-COPY src /app
-CMD ["python", "main.py"]
+ 
+CMD ["python", "src/main.py"]
  

@@ -28,10 +28,12 @@ ENV TRANSFORMERS_CACHE="/app/cache" \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
+
+RUN pip   install llama-cpp-python==0.2.38
+
 EXPOSE 8000
-#copy the contents   of the foloder src in current directory to /app
-COPY src /app 
-CMD ["python", "main.py"]
+WORKDIR /app   
+CMD ["python", "src/main.py"]
 
  
 

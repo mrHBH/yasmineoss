@@ -7,11 +7,16 @@ services:
       dockerfile: dockerfile.GPU 
     restart: unless-stopped
     volumes:
-      - ./:/pythonbackend
+      - ./backend/python/models/:/app/models
+      - ./backend/python/src/:/app/src
     ports:
       - '8000:8000'
     networks:
       - yasminenet
+    environment:
+      - LLM_MODEL_NAME=mistral-7b-instruct-v0.2.Q8_0.gguf
+      - LLM_MODELS_PATH=/app/models/
+      - LLM_MODEL_URL=https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q8_0.gguf
     deploy:
       resources:
         reservations:
