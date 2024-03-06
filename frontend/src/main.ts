@@ -131,7 +131,7 @@ class Main {
     await this.entityManager.AddEntity(bob, "Bob");
 
     //add 50 random entities at random positions either bob or sydney all walking
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 5; i++) {
       let entity = new Entity();
       let randoemclass = Math.random() < 0.5 ? 'models/gltf/ybot2.glb' : 'models/gltf/Xbot.glb';
       let randomposition = new THREE.Vector3(Math.random() * 20, 0, Math.random() * 50);
