@@ -103,7 +103,7 @@ class Main {
 
   private async init(): Promise<void> {
     this.entityManager = new EntityManager();
-    this.maincController = new MainController();
+    this.maincController = new MainController(this.entityManager);
 
 
 
@@ -138,7 +138,7 @@ class Main {
       let randomcontroller = new CharacterComponent({
         modelpath: randoemclass,
         animationspath: 'animations/gltf/ybot2@walking.glb',
-        scene: this.maincController. webgpuScene
+        scene: this.maincController.webgpuScene
       });
       entity.position.set(randomposition.x, randomposition.y, randomposition.z);
       await entity.AddComponent(randomcontroller);

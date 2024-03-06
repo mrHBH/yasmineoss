@@ -18,7 +18,9 @@
   "dependencies": {
     "@tweakpane/plugin-essentials": "^0.2.1",
     "@tweenjs/tween.js": "^23.1.1",
+    "shifty": "^3.0.3",
     "three": "^0.162.0",
+    "three-mesh-bvh": "^0.7.3",
     "tweakpane": "^4.0.3",
     "uikit": "^3.19.1",
     "uuid": "^9.0.1"

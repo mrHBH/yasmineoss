@@ -30,12 +30,16 @@ class CharacterComponent extends Component {
         this._animationspath = animationspath;
         this._scene = scene;
         this._group = new THREE.Group();
+
     }
+
     async InitComponent(entity: Entity): Promise<void> {
         this._entity = entity;
         this._model = await LoadingManager.loadGLTF(this._modelpath);
         this._animation = await LoadingManager.loadGLTFAnimation('animations/gltf/ybot2@walking.glb');
         this._group.add(this._model);
+
+
         this._mixer = new THREE.AnimationMixer(this._model);
         this._mixer.clipAction(this._animation).play();
         this._model.traverse(function (child: any) {
@@ -47,7 +51,7 @@ class CharacterComponent extends Component {
                 //create a skinning node
                 //    const animatedskinning =  skinning( child ) ;
                 //   materialPoints.positionNode = animatedskinning;
-
+                child.geometry.computeBoundsTree();
                 //adjust scale and rotation of the points
                 //materialPoints.positionNode = uniform( child.scale );
 
@@ -59,38 +63,42 @@ class CharacterComponent extends Component {
 
 
                 //   child.updateMatrixWorld(true); // Force update matrix and children
-                //    this._pointCloud = new THREE.Points(child.geometry, materialPoints);
+                   this._pointCloud = new THREE.Points(child.geometry, materialPoints);
 
 
 
-                //   this._group.add(this._pointCloud);
+                   // this._group.add(this._pointCloud);
 
 
             }
         }.bind(this));
+
         this._scene.add(this._group);
+
+
+
+
+
     }
+
+
     async InitEntity(): Promise<void> {
         console.log("InitEntity CharacterComponent");
-        const htmlelelementinnerHTML = /*html*/ `
-        
-        <ul class="uk-iconnav">      
+        const htmlelelementinnerHTML = /*html*/ `<ul class="uk-iconnav">      
 		
-            <li><a href="#" uk-tooltip="Chat!" uk-icon="icon:  reply; ratio: 1.0"></a>
-                    <div class="   uk-background-secondary" uk-dropdown="pos: top; offset: 160; mode: click; auto-update: false; animate-out: true " >
-                        <button class="uk-button uk-button-default">Debug</button></p>	 
-                    </div>
-                
-            </li>
-            <li>
-                <a class="namenode" href="#"></span> ${this._entity._name}</a>
-            </li>
-         </ul>`;
+		<li><a href="#" uk-tooltip="Chat!" uk-icon="icon:  reply; ratio: 1.0"></a>
+ 
+	</li>
+        <li><a id="name" class="namenode" href="#" ></span> ${this._entity._name}</a></li>
+    </ul>`;
         const htmlelelement = document.createElement('div');
         htmlelelement.innerHTML = htmlelelementinnerHTML;
         const label = new CSS2DObject(htmlelelement);
         label.position.set(0, 2, 0);
         this._group.add(label);
+
+        this._entity._group = this._group;
+        this._entity._mesh = this._model as THREE.Mesh;
 
     }
 
@@ -105,15 +113,12 @@ class CharacterComponent extends Component {
 
 
     async Destroy() {
-
-        //loop through all the children and remove them
         for (let i = this._group.children.length - 1; i >= 0; i--) {
             //find all instances of css2dobject and remove them
-           
+            if (this._group.children[i] instanceof CSS2DObject) {
                 this._group.remove(this._group.children[i]);
-            
+            }
         }
-            
         this._scene.remove(this._group);
     }
 

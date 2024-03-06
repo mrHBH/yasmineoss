@@ -6,6 +6,7 @@ class Entity {
     _position: THREE.Vector3;
     _rotation: THREE.Quaternion;
     _group: THREE.Group;
+    _mesh: THREE.Mesh;
     _components: Component[] = [];
     _handlers: {
         [topic: string]: ((message: unknown) => void)[];

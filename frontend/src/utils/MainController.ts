@@ -4,9 +4,20 @@ import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 
 import WebGPURenderer from 'three/examples/jsm/renderers/webgpu/WebGPURenderer.js';
 import { InfiniteGridHelper } from "./InfiniteGridHelper";
-import TWEEN from '@tweenjs/tween.js'
+import { tween } from 'shifty'
 import { Pane } from 'tweakpane';
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials';
+import {
+    acceleratedRaycast, computeBoundsTree, disposeBoundsTree,
+    CENTER, SAH, AVERAGE, MeshBVHHelper
+} from 'three-mesh-bvh';
+import { EntityManager } from './EntityManager';
+
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+//@ts-ignore
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+//@ts-ignore
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 
 
 class MainController {
@@ -15,12 +26,13 @@ class MainController {
     scene: THREE.Scene;
     renderer: WebGPURenderer;
     css2dRenderer: CSS2DRenderer;
+    entitymanager: EntityManager
 
     webgpuScene: THREE.Scene;
     clock: THREE.Clock;
     grid: any;
     fpsGraph: any;
-    constructor() {
+    constructor(entityManager: EntityManager) {
 
 
         this.webgpuScene = new THREE.Scene();
@@ -33,6 +45,7 @@ class MainController {
             this.renderer.setSize(window.innerWidth, window.innerHeight);
 
         });
+        this.entitymanager = entityManager;
         this.css2dRenderer = new CSS2DRenderer();
         this.css2dRenderer.setSize(window.innerWidth, window.innerHeight);
         this.css2dRenderer.domElement.style.position = "absolute";
@@ -118,6 +131,7 @@ class MainController {
 
         this.grid = new InfiniteGridHelper(this.camera, 10, 100, new THREE.Color(0x888888), new THREE.Color(0x444444));
         this.webgpuScene.add(this.grid);
+
     }
 
 
@@ -125,9 +139,10 @@ class MainController {
     async update(delta: number) {
 
         await this.renderer.renderAsync(this.webgpuScene, this.camera);
-        TWEEN.update();
+        //  TWEEN.update();
         this.fpsGraph?.begin();
         this.fpsGraph?.end();
+        //wait 1 s
         this.css2dRenderer.render(this.webgpuScene, this.camera);
 
 
@@ -141,70 +156,100 @@ class MainController {
         this.css2dRenderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-    private onDoubleClick(event: MouseEvent): void {
 
-        const raycaster = new THREE.Raycaster()
+
+    private async onDoubleClick(event: MouseEvent): Promise<void> {
+        const raycaster = new THREE.Raycaster();
+        raycaster.firstHitOnly = true;
+
+
+        //get first mesh object from the entities in the scene 
+        let entities = this.entitymanager.Entities;
+        //get first child that is of type "SkinnedMesh" 
+        let entitieswithmeshes = entities.map((entity) =>
+            entity._mesh)
+        //filter  groups that is of type mesh
+        //   let entitieswithmeshes =  entities.map((entity) =>  entity.group.children[0]).filter((child) => child instanceof THREE.Mesh);
+
+        console.log(entitieswithmeshes);
+
         raycaster.setFromCamera(
             new THREE.Vector2(
-                (event.clientX / this.renderer.domElement.clientWidth) * 2 - 1,
-                -(event.clientY / this.renderer.domElement.clientHeight) * 2 + 1
+                ((event.clientX / this.renderer.domElement.clientWidth) * 2 - 1), // These should already be numbers but reaffirming for clarity.
+                (-(event.clientY / this.renderer.domElement.clientHeight) * 2 + 1)
             ),
-
             this.camera
-        )
-        const intersectionobjects = this.webgpuScene.children.filter((child) => {
-
-
-            //only groups can be intersected
-            if (child.type === "Group") {
-                return true;
-            }
-            return false;
-
-        }
         );
-        const intersects = raycaster.intersectObjects(intersectionobjects, true)
+
+        const intersectionObjects = this.webgpuScene.children.filter((child) => child.type === "Group");
+        // for (let i = 0; i < intersectionObjects.length; i++) {
+        //     intersectionObjects[i].traverse((child) => {
+        //         if (child instanceof THREE.Mesh) {
+        //             child.geometry.computeBoundsTree();
+        //         }
+        //     });
+        // }
+        const intersects = raycaster.intersectObjects(entitieswithmeshes, true);
+        console.log(intersects);
 
         if (intersects.length > 0) {
-            const p = intersects[0].point; // Point where the user double clicked.
+            const p = intersects[0].point;
 
             console.log(intersects[0].object);
-            // Calculate the current offset between the camera and the target
             let offset = new THREE.Vector3().copy(this.camera.position).sub(p);
             let spherical = new THREE.Spherical().setFromVector3(offset);
 
-            let newRadius = 5; //spherical.radius * zoomFactor;
+            let newRadius = 5; // This is a number, so no issue here.
 
-            // Calculate new camera position
             let newCameraPosition = new THREE.Vector3().setFromSphericalCoords(newRadius, spherical.phi, spherical.theta).add(p);
 
-            // Optionally, smoothly transition the camera to the new position and orientation.
-            // Update camera position
-            new TWEEN.Tween(this.camera.position)
-                .to({
-                    x: newCameraPosition.x,
-                    y: newCameraPosition.y,
-                    z: newCameraPosition.z
-                }, 500)
-                .easing(TWEEN.Easing.Cubic.Out)
-                .start();
+            // Enforce number types on all coordinates before passing them into the tween.
+            tween({
+                from: {
+                    x: Number(this.camera.position.x),
+                    y: Number(this.camera.position.y),
+                    z: Number(this.camera.position.z)
+                },
+                to: {
+                    x: Number(newCameraPosition.x),
+                    y: Number(newCameraPosition.y),
+                    z: Number(newCameraPosition.z)
+                },
+                duration: 500,
+                easing: 'cubicInOut',
+                render: (state) => {
+                    // Here ensure all state values are treated as numbers explicitly
+                    this.camera.position.set(Number(state.x), Number(state.y), Number(state.z));
+                }
+            });
 
-            // Update controls target to the new point (if using orbit controls)
-            new TWEEN.Tween(this.orbitControls.target)
-                .to({
-                    x: p.x,
-                    y: p.y,
-                    z: p.z
-                }, 500)
-                .easing(TWEEN.Easing.Cubic.Out)
-                .onUpdate(() => this.orbitControls.update())
-                .start();
+            // Repeat type enforcement for orbit controls target tween
+            tween({
+                from: {
+                    x: Number(this.orbitControls.target.x),
+                    y: Number(this.orbitControls.target.y),
+                    z: Number(this.orbitControls.target.z)
+                },
+                to: {
+                    x: Number(p.x),
+                    y: Number(p.y),
+                    z: Number(p.z)
+                },
+                duration: 500,
+                easing: 'cubicInOut',
+                render: (state) => {
+                    this.orbitControls.target.set(Number(state.x), Number(state.y), Number(state.z));
+                    this.orbitControls.update();
+                }
+            });
         }
 
+
+
     }
-
-
-
 }
 
 export { MainController };
+
+
+
