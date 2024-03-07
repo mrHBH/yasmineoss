@@ -191,7 +191,7 @@ class MainController {
         this.fpsGraph?.end();
         //wait 1 s
         this.css2drenderer.render(this.css2dscene, this.camera);
-        this.css3drenderer.render(this.css3dscene,  this.camera);
+      //  this.css3drenderer.render(this.css3dscene,  this.camera);
 
 
 
