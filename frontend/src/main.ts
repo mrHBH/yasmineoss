@@ -167,11 +167,11 @@ class Main {
       5000
     );
 
-    // await sydney.AddComponent(sydneycontroller);
-    // await this.entityManager.AddEntity(sydney, "Sydney");
+    await sydney.AddComponent(sydneycontroller);
+    await this.entityManager.AddEntity(sydney, "Sydney");
 
-    // await bob.AddComponent(bobcontroller);
-    // await this.entityManager.AddEntity(bob, "Bob");
+    await bob.AddComponent(bobcontroller);
+    await this.entityManager.AddEntity(bob, "Bob");
 
     // //add 50 random entities at random positions either bob or sydney all walking
     // for (let i = 0; i < 50; i++) {
