@@ -50,7 +50,7 @@ class UIComponent extends Component {
 
          
         this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
-        this._entity._entityManager._mc.css2dscene.add(this._css2dgroup);
+        this._entity._entityManager._mc.css2dscenel2.add(this._css2dgroup);
 
         
     }
@@ -64,7 +64,7 @@ class UIComponent extends Component {
         const distance = this._entity.position.distanceTo(this._entity._entityManager._mc.camera.position);
         //hide the opacity of this._titlebar if the distance is greater than 10
 
-        if (distance > 40) {
+        if (distance > 25) {
             this._htmlElement.style.opacity = "0";
             this._htmlElement.style.pointerEvents = "none";
              

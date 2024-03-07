@@ -15,7 +15,7 @@ class StaticCLI {
         return prompt;
     }
 
-    public static async typeInside(container: HTMLElement, textelementtag:string, text: string, delay: number = 100): Promise<void> {
+    public static async typeInside(container: HTMLElement, textelementtag:string, text: string, delay: number = 100 , override: boolean = false): Promise<void> {
 
 
         //query textelementtag from the container
@@ -32,7 +32,7 @@ class StaticCLI {
         const cursor = this.ensureCursor(container);
 
 
-        let currentText = textelement.textContent ?? ''; // Get current text without the cursor
+        let currentText = override ? '' : textelement.textContent || '';
 
         for (const char of text) {
             await new Promise<void>((resolve) => {

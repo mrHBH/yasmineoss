@@ -115,48 +115,57 @@ class Main {
       animationspath: "animations/gltf/ybot2@walking.glb",
     });
 
-
-
     const introui = new Entity();
     introui.position.set(0, 10, 0);
     const uicomponent = new UIComponent(
-      '<div class="uk-card uk-card-default uk-card-body"> <h3 class="uk-card-title">Hello World</h3> <p>UI Component</p> </div>'
+      '<div class="uk-card uk-card-default uk-card-body"> <h3 class="uk-card-title">Hello World</h3> <p class="inner-text">UI Component</p> </div>'
     );
 
     await introui.AddComponent(uicomponent);
     await this.entityManager.AddEntity(introui, "UI");
 
-    setInterval(() => {
-      tween({
-        from: {
-          x:  introui.position.x,
-          y: introui.position.y,
-          z:  introui.position.z,
+    setInterval(
+      () => {
+        tween({
+          from: {
+            x: introui.position.x,
+            y: introui.position.y,
+            z: introui.position.z,
+          },
+          to: {
+            x: Math.random() * 5,
+            y: Math.random() * 5,
+            z: Math.random() * 5,
+          },
+          duration: 10000,
+          easing: "cubicInOut",
+          render: (state) => {
+            // Here ensure all state values are treated as numbers explicitly
+            introui.position.set(
+              Number(state.x),
+              Number(state.y),
+              Number(state.z)
+            );
+          },
+        });
+        StaticCLI.typeInside(
+          uicomponent.htmlElement,
+          "uk-card-title",
+          "YASMINE OS OS BUILD 5",
+          25,
+          true
+        );
+        StaticCLI.typeInside(
+          uicomponent.htmlElement,
+          "inner-text",
+          "... Under Contstruction ...  ",
+          250,
+          true
+        );
+      },
 
-        },
-        to: {
-          x: Math.random() * 5,
-          y: Math.random() * 5,
-          z: Math.random() * 5,
-        },
-        duration: 10000,
-        easing: "cubicInOut",
-        render: (state) => {
-          // Here ensure all state values are treated as numbers explicitly
-          introui.position.set(
-            Number(state.x),
-            Number(state.y),
-            Number(state.z)
-          );
-        },
-      });
-      StaticCLI.typeInside(uicomponent.htmlElement, "uk-card-title", "... Under Contstruction ... YASMINE OS OS BUILD 5", 25);  
-
-    }
- 
-   
- 
-    , 2500);
+      5000
+    );
 
     await sydney.AddComponent(sydneycontroller);
     await this.entityManager.AddEntity(sydney, "Sydney");
@@ -164,28 +173,28 @@ class Main {
     await bob.AddComponent(bobcontroller);
     await this.entityManager.AddEntity(bob, "Bob");
 
-    //add 50 random entities at random positions either bob or sydney all walking
-    for (let i = 0; i < 50; i++) {
-      let entity = new Entity();
-      let randoemclass =
-        Math.random() < 0.5 ? "models/gltf/ybot2.glb" : "models/gltf/Xbot.glb";
-      let randomposition = new THREE.Vector3(
-        Math.random() * 20,
-        0,
-        Math.random() * 50
-      );
-      let randomcontroller = new CharacterComponent({
-        modelpath: randoemclass,
-        animationspath: "animations/gltf/ybot2@walking.glb",
-      });
-      entity.position.set(randomposition.x, randomposition.y, randomposition.z);
-      await entity.AddComponent(randomcontroller);
-      await this.entityManager.AddEntity(entity, "RandomEntity" + i);
-      let deathtimeout = Math.random() * 32000 + 2000;
-      setTimeout(() => {
-        entity.kill();
-      }, deathtimeout);
-    }
+    // //add 50 random entities at random positions either bob or sydney all walking
+    // for (let i = 0; i < 50; i++) {
+    //   let entity = new Entity();
+    //   let randoemclass =
+    //     Math.random() < 0.5 ? "models/gltf/ybot2.glb" : "models/gltf/Xbot.glb";
+    //   let randomposition = new THREE.Vector3(
+    //     Math.random() * 20,
+    //     0,
+    //     Math.random() * 50
+    //   );
+    //   let randomcontroller = new CharacterComponent({
+    //     modelpath: randoemclass,
+    //     animationspath: "animations/gltf/ybot2@walking.glb",
+    //   });
+    //   entity.position.set(randomposition.x, randomposition.y, randomposition.z);
+    //   await entity.AddComponent(randomcontroller);
+    //   await this.entityManager.AddEntity(entity, "RandomEntity" + i);
+    //   let deathtimeout = Math.random() * 32000 + 2000;
+    //   setTimeout(() => {
+    //     entity.kill();
+    //   }, deathtimeout);
+    // }
 
     this.animate();
   }

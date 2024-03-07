@@ -28,6 +28,8 @@ class MainController {
   css2drenderer: CSS2DRenderer;
   css2dscene: THREE.Scene = new THREE.Scene();
   entitymanager: EntityManager;
+  css2drendererl2: CSS2DRenderer;
+  css2dscenel2: THREE.Scene = new THREE.Scene();
 
   webgpuscene: THREE.Scene = new THREE.Scene();
   clock: THREE.Clock;
@@ -51,9 +53,17 @@ class MainController {
     this.css2drenderer.domElement.style.pointerEvents = "auto";
     this.css2drenderer.domElement.style.zIndex = "4";
 
+
+
+    this.css2drendererl2 = new CSS2DRenderer();
+    this.css2drendererl2.setSize(window.innerWidth, window.innerHeight);
+    this.css2drendererl2.domElement.style.position = "absolute";
+    this.css2drendererl2.domElement.style.top = "0px";
+    this.css2drendererl2.domElement.style.pointerEvents = "auto";
+    this.css2drendererl2.domElement.style.zIndex = "2";
+
     this.webgpu.domElement.style.position = "absolute";
     this.webgpu.domElement.style.top = "0px";
-
     this.webgpu.domElement.style.pointerEvents = "none";
     this.webgpu.domElement.style.zIndex = "3";
 
@@ -69,6 +79,7 @@ class MainController {
 
     document.body.appendChild(this.css2drenderer.domElement);
     document.body.appendChild(this.webgpu.domElement);
+    document.body.appendChild(this.css2drendererl2.domElement);
     // document.body.appendChild(this.css3drenderer.domElement);
     //document.body.appendChild(this.css2dRenderer.domElement);
 
@@ -147,7 +158,7 @@ class MainController {
     //wait 1 s
     this.css2drenderer.render(this.css2dscene, this.camera);
     //  this.css3drenderer.render(this.css3dscene,  this.camera);
-
+    this.css2drendererl2.render(this.css2dscenel2, this.camera); 
     // this.camera.position.x += 0.01;
   }
 
@@ -156,6 +167,7 @@ class MainController {
     this.camera.updateProjectionMatrix();
     this.webgpu.setSize(window.innerWidth, window.innerHeight);
     this.css2drenderer.setSize(window.innerWidth, window.innerHeight);
+    this.css2drendererl2 .setSize(window.innerWidth, window.innerHeight);
     // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
   }
 
