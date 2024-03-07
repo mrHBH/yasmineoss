@@ -6,8 +6,7 @@ WORKDIR /frontend
  
 
 # Copy the package.json file into the container
-COPY package.json .
-
+COPY package.json /frontend/package.json
 # Install dependencies
 RUN bun install
 

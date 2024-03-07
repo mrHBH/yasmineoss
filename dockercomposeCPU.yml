@@ -64,6 +64,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./frontend/:/frontend
+      - /frontend/node_modules
     ports:
       - '3001:3001'
     networks:
