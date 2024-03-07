@@ -167,6 +167,69 @@ class Main {
       5000
     );
 
+    //create 50  ui elements , and animate them in a random fashion , and change the text inside them in a random fashion
+
+    for (let i = 0; i < 50; i++) {
+      let entity = new Entity();
+      let randomposition = new THREE.Vector3(
+        Math.random() * 200,
+        Math.random() * 200,
+        Math.random() * 200
+      );
+      let randomui = new UIComponent(
+        '<div class="uk-card uk-card-default uk-card-body"> <h3 class="uk-card-title">Hello World</h3> <p class="inner-text">UI Component</p> </div>'
+      );
+      entity.position.set(randomposition.x, randomposition.y, randomposition.z);
+      await entity.AddComponent(randomui);
+      await this.entityManager.AddEntity(entity, "UI" + i);
+      let deathtimeout = Math.random() * 32000 + 2000;
+      setInterval(
+        () => {
+          tween({
+            from: {
+              x: entity.position.x,
+              y: entity.position.y,
+              z: entity.position.z,
+            },
+            to: {
+              x: Math.random() * 200,
+              y: Math.random() * 200,
+              z: Math.random() * 200,
+            },
+            duration: 100000,
+            easing: "cubicInOut",
+            render: (state) => {
+              // Here ensure all state values are treated as numbers explicitly
+              entity.position.set(
+                Number(state.x),
+                Number(state.y),
+                Number(state.z)
+              );
+            },
+          });
+          StaticCLI.typeInside(
+            randomui.htmlElement,
+            "uk-card-title",
+            "YASMINE OS OS BUILD 5",
+            25,
+            true
+          );
+          StaticCLI.typeInside(
+            randomui.htmlElement,
+            "inner-text",
+            "... Under Contstruction ...  ",
+            250,
+            true
+          );
+        },
+
+        50000
+      );
+      setTimeout(() => {
+      //  entity.kill();
+      }, deathtimeout);
+    }
+
     await sydney.AddComponent(sydneycontroller);
     await this.entityManager.AddEntity(sydney, "Sydney");
 

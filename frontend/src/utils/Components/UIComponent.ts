@@ -64,7 +64,7 @@ class UIComponent extends Component {
         const distance = this._entity.position.distanceTo(this._entity._entityManager._mc.camera.position);
         //hide the opacity of this._titlebar if the distance is greater than 10
 
-        if (distance > 25) {
+        if (distance > 35) {
             this._htmlElement.style.opacity = "0";
             this._htmlElement.style.pointerEvents = "none";
              
