@@ -78,8 +78,9 @@ class MainController {
     // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
 
     document.body.appendChild(this.css2drenderer.domElement);
-    document.body.appendChild(this.webgpu.domElement);
     document.body.appendChild(this.css2drendererl2.domElement);
+    document.body.appendChild(this.webgpu.domElement);
+    
     // document.body.appendChild(this.css3drenderer.domElement);
     //document.body.appendChild(this.css2dRenderer.domElement);
 
