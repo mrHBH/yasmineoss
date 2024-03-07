@@ -1,9 +1,12 @@
 import { Entity } from "./Entity.ts";
+import { MainController } from "./MainController.ts";
 
 class EntityManager {
     _ids: number;
     _entities: Entity[];
     _entitiesMap:   Map<number, Entity>;
+    _mc: MainController;
+
     
     constructor() {
         this._ids = 0;
@@ -21,6 +24,7 @@ class EntityManager {
         entity._name = name;
         entity.id = this._ids;          
         this._entities.push(entity);
+        entity._entityManager = this;
         this._entitiesMap.set(this._ids, entity);
         this._ids++;
         await entity.Initialize();

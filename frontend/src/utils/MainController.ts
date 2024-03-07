@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/Addons.js';
+import { CSS3DRenderer, OrbitControls ,CSS3DObject } from 'three/examples/jsm/Addons.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 
 import WebGPURenderer from 'three/examples/jsm/renderers/webgpu/WebGPURenderer.js';
@@ -12,6 +12,7 @@ import {
     CENTER, SAH, AVERAGE, MeshBVHHelper
 } from 'three-mesh-bvh';
 import { EntityManager } from './EntityManager';
+import { CharacterComponent } from './Components/CharacterComponent';
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 //@ts-ignore
@@ -24,44 +25,90 @@ class MainController {
     camera: THREE.PerspectiveCamera;
     orbitControls: OrbitControls;
     scene: THREE.Scene;
-    renderer: WebGPURenderer;
-    css2dRenderer: CSS2DRenderer;
+    webgpu: WebGPURenderer;
+    css2drenderer: CSS2DRenderer;
+    css2dscene: THREE.Scene = new THREE.Scene();
     entitymanager: EntityManager
 
-    webgpuScene: THREE.Scene;
+    webgpuscene: THREE.Scene = new THREE.Scene();
     clock: THREE.Clock;
     grid: any;
     fpsGraph: any;
+    css3drenderer: CSS3DRenderer
+    css3dscene:  THREE.Scene = new THREE.Scene();
     constructor(entityManager: EntityManager) {
 
 
-        this.webgpuScene = new THREE.Scene();
-        //  this.webgpuScene.background = new THREE.Color(0x222222);
+       this.webgpuscene.background = new THREE.Color(0x202020);
 
 
-        this.renderer = new WebGPURenderer({ antialias: true });
-        this.renderer.init().then(() => {
-            this.renderer.setPixelRatio(window.devicePixelRatio);
-            this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.webgpu = new WebGPURenderer({ antialias: true });
+        this.webgpu.init().then(() => {
+            this.webgpu.setPixelRatio(window.devicePixelRatio);
+            this.webgpu.setSize(window.innerWidth, window.innerHeight);
 
         });
+		this.webgpu.setClearColor( new THREE.Color( 0x000000 ) );
         this.entitymanager = entityManager;
-        this.css2dRenderer = new CSS2DRenderer();
-        this.css2dRenderer.setSize(window.innerWidth, window.innerHeight);
-        this.css2dRenderer.domElement.style.position = "absolute";
-        this.css2dRenderer.domElement.style.top = "0px";
-        this.css2dRenderer.domElement.style.pointerEvents = "auto";
-        this.css2dRenderer.domElement.style.zIndex = "2";
+        this.entitymanager._mc = this;
+        this.css2drenderer = new CSS2DRenderer();
+        this.css2drenderer.setSize(window.innerWidth, window.innerHeight);
+        this.css2drenderer.domElement.style.position = "absolute";
+        this.css2drenderer.domElement.style.top = "0px";
+        this.css2drenderer.domElement.style.pointerEvents = "auto";
+        this.css2drenderer.domElement.style.zIndex = "4";
 
 
-        this.renderer.domElement.style.position = "absolute";
-        this.renderer.domElement.style.top = "0px";
-        this.renderer.domElement.style.zIndex = "40";
-        this.renderer.domElement.style.pointerEvents = "none";
-        this.renderer.domElement.style.zIndex = "1";
+        this.webgpu.domElement.style.position = "absolute";
+        this.webgpu.domElement.style.top = "0px";
+ 
+        this.webgpu.domElement.style.pointerEvents = "none";
+        this.webgpu.domElement.style.zIndex = "3";
 
-        document.body.appendChild(this.css2dRenderer.domElement);
-        document.body.appendChild(this.renderer.domElement);
+        this.css3drenderer = new CSS3DRenderer();
+		this.css3drenderer.domElement.style.position = "absolute";
+		//this.rendererCSS.domElement.style.transition = "all 5.5s ease";
+		this.css3drenderer.domElement.style.top = "0";
+        this.css3drenderer.domElement.style.zIndex = "2";
+ 
+        this.css3drenderer.domElement.style.pointerEvents = "none";
+
+
+        let div = document.createElement('div');
+        div.style.width = '10000px';
+        div.style.height = '500px';
+        div.style.backgroundColor = 'blue';
+         div.style.pointerEvents = 'none';
+
+         const planeMaterial = new THREE.MeshLambertMaterial();
+		 
+
+		
+         planeMaterial.color.set("black");
+         planeMaterial.opacity = 0.00;
+         planeMaterial.blending = THREE.NoBlending;
+         planeMaterial.transparent = false;
+         planeMaterial.side = THREE.DoubleSide;
+
+        const planeGeometry = new THREE.PlaneGeometry(10, 10);
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.position.set(0, 3, 10);
+
+        this.webgpuscene.add(plane);
+ 
+
+        const css3dobject = new CSS3DObject(div);
+
+
+        css3dobject.position.set(0, 3,10);
+        this.css3dscene.add(css3dobject);
+
+        //this.rendererCSS.domElement.style.transition = "all 0.5s ease";
+        this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
+
+        document.body.appendChild(this.css2drenderer.domElement);
+        document.body.appendChild(this.webgpu.domElement);
+        document.body.appendChild(this.css3drenderer.domElement);
         //document.body.appendChild(this.css2dRenderer.domElement);
 
 
@@ -74,7 +121,7 @@ class MainController {
         this.camera.position.set(2.5, 1, 3);
         this.camera.position.multiplyScalar(0.8);
         this.camera.lookAt(0, 1, 0);
-        this.webgpuScene.add(this.camera);
+        this.webgpuscene.add(this.camera);
 
         const pane = new Pane({
 
@@ -113,7 +160,7 @@ class MainController {
 
 
 
-        this.orbitControls = new OrbitControls(this.camera, this.css2dRenderer.domElement);
+        this.orbitControls = new OrbitControls(this.camera, this.css2drenderer.domElement);
         this.orbitControls.target.set(0, 1, 0);
         this.orbitControls.update();
         window.addEventListener('resize', () => this.onWindowResize());
@@ -125,12 +172,12 @@ class MainController {
 
         const light = new THREE.PointLight(0xffffff, 1);
         light.position.set(0, 1, 5);
-        this.webgpuScene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
-        this.webgpuScene.add(light);
+        this.webgpuscene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
+        this.webgpuscene.add(light);
 
 
         this.grid = new InfiniteGridHelper(this.camera, 10, 100, new THREE.Color(0x888888), new THREE.Color(0x444444));
-        this.webgpuScene.add(this.grid);
+        this.webgpuscene.add(this.grid);
 
     }
 
@@ -138,12 +185,14 @@ class MainController {
 
     async update(delta: number) {
 
-        await this.renderer.renderAsync(this.webgpuScene, this.camera);
+        await this.webgpu.renderAsync(this.webgpuscene, this.camera);
         //  TWEEN.update();
         this.fpsGraph?.begin();
         this.fpsGraph?.end();
         //wait 1 s
-        this.css2dRenderer.render(this.webgpuScene, this.camera);
+        this.css2drenderer.render(this.css2dscene, this.camera);
+        this.css3drenderer.render(this.css3dscene,  this.camera);
+
 
 
         // this.camera.position.x += 0.01;
@@ -152,8 +201,9 @@ class MainController {
     private onWindowResize(): void {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.css2dRenderer.setSize(window.innerWidth, window.innerHeight);
+        this.webgpu.setSize(window.innerWidth, window.innerHeight);
+        this.css2drenderer.setSize(window.innerWidth, window.innerHeight);
+        this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
     }
 
 
@@ -162,26 +212,16 @@ class MainController {
         const raycaster = new THREE.Raycaster();
         raycaster.firstHitOnly = true;
 
-
-        //get first mesh object from the entities in the scene 
-        let entities = this.entitymanager.Entities;
-        //get first child that is of type "SkinnedMesh" 
-        let entitieswithmeshes = entities.map((entity) =>
-            entity._mesh)
-        //filter  groups that is of type mesh
-        //   let entitieswithmeshes =  entities.map((entity) =>  entity.group.children[0]).filter((child) => child instanceof THREE.Mesh);
-
-        console.log(entitieswithmeshes);
-
+ 
         raycaster.setFromCamera(
             new THREE.Vector2(
-                ((event.clientX / this.renderer.domElement.clientWidth) * 2 - 1), // These should already be numbers but reaffirming for clarity.
-                (-(event.clientY / this.renderer.domElement.clientHeight) * 2 + 1)
+                ((event.clientX / this.webgpu.domElement.clientWidth) * 2 - 1), // These should already be numbers but reaffirming for clarity.
+                (-(event.clientY / this.webgpu.domElement.clientHeight) * 2 + 1)
             ),
             this.camera
         );
 
-        const intersectionObjects = this.webgpuScene.children.filter((child) => child.type === "Group");
+        const intersectionObjects = this.webgpuscene.children.filter((child) => child.type === "Group");
         // for (let i = 0; i < intersectionObjects.length; i++) {
         //     intersectionObjects[i].traverse((child) => {
         //         if (child instanceof THREE.Mesh) {
@@ -189,7 +229,7 @@ class MainController {
         //         }
         //     });
         // }
-        const intersects = raycaster.intersectObjects(entitieswithmeshes, true);
+        const intersects = raycaster.intersectObjects( intersectionObjects, true);
         console.log(intersects);
 
         if (intersects.length > 0) {

@@ -111,8 +111,7 @@ class Main {
     const bobcontroller = new CharacterComponent({
       modelpath: 'models/gltf/ybot2.glb',
       animationspath: 'animations/gltf/ybot2@walking.glb',
-      scene: this.maincController.webgpuScene
-
+ 
     });
 
     const sydney = new Entity();
@@ -120,7 +119,7 @@ class Main {
     const sydneycontroller = new CharacterComponent({
       modelpath: 'models/gltf/Xbot.glb',
       animationspath: 'animations/gltf/ybot2@walking.glb',
-      scene: this.maincController.webgpuScene
+      
     });
 
 
@@ -131,19 +130,19 @@ class Main {
     await this.entityManager.AddEntity(bob, "Bob");
 
     //add 50 random entities at random positions either bob or sydney all walking
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 50; i++) {
       let entity = new Entity();
       let randoemclass = Math.random() < 0.5 ? 'models/gltf/ybot2.glb' : 'models/gltf/Xbot.glb';
       let randomposition = new THREE.Vector3(Math.random() * 20, 0, Math.random() * 50);
       let randomcontroller = new CharacterComponent({
         modelpath: randoemclass,
         animationspath: 'animations/gltf/ybot2@walking.glb',
-        scene: this.maincController.webgpuScene
+ 
       });
       entity.position.set(randomposition.x, randomposition.y, randomposition.z);
       await entity.AddComponent(randomcontroller);
       await this.entityManager.AddEntity(entity, "RandomEntity" + i);
-      let deathtimeout = Math.random() * 16000 + 2000
+      let deathtimeout = Math.random() * 32000 + 2000
       setTimeout(() => {
         entity.kill()
       }, deathtimeout);

@@ -1,13 +1,13 @@
 import * as THREE from "three";
 import { Component } from "./Component";
+import { EntityManager } from "./EntityManager";
 class Entity {
     _name: string;
     id: number;
     _position: THREE.Vector3;
     _rotation: THREE.Quaternion;
-    _group: THREE.Group;
-    _mesh: THREE.Mesh;
     _components: Component[] = [];
+    _entityManager: EntityManager;
     _handlers: {
         [topic: string]: ((message: unknown) => void)[];
     } = {};
@@ -24,9 +24,7 @@ class Entity {
 
     }
 
-    get group() {
-        return this._group;
-    }
+
 
     get name() {
         return this._name;

@@ -1,12 +1,8 @@
 # Use the official bun image as base
 FROM oven/bun:1-debian
 # Set the working directory
-WORKDIR /bunapp
+WORKDIR /tsbackend
 # Copy the rest of the application into the container
 COPY . . 
-RUN bun install
-# Expose the port
-EXPOSE 8089
-# Start the server
-RUN bun install
+RUN bun install 
 CMD ["bun", "run", "dev"]
