@@ -133,9 +133,11 @@ class CharacterComponent extends Component {
 
         if (distance > 10) {
             this._titlebar.style.opacity = "0";
+            this._titlebar.style.pointerEvents = "none";
         }
         else {
             this._titlebar.style.opacity = "1";
+            this._titlebar.style.pointerEvents = "auto";
         }
 
 

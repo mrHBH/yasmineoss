@@ -1,15 +1,17 @@
-import './style.css';
-import UIkit from 'uikit';
-import Icons from 'uikit/dist/js/uikit-icons';
-import 'uikit/dist/css/uikit.css';
+import "./style.css";
+import UIkit from "uikit";
+import Icons from "uikit/dist/js/uikit-icons";
+import "uikit/dist/css/uikit.css";
 UIkit.use(Icons);
 
-
-import * as THREE from 'three';
-import { Entity } from './utils/Entity';
-import { CharacterComponent } from './utils/Components/CharacterComponent';
-import { EntityManager } from './utils/EntityManager';
-import { MainController } from './utils/MainController';
+import * as THREE from "three";
+import { Entity } from "./utils/Entity";
+import { CharacterComponent } from "./utils/Components/CharacterComponent";
+import { EntityManager } from "./utils/EntityManager";
+import { MainController } from "./utils/MainController";
+import { UIComponent } from "./utils/Components/UIComponent";
+import { tween } from "shifty";
+import { StaticCLI } from "./SimpleCLI";
 // InfiniteGridHelper class definition ends here
 
 //define a structire that holds the address of the backends. it is a collection of ports and addresses
@@ -17,43 +19,39 @@ let backends;
 let protocol = window.location.protocol;
 if (window.location.hostname === "localhost") {
   backends = {
-    "rustbackend": "http://localhost:8420",
-    "pythonbackend": "http://localhost:8000",
-    "pythonbackendws": "ws://localhost:8000/ws/rtd/",
-    "cppbackend": "http://localhost:8080",
-    "cppbackendws": "ws://localhost:8080/ ",
-    "tsbackend": "http://localhost:8089",
-    "tsbackendws": "ws://localhost:8089"
-  }
+    rustbackend: "http://localhost:8420",
+    pythonbackend: "http://localhost:8000",
+    pythonbackendws: "ws://localhost:8000/ws/rtd/",
+    cppbackend: "http://localhost:8080",
+    cppbackendws: "ws://localhost:8080/ ",
+    tsbackend: "http://localhost:8089",
+    tsbackendws: "ws://localhost:8089",
+  };
 } else {
   let hostname = window.location.hostname;
   //check if secure or not
   if (window.location.protocol === "http:") {
-
     backends = {
-      "rustbackend": "http://" + hostname + ":8420",
-      "pythonbackend": "http://" + hostname + ":8000",
-      "pythonbackendws": "ws://" + hostname + ":8000/ws/rtd/",
-      "cppbackend": "http://" + hostname + ":8080",
-      "cppbackendws": "ws://" + hostname + ":8080/ ",
-      "tsbackend": "http://" + hostname + ":8089",
-      "tsbackendws": "ws://" + hostname + ":8089"
-    }
-  }
-  else {
+      rustbackend: "http://" + hostname + ":8420",
+      pythonbackend: "http://" + hostname + ":8000",
+      pythonbackendws: "ws://" + hostname + ":8000/ws/rtd/",
+      cppbackend: "http://" + hostname + ":8080",
+      cppbackendws: "ws://" + hostname + ":8080/ ",
+      tsbackend: "http://" + hostname + ":8089",
+      tsbackendws: "ws://" + hostname + ":8089",
+    };
+  } else {
     backends = {
-      "rustbackend": "https://" + hostname + ":8420",
-      "pythonbackend": "https://" + hostname + ":8000",
-      "pythonbackendws": "wss://" + hostname + ":8000/ws/rtd/",
-      "cppbackend": "https://" + hostname + ":8080",
-      "cppbackendws": "wss://" + hostname + ":8080/ ",
-      "tsbackend": "https://" + hostname + ":8089",
-      "tsbackendws": "wss://" + hostname + ":8089"
-    }
-
+      rustbackend: "https://" + hostname + ":8420",
+      pythonbackend: "https://" + hostname + ":8000",
+      pythonbackendws: "wss://" + hostname + ":8000/ws/rtd/",
+      cppbackend: "https://" + hostname + ":8080",
+      cppbackendws: "wss://" + hostname + ":8080/ ",
+      tsbackend: "https://" + hostname + ":8089",
+      tsbackendws: "wss://" + hostname + ":8089",
+    };
   }
 }
-
 
 //   //create to ts backend , over websockets and send periodic messages to the backend
 //   const ws = new WebSocket(backends.tsbackendws);
@@ -94,10 +92,9 @@ class Main {
   private maincController: MainController;
   private clock = new THREE.Clock();
 
-
   constructor() {
     this.init().catch((error) => {
-      console.error('Failed to initialize the scene:', error);
+      console.error("Failed to initialize the scene:", error);
     });
   }
 
@@ -105,23 +102,61 @@ class Main {
     this.entityManager = new EntityManager();
     this.maincController = new MainController(this.entityManager);
 
-
-
     const bob = new Entity();
     const bobcontroller = new CharacterComponent({
-      modelpath: 'models/gltf/ybot2.glb',
-      animationspath: 'animations/gltf/ybot2@walking.glb',
- 
+      modelpath: "models/gltf/ybot2.glb",
+      animationspath: "animations/gltf/ybot2@walking.glb",
     });
 
     const sydney = new Entity();
     sydney.position.set(2, 0, 2);
     const sydneycontroller = new CharacterComponent({
-      modelpath: 'models/gltf/Xbot.glb',
-      animationspath: 'animations/gltf/ybot2@walking.glb',
-      
+      modelpath: "models/gltf/Xbot.glb",
+      animationspath: "animations/gltf/ybot2@walking.glb",
     });
 
+
+
+    const introui = new Entity();
+    introui.position.set(0, 10, 0);
+    const uicomponent = new UIComponent(
+      '<div class="uk-card uk-card-default uk-card-body"> <h3 class="uk-card-title">Hello World</h3> <p>UI Component</p> </div>'
+    );
+
+    await introui.AddComponent(uicomponent);
+    await this.entityManager.AddEntity(introui, "UI");
+
+    setInterval(() => {
+      tween({
+        from: {
+          x:  introui.position.x,
+          y: introui.position.y,
+          z:  introui.position.z,
+
+        },
+        to: {
+          x: Math.random() * 5,
+          y: Math.random() * 5,
+          z: Math.random() * 5,
+        },
+        duration: 10000,
+        easing: "cubicInOut",
+        render: (state) => {
+          // Here ensure all state values are treated as numbers explicitly
+          introui.position.set(
+            Number(state.x),
+            Number(state.y),
+            Number(state.z)
+          );
+        },
+      });
+      StaticCLI.typeInside(uicomponent.htmlElement, "uk-card-title", "... Under Contstruction ... YASMINE OS OS BUILD 5", 25);  
+
+    }
+ 
+   
+ 
+    , 2500);
 
     await sydney.AddComponent(sydneycontroller);
     await this.entityManager.AddEntity(sydney, "Sydney");
@@ -132,43 +167,28 @@ class Main {
     //add 50 random entities at random positions either bob or sydney all walking
     for (let i = 0; i < 50; i++) {
       let entity = new Entity();
-      let randoemclass = Math.random() < 0.5 ? 'models/gltf/ybot2.glb' : 'models/gltf/Xbot.glb';
-      let randomposition = new THREE.Vector3(Math.random() * 20, 0, Math.random() * 50);
+      let randoemclass =
+        Math.random() < 0.5 ? "models/gltf/ybot2.glb" : "models/gltf/Xbot.glb";
+      let randomposition = new THREE.Vector3(
+        Math.random() * 20,
+        0,
+        Math.random() * 50
+      );
       let randomcontroller = new CharacterComponent({
         modelpath: randoemclass,
-        animationspath: 'animations/gltf/ybot2@walking.glb',
- 
+        animationspath: "animations/gltf/ybot2@walking.glb",
       });
       entity.position.set(randomposition.x, randomposition.y, randomposition.z);
       await entity.AddComponent(randomcontroller);
       await this.entityManager.AddEntity(entity, "RandomEntity" + i);
-      let deathtimeout = Math.random() * 32000 + 2000
+      let deathtimeout = Math.random() * 32000 + 2000;
       setTimeout(() => {
-        entity.kill()
+        entity.kill();
       }, deathtimeout);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     this.animate();
   }
-
 
   private async animate(): Promise<void> {
     requestAnimationFrame(() => this.animate());
@@ -177,13 +197,6 @@ class Main {
 
     await this.entityManager.Update(delta);
     await this.maincController.update(delta);
-
   }
-
-
-
-
-
-
 }
 new Main();
