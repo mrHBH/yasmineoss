@@ -120,7 +120,7 @@ class Main {
     const uicomponent = new UIComponent(
       '<div class="uk-card uk-card-default uk-card-body"> <h3 class="uk-card-title">Hello World</h3> <p class="inner-text">UI Component</p> </div>'
     );
-
+       
     await introui.AddComponent(uicomponent);
     await this.entityManager.AddEntity(introui, "UI");
 
@@ -137,7 +137,7 @@ class Main {
             y: Math.random() * 5,
             z: Math.random() * 5,
           },
-          duration: 10000,
+          duration: 100000,
           easing: "cubicInOut",
           render: (state) => {
             // Here ensure all state values are treated as numbers explicitly
@@ -168,63 +168,153 @@ class Main {
     );
 
     //create 50  ui elements , and animate them in a random fashion , and change the text inside them in a random fashion
+    let randomuirules = [
+      " a good ui is to be felt not seen",
+      " fps is the most important thing in a ui",
+      " programming language? all you need is computing power",
+      " the best ui is the one that is not there",
+      " main rendering thread : shall not be disturbed",
+      " cards cards cards",
+      " hyper smooth transitions , fight the jank",
+      " 60 fps or bust",
+      " fonts : max resolution",
+    ];
 
-    for (let i = 0; i < 50; i++) {
-      let entity = new Entity();
+    let randomprogrammingtips = [
+      " always use a linter , respect the linter , obey the linter",
+    ];
+
+    let randomfacts = [
+      " human attention span is 8 seconds , quite short , huh?",    
+      " the average person spends a huge amount clicking on things and moving the mouse",
+    ];
+
+    let randomtitles = [
+      " Dynamically Generated UI",
+      "Random UI",
+      "Random ui rules",
+      "random programming tips",
+      "random facts",
+      "random titles",];
+
+      
+      //combine all the random facts and rules
+      randomfacts = randomfacts.concat(randomuirules).concat(randomprogrammingtips) 
+    for (let i = 0; i < 60; i++) {
+      let randomsize =  new THREE.Vector2( Math.random() * 100 + 250, Math.random() * 100 + 250);
+       let entity = new Entity();
       let randomposition = new THREE.Vector3(
-        Math.random() * 200,
-        Math.random() * 200,
-        Math.random() * 200
+        Math.random() * 204,
+        Math.random() * 209,
+        Math.random() * 206
       );
+
       let randomui = new UIComponent(
-        '<div class="uk-card uk-card-default uk-card-body"> <h3 class="uk-card-title">Hello World</h3> <p class="inner-text">UI Component</p> </div>'
-      );
+        '<div class="uk-card uk-card-default uk-card-body " > <h3 class="uk-card-title">Hello World</h3> <p class="inner-text">UI Component</p> </div>',
+        randomsize 
+        );
+      
+          
       entity.position.set(randomposition.x, randomposition.y, randomposition.z);
       await entity.AddComponent(randomui);
       await this.entityManager.AddEntity(entity, "UI" + i);
-      let deathtimeout = Math.random() * 32000 + 2000;
-      setInterval(
-        () => {
-          tween({
-            from: {
-              x: entity.position.x,
-              y: entity.position.y,
-              z: entity.position.z,
-            },
-            to: {
-              x: Math.random() * 200,
-              y: Math.random() * 200,
-              z: Math.random() * 200,
-            },
-            duration: 100000,
-            easing: "cubicInOut",
-            render: (state) => {
-              // Here ensure all state values are treated as numbers explicitly
-              entity.position.set(
-                Number(state.x),
-                Number(state.y),
-                Number(state.z)
-              );
-            },
-          });
-          StaticCLI.typeInside(
-            randomui.htmlElement,
-            "uk-card-title",
-            "YASMINE OS OS BUILD 5",
-            25,
-            true
-          );
-          StaticCLI.typeInside(
-            randomui.htmlElement,
-            "inner-text",
-            "... Under Contstruction ...  ",
-            250,
-            true
-          );
-        },
-
-        50000
+      StaticCLI.typeInside(
+        randomui.htmlElement,
+        "uk-card-title",
+        randomtitles[Math.floor(Math.random() * randomtitles.length)],
+        25,
+        true
       );
+        StaticCLI.typeInside(
+        randomui.htmlElement,
+        "inner-text",
+        randomfacts[Math.floor(Math.random() * randomfacts.length)],
+        250,
+        true
+      );
+      let deathtimeout = Math.random() * 32000 + 2000;
+      let randommobility = Math.random() * 6 + 1;
+      if (randommobility  > 2.5) {
+        setInterval(
+          () => {
+            tween({
+              from: {
+                x: entity.position.x,
+                y: entity.position.y,
+                z: entity.position.z,
+              },
+              to: {
+                x: Math.random() * 200,
+                y: Math.random() * 200,
+                z: Math.random() * 200,
+              },
+              duration: 1000000,
+              easing: "cubicInOut",
+              render: (state) => {
+                // Here ensure all state values are treated as numbers explicitly
+                entity.position.set(
+                  Number(state.x),
+                  Number(state.y),
+                  Number(state.z)
+                );
+              },
+            });
+            // tween({
+            //   from: {
+            //     x: randomui.Size.x,
+            //     y: randomui.Size.y,
+            //   },
+            //   to: {
+            //     x: Math.random() * 200 + 250,
+            //     y: Math.random() * 200 + 250,
+            //   },
+            //   duration: 2000,
+            //   easing: "cubicInOut",
+            //   render: (state) => {
+            //     // Here ensure all state values are treated as numbers explicitly
+            //     randomui.Size = new THREE.Vector2(
+            //       Number(state.x),
+            //       Number(state.y)
+            //     );
+            //   },
+            // });
+            StaticCLI.typeInside(
+              randomui.htmlElement,
+              "uk-card-title",
+              "YASMINE OS OS BUILD 5",
+              25,
+              true
+            );
+            StaticCLI.typeInside(
+              randomui.htmlElement,
+              "inner-text",
+              randomfacts[Math.floor(Math.random() * randomfacts.length)],
+              55,
+              true
+            );
+          },
+  
+          5000
+        );
+      }
+      else {
+        StaticCLI.typeInside(
+          randomui.htmlElement,
+          "uk-card-title",
+          "YASMINE OS OS BUILD 5",
+          25,
+          true
+        );
+        StaticCLI.typeInside(
+          randomui.htmlElement,
+          "inner-text",
+          randomfacts[Math.floor(Math.random() * randomfacts.length)],
+          55,
+          true
+        );
+      }
+       
+     
       setTimeout(() => {
       //  entity.kill();
       }, deathtimeout);

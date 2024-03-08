@@ -29,10 +29,8 @@ services:
     container_name: tsbackend
     build:
       context: ./backend/typescript/
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    volumes:
-      - ./:/tsbackend
+      dockerfile: dockerfile 
+    restart: unless-stopped    
     ports:
       - '8089:8089'
     networks:
@@ -45,11 +43,13 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     volumes:
-      - ./:/frontend
+      - ./frontend/:/frontend
+      - /frontend/node_modules
     ports:
       - '3001:3001'
     networks:
       - yasminenet
+
 
   cppbackend:
     container_name: cppbackend
@@ -57,8 +57,7 @@ services:
       context: ./backend/c++/
       dockerfile: Dockerfile
     restart: unless-stopped
-    volumes:
-      - ./:/cppbackend
+ 
     ports:
       - '8080:8080'
     networks:
@@ -67,17 +66,14 @@ services:
 
   rustbackend:
     container_name: rustbackend
-    build:
+    build:      
       context: ./backend/rust/
       dockerfile: Dockerfile
-    restart: unless-stopped
-    volumes:
-      - ./:/rustbackend
+    restart: unless-stopped 
     ports:
       - '8420:8420'
     networks:
       - yasminenet
- 
  
 networks:
   yasminenet:
