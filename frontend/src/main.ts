@@ -12,7 +12,7 @@ import { MainController } from "./utils/MainController";
 import { UIComponent } from "./utils/Components/UIComponent";
 import { tween } from "shifty";
 import { StaticCLI } from "./SimpleCLI";
-// InfiniteGridHelper class definition ends here
+ // InfiniteGridHelper class definition ends here
 
 //define a structire that holds the address of the backends. it is a collection of ports and addresses
 let backends;
@@ -110,13 +110,15 @@ class Main {
 
     const sydney = new Entity();
     sydney.position.set(2, 0, 2);
+    //rotate sydney 90 degrees
+    sydney.rotation.set(0, Math.PI / 2, 0 , 1);
     const sydneycontroller = new CharacterComponent({
       modelpath: "models/gltf/Xbot.glb",
       animationspath: "animations/gltf/ybot2@walking.glb",
     });
 
     const introui = new Entity();
-    introui.position.set(0, 10, 0);
+    introui.position.set(0, 10,5 );
     const uicomponent = new UIComponent(
       '<div class="uk-card uk-card-default uk-card-body"> <h3 class="uk-card-title">Hello World</h3> <p class="inner-text">UI Component</p> </div>'
     );
@@ -200,13 +202,20 @@ class Main {
       
       //combine all the random facts and rules
       randomfacts = randomfacts.concat(randomuirules).concat(randomprogrammingtips) 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 15; i++) {
       let randomsize =  new THREE.Vector2( Math.random() * 100 + 250, Math.random() * 100 + 250);
        let entity = new Entity();
       let randomposition = new THREE.Vector3(
         Math.random() * 204,
         Math.random() * 209,
         Math.random() * 206
+      );
+
+      let randomrotation = new THREE.Quaternion(
+       0,
+        Math.random() * 2 * Math.PI,
+        0,
+        1
       );
 
       let randomui = new UIComponent(
@@ -216,6 +225,7 @@ class Main {
       
           
       entity.position.set(randomposition.x, randomposition.y, randomposition.z);
+     entity. rotation.set(randomrotation.x, randomrotation.y, randomrotation.z, randomrotation.w);
       await entity.AddComponent(randomui);
       await this.entityManager.AddEntity(entity, "UI" + i);
       StaticCLI.typeInside(
@@ -319,7 +329,22 @@ class Main {
       //  entity.kill();
       }, deathtimeout);
     }
+ 
+      setInterval(() => {
+       
+      //select a random entity , and zoom to it
+      let randomentity = this.entityManager.Entities[
+        Math.floor(Math.random() * this.entityManager.Entities.length)
+      ];
+      randomentity.Broadcast({
+        topic: "zoom",
+        data: {},
+      });
+    }
+    , 5000);
 
+ 
+  
     await sydney.AddComponent(sydneycontroller);
     await this.entityManager.AddEntity(sydney, "Sydney");
 

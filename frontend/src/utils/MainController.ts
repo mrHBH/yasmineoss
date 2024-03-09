@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/Addons.js";
+import { OrbitControls } from  "./OrbitControls";
 import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 
 import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
@@ -13,6 +13,7 @@ import {
   disposeBoundsTree,
 } from "three-mesh-bvh";
 import { EntityManager } from "./EntityManager";
+import { cp } from "fs";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 //@ts-ignore
@@ -90,9 +91,9 @@ class MainController {
       0.01,
       2000
     );
-    this.camera.position.set(2.5, 1, 3);
+    this.camera.position.set(2.5, 20, 5);
     this.camera.position.multiplyScalar(0.8);
-    this.camera.lookAt(0, 1, 0);
+    this.camera.lookAt(0, 5, 0);
     this.webgpuscene.add(this.camera);
 
     const pane = new Pane({});
@@ -126,8 +127,15 @@ class MainController {
       this.camera,
       this.css2drenderer.domElement
     );
-    this.orbitControls.target.set(0, 1, 0);
+    this.orbitControls.target.set(0, 5, 0);
+     // this.orbitControls.maxAzimuthAngle = Math.PI  ;
+    // this.orbitControls.maxPolarAngle = Math.PI / 2;
+    // this.orbitControls.minAzimuthAngle =- Math.PI / 2;
+    // this.orbitControls.minPolarAngle = - Math.PI / 2;
+    // this.orbitControls.enableDamping = true;
+    // this.orbitControls.dampingFactor = 0.05;
     this.orbitControls.update();
+    
     window.addEventListener("resize", () => this.onWindowResize());
 
     document.addEventListener(
@@ -172,6 +180,19 @@ class MainController {
     // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
   }
 
+
+  private resetview(): void {
+     // Repeat type enforcement for orbit controls target tween
+     
+      this.orbitControls.minAzimuthAngle = -Infinity;
+      this.orbitControls.maxAzimuthAngle = Infinity;
+      this.orbitControls.minPolarAngle = 0;
+      this.orbitControls.maxPolarAngle = Math.PI;
+      this.orbitControls.maxTargetRadius = Infinity;
+      this.orbitControls.minTargetRadius = 0;
+      this.orbitControls.maxDistance = Infinity;
+    } 
+
   private async onDoubleClick(event: MouseEvent): Promise<void> {
     const raycaster = new THREE.Raycaster();
     //@ts-ignore
@@ -185,9 +206,9 @@ class MainController {
       this.camera
     );
 
-    const intersectionObjects = this.webgpuscene.children.filter(
-      (child) => child.type === "Group"
-    );
+    //recursively get a list of all objects that have a component as userdata , break as soon as the first one is found for every object
+
+   
     // for (let i = 0; i < intersectionObjects.length; i++) {
     //     intersectionObjects[i].traverse((child) => {
     //         if (child instanceof THREE.Mesh) {
@@ -195,71 +216,145 @@ class MainController {
     //         }
     //     });
     // }
-    const intersects = raycaster.intersectObjects(intersectionObjects, true);
+    const intersects = raycaster.intersectObjects(this.webgpuscene.children, true);
     console.log(intersects);
-
-    if (intersects.length > 0) {
-      const p = intersects[0].point;
-
-      console.log(intersects[0].object);
-      let offset = new THREE.Vector3().copy(this.camera.position).sub(p);
-      let spherical = new THREE.Spherical().setFromVector3(offset);
-
-      let newRadius = 5; // This is a number, so no issue here.
-
-      let newCameraPosition = new THREE.Vector3()
-        .setFromSphericalCoords(newRadius, spherical.phi, spherical.theta)
-        .add(p);
-
-      // Enforce number types on all coordinates before passing them into the tween.
-      tween({
-        from: {
-          x: Number(this.camera.position.x),
-          y: Number(this.camera.position.y),
-          z: Number(this.camera.position.z),
-        },
-        to: {
-          x: Number(newCameraPosition.x),
-          y: Number(newCameraPosition.y),
-          z: Number(newCameraPosition.z),
-        },
-        duration: 500,
-        easing: "cubicInOut",
-        render: (state) => {
-          // Here ensure all state values are treated as numbers explicitly
-          this.camera.position.set(
-            Number(state.x),
-            Number(state.y),
-            Number(state.z)
-          );
-        },
-      });
-
-      // Repeat type enforcement for orbit controls target tween
-      tween({
-        from: {
-          x: Number(this.orbitControls.target.x),
-          y: Number(this.orbitControls.target.y),
-          z: Number(this.orbitControls.target.z),
-        },
-        to: {
-          x: Number(p.x),
-          y: Number(p.y),
-          z: Number(p.z),
-        },
-        duration: 500,
-        easing: "cubicInOut",
-        render: (state) => {
-          this.orbitControls.target.set(
-            Number(state.x),
-            Number(state.y),
-            Number(state.z)
-          );
-          this.orbitControls.update();
-        },
-      });
+    //get the first object that has a component as userdata
+    let componententities = intersects.find((i) => i.object.userData.component);
+    if (componententities) {
+      const p = componententities.point;
+      let component = componententities.object.userData.component;
+      let quaternion = new THREE.Quaternion();
+      if (component) {
+        quaternion = component._entity.rotation;
+         this.zoomTo(p, 2, quaternion);
+        if (!quaternion) {
+          quaternion = new THREE.Quaternion();
+        }
+      }
+     
     }
+
+    
+    // if (intersects.length > 0) {
+    //   const p = intersects[0].point;
+    //   let component = intersects[0].object.userData.component;
+      
+    //   let quaternion = new THREE.Quaternion();
+    //   if (component) {
+        
+    //     quaternion = component._entity.rotation;
+
+    //     if (!quaternion) {
+    //       quaternion = c
+    //     }
+    //   }
+    //   this.zoomTo(p, 5 , quaternion);
+    //   // tween the orbit controls phi and theta to face the new target
+    //   // 
+ 
+    // }
   }
+
+
+  async zoomTo(p: THREE.Vector3, newRadius: number, quat: THREE.Quaternion): Promise<void> {
+     
+ 
+  
+     tween({
+      from: {
+        x: Number(this.orbitControls.target.x),
+        y: Number(this.orbitControls.target.y),
+        z: Number(this.orbitControls.target.z),
+      },
+      to: {
+        x: Number(p.x),
+        y: Number(p.y),
+        z: Number(p.z),
+      },
+      duration: 500,
+      easing: "cubicInOut",
+      render: (state) => {
+        this.orbitControls.target.set(
+          Number(state.x),
+          Number(state.y),
+          Number(state.z)
+        );
+         
+      },
+    });
+   tween({
+              from: {
+                radius: this.orbitControls.target.distanceTo(this.camera.position),
+              },
+              to: {
+                radius: newRadius,
+              },
+              duration: 500,
+              easing: "cubicInOut",
+              render: (state) => {
+                 this.orbitControls.maxDistance  = Number(state.radius);
+                this.orbitControls.update();
+              },
+              finish: () => {
+                this.resetview();
+              }
+            });
+
+ 
+     let oldalpha = this.orbitControls.getAzimuthalAngle()
+     let oldbete= this.orbitControls.getPolarAngle() - Math.PI / 2
+     //make sure the new alpha and beta are within the range of the orbit controls
+      if (quat.y > Math.PI) {
+        quat.y = quat.y - 2 * Math.PI;
+      }
+      if (quat.y < -Math.PI) {
+        quat.y = quat.y + 2 * Math.PI;
+      }
+     tween({
+
+      from: {
+        alpha: oldalpha,
+        beta: oldbete,
+      },
+      to: {
+        alpha: quat.y,
+        beta: quat.x,
+      },
+      duration: 500,
+      easing: "cubicInOut",
+      render: (state) => {
+        this.orbitControls.maxAzimuthAngle = Number(state.alpha);
+        this.orbitControls.minAzimuthAngle = Number(state.alpha);
+
+        this.orbitControls.maxPolarAngle = Number(state.beta) + Math.PI / 2;
+        this.orbitControls.minPolarAngle = Number(state.beta) + Math.PI / 2;
+  
+        this.orbitControls.update();
+      },
+      finish: () => {
+    
+   // this.orbitControls.maxDistance  = newRadius;
+     //   this.orbitControls.update();
+         this.resetview();
+         
+
+         
+            
+         
+      },
+    });
+
+    
+     //tween     this.orbitControls.maxDistance  = newRadius;
+            // this.orbitControls.update();
+
+         
+  
+     
+  }
+ 
+
+
 }
 
 export { MainController };

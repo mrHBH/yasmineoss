@@ -41,6 +41,7 @@ class CharacterComponent extends Component {
     async InitComponent(entity: Entity): Promise<void> {
         this._entity = entity;
         this._model = await LoadingManager.loadGLTF(this._modelpath);
+        this._model.userData.component =  this;
         this._animation = await LoadingManager.loadGLTFAnimation('animations/gltf/ybot2@walking.glb');
         this._model.userData.entity = this._entity;
         this._webgpugroup.add(this._model);
@@ -48,44 +49,45 @@ class CharacterComponent extends Component {
 
         this._mixer = new THREE.AnimationMixer(this._model);
         this._mixer.clipAction(this._animation).play();
-        // this._model.traverse(function (child: any) {
-        //     if (child.isMesh) {
-        //         //hide the mesh
-        //         //  child.visible = false;
-        //         const materialPoints = new PointsNodeMaterial({ size: 0.05, color: new THREE.Color(0x0011ff) });
-        //         child.updateMatrixWorld(true); // Force update matrix and children
-        //         //create a skinning node
-        //         //    const animatedskinning =  skinning( child ) ;
-        //         //   materialPoints.positionNode = animatedskinning;
-        //         // child.geometry.computeBoundsTree();
-        //         // let boundsViz = new MeshBVHHelper( child );
-        //         //this._group.attach(boundsViz);
+        this._model.traverse(function (child: any) {
+            if (child.isMesh) {
+                child.userData.component = this;
+                //hide the mesh
+                //  child.visible = false;
+                // const materialPoints = new PointsNodeMaterial({ size: 0.05, color: new THREE.Color(0x0011ff) });
+                // child.updateMatrixWorld(true); // Force update matrix and children
+                //create a skinning node
+                //    const animatedskinning =  skinning( child ) ;
+                //   materialPoints.positionNode = animatedskinning;
+                // child.geometry.computeBoundsTree();
+                // let boundsViz = new MeshBVHHelper( child );
+                //this._group.attach(boundsViz);
 
-        //         //set scale and rotation of the points
-
-
-
-        //         //adjust scale and rotation of the points
-        //         //materialPoints.positionNode = uniform( child.scale );
+                //set scale and rotation of the points
 
 
 
-        //         //materialPoints.positionNode = skinning( child );
-        //         // materialPoints.positionNode = uniform( child.position );
+                //adjust scale and rotation of the points
+                //materialPoints.positionNode = uniform( child.scale );
 
 
 
-        //         //   child.updateMatrixWorld(true); // Force update matrix and children
-        //         this._pointCloud = new THREE.Points(child.geometry, materialPoints);
+                //materialPoints.positionNode = skinning( child );
+                // materialPoints.positionNode = uniform( child.position );
 
 
 
-        //         this._webgpugroup.add(this._pointCloud);
+                // //   child.updateMatrixWorld(true); // Force update matrix and children
+                // this._pointCloud = new THREE.Points(child.geometry, materialPoints);
 
 
 
-        //     }
-        // }.bind(this));
+                // this._webgpugroup.add(this._pointCloud);
+
+
+
+            }
+        }.bind(this));
 
 
 
