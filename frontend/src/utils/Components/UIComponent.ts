@@ -60,7 +60,7 @@ class UIComponent extends Component {
       ),
       planeMaterial
     );
-     
+
     this._webgpuplane.userData.component = this;
     this._webgpugroup.add(this._webgpuplane);
   }
@@ -68,21 +68,59 @@ class UIComponent extends Component {
   async InitEntity(): Promise<void> {
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
     this._entity._entityManager._mc.css2dscenel2.add(this._css2dgroup);
-    this._entity._RegisterHandler("zoom",  async () => {
-       await this.zoom();
-        });
-    }
+    this._entity._RegisterHandler("zoom", async () => {
+      await this.zoom();
+    });
 
+    this._entity._RegisterHandler("setSize", async (data: any) => {
+      console.log(data);
+      await this.setSizeSmoothly(data?.size as THREE.Vector2);
+    });
+  }
 
-    async zoom() {
-        let newRadius =7; // Distance in front of the plane
-        let p = this._entity.position.clone(); // Make sure to clone so you don't accidentally modify the original position
-        let quat= this._entity.rotation.clone();
-        this._entity._entityManager._mc.zoomTo(p, newRadius , quat);
-   
-      
-    }
-    
+  async zoom() {
+    let newRadius = 7; // Distance in front of the plane
+    let p = this._entity.position.clone(); // Make sure to clone so you don't accidentally modify the original position
+    let quat = this._entity.rotation.clone();
+    this._entity._entityManager._mc.zoomTo(p, newRadius, quat);
+  }
+
+  async setSizeSmoothly(size: THREE.Vector2) {
+    console.log("setSizeSmoothly");
+    console.log(size);
+    this._size = size;
+
+    tween({
+      from: {
+        x: this._htmlElement.clientWidth,
+        y: this._htmlElement.clientHeight,
+      },
+      to: { x: size.x, y: size.y },
+      duration: 1500,
+      easing: "easeOutQuad",
+      render: (state: any) => {
+        this._htmlElement.style.height = state.y + "px";
+        this._htmlElement.style.width = state.x + "px";
+      },
+    });
+
+    // this._htmlElement.style.height = this._size.y + "px";
+    // this._htmlElement.style.width = this._size.x + "px";
+    // this._webgpuplane.geometry = new THREE.PlaneGeometry(
+    //   (2 * this._size.x) / 100,
+    //   (1.5 * this._size.y) / 100
+    // );
+    tween({
+      from: { x: this._webgpuplane.scale.x, y: this._webgpuplane.scale.y },
+      to: { x: (1 * this._size.x) / 100, y: (1 * this._size.y) / 100 },
+      duration: 1500,
+      easing: "easeOutQuad",
+      render: (state: any) => {
+        this._webgpuplane.scale.set(state.x, state.y, 1);
+      },
+    });
+  }
+
   async Update(deltaTime: number): Promise<void> {
     this._webgpugroup?.position.set(
       this._entity.position.x,

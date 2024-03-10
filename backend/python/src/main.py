@@ -19,19 +19,22 @@ import uvicorn
 import datetime
 from datetime import datetime as dt
 from pathlib import Path
-from guidance import models  , gen
+from guidance import models, gen
 import requests
+from concurrent.futures import ThreadPoolExecutor
 
-
-LLM_MODEL_URL =  os.getenv("LLM_MODEL_URL")
-LLM_MODELS_PATH =  os.getenv("LLM_MODELS_PATH")
+LLM_MODEL_URL = os.getenv("LLM_MODEL_URL")
+LLM_MODELS_PATH = os.getenv("LLM_MODELS_PATH")
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
 
 
-#load_dotenv()
+# load_dotenv()
 app = FastAPI()
 llm = None
+llm_lock = asyncio.Lock()
+threadpoolexec = ThreadPoolExecutor()
 
+ThreadPoolExecutor = importlib.import_module("concurrent.futures").ThreadPoolExecutor
 logging.basicConfig(level=logging.INFO)
 logging.log(logging.INFO, "Starting server", exc_info=True)
 
@@ -44,7 +47,7 @@ consoleHandler.setFormatter(formatter)
 logger.addHandler(consoleHandler)
 logger.info("Starting server")
 
- 
+
 connectedClients: List[WebSocket] = []
 origins = ["*"]
 app.add_middleware(
@@ -55,9 +58,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 """This function that chesks if torch gpu is available"""
+
+
 @app.post("/capa/")
 async def capa():
     import torch
+
     return torch.cuda.is_available()
 
 
@@ -66,24 +72,25 @@ async def websocket_endpoint(websocket: WebSocket):
     """This function is a websocket endpoint that sends log messages to connected clients."""
     await websocket.accept()
     connectedClients.append(websocket)
-    try:
-        while True:
-            # Keep the connection alive
-            res = await websocket.receive_text()
-            logger.info(res)
-            await websocket.send_text("pong " + res)
-    except WebSocketDisconnect:
-        connectedClients.remove(websocket)
+    import modules.basicguidancegen as bg
+
+    importlib.reload(bg)
+
+    dynamicmodule = bg.BasicGuidanceGen(llm=llm, llm_lock=llm_lock, websocket=websocket)
+    res = await getattr(dynamicmodule, "run")()
+    await websocket.send_text( json.dumps([{"command": "finalans", "text": res}]) )
+    # connectedClients.remove(websocket)
+    # await websocket.close()
 
 
 @app.post("/loadmodel/")
 async def loadmodel():
-    global llm 
+    global llm
     endloadingtime = None
     if llm is None:
         startloadindtime = dt.now()
         # raise an error if the model is not found
-        
+
         if not os.path.exists(Path(LLM_MODELS_PATH) / LLM_MODEL_NAME):
             return {"error": "Model not found"}
         llm = models.LlamaCpp(
@@ -111,8 +118,8 @@ async def list_models():
     """
     this endpoint returns a list of all available models
     """
-     #return a list of all available models in the models folder
-    models = os.listdir( LLM_MODELS_PATH)
+    # return a list of all available models in the models folder
+    models = os.listdir(LLM_MODELS_PATH)
     return {"models": models}
 
 
@@ -135,4 +142,4 @@ async def download_model():
 
 if __name__ == "__main__":
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

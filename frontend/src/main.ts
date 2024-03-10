@@ -67,16 +67,7 @@ if (window.location.hostname === "localhost") {
 
 //   }
 
-//   const ws2 = new WebSocket(backends.pythonbackendws);
-//   ws2.onopen = function open() {
-//     setInterval(() => {
-//     ws2.send('something for python');
-//     } , 1000);
-//   };
-//   ws2.onmessage = function incoming(event) {
-//     console.log('received from python backend:', event.data);
-//   }
-
+  
 //  const ws3 = new WebSocket(backends.cppbackendws);
 //   ws3.onopen = function open() {
 //     setInterval(() => {
@@ -91,6 +82,8 @@ class Main {
   private entityManager: EntityManager;
   private maincController: MainController;
   private clock = new THREE.Clock();
+  private inferencewebsocket: WebSocket;
+
 
   constructor() {
     this.init().catch((error) => {
@@ -101,6 +94,39 @@ class Main {
   private async init(): Promise<void> {
     this.entityManager = new EntityManager();
     this.maincController = new MainController(this.entityManager);
+    // const ws2 = new WebSocket(backends.pythonbackendws);
+    //   ws2.onopen = function open() {
+    //     // setInterval(() => {
+    //     // ws2.send('something for python');
+    //     // } , 1000);
+    //     ws2.send('hello from the frontend');
+    //     let jsoncmd = JSON.stringify({cmd: "gen" , topic : "random fact about programming"});
+    //     ws2.send(jsoncmd);
+    //   };
+    //   ws2.onmessage = function incoming(event) {
+    //     console.log('received from python backend:', event.data);
+    //   }
+    
+    this.inferencewebsocket = new WebSocket(backends.pythonbackendws);
+    this.inferencewebsocket.onopen = function open() {
+      // setInterval(() => {
+      // ws2.send('something for python');
+      // } , 1000);
+      // ws2.send('hello from the frontend');
+      let jsoncmd = JSON.stringify({cmd: "gen" , topic : "random fact about programming"}) ;
+      this.send(jsoncmd);
+    }; 
+
+    this.inferencewebsocket.onmessage = function incoming(event) {
+     
+      //load json
+      let json = JSON.parse(event.data);
+      console.log(json);
+      if (json.command === "token") {
+        console.log(json.text );
+      }
+      //check if json 
+    }
 
     const bob = new Entity();
     const bobcontroller = new CharacterComponent({
@@ -121,53 +147,54 @@ class Main {
     introui.position.set(0, 10,5 );
     const uicomponent = new UIComponent(
       '<div class="uk-card uk-card-default uk-card-body"> <h3 class="uk-card-title">Hello World</h3> <p class="inner-text">UI Component</p> </div>'
+      
     );
        
     await introui.AddComponent(uicomponent);
     await this.entityManager.AddEntity(introui, "UI");
 
-    setInterval(
-      () => {
-        tween({
-          from: {
-            x: introui.position.x,
-            y: introui.position.y,
-            z: introui.position.z,
-          },
-          to: {
-            x: Math.random() * 5,
-            y: Math.random() * 5,
-            z: Math.random() * 5,
-          },
-          duration: 100000,
-          easing: "cubicInOut",
-          render: (state) => {
-            // Here ensure all state values are treated as numbers explicitly
-            introui.position.set(
-              Number(state.x),
-              Number(state.y),
-              Number(state.z)
-            );
-          },
-        });
-        StaticCLI.typeInside(
-          uicomponent.htmlElement,
-          "uk-card-title",
-          "YASMINE OS OS BUILD 5",
-          25,
-          true
-        );
-        StaticCLI.typeInside(
-          uicomponent.htmlElement,
-          "inner-text",
-          "... Under Contstruction ...  ",
-          250,
-          true
-        );
-      },
+    // setInterval(
+    //   () => {
+    //     tween({
+    //       from: {
+    //         x: introui.position.x,
+    //         y: introui.position.y,
+    //         z: introui.position.z,
+    //       },
+    //       to: {
+    //         x: Math.random() * 5,
+    //         y: Math.random() * 5,
+    //         z: Math.random() * 5,
+    //       },
+    //       duration: 100000,
+    //       easing: "cubicInOut",
+    //       render: (state) => {
+    //         // Here ensure all state values are treated as numbers explicitly
+    //         introui.position.set(
+    //           Number(state.x),
+    //           Number(state.y),
+    //           Number(state.z)
+    //         );
+    //       },
+    //     });
+    //     StaticCLI.typeInside(
+    //       uicomponent.htmlElement,
+    //       "uk-card-title",
+    //       "YASMINE OS OS BUILD 5",
+    //       25,
+    //       true
+    //     );
+    //     StaticCLI.typeInside(
+    //       uicomponent.htmlElement,
+    //       "inner-text",
+    //       "... Under Contstruction ...  ",
+    //       250,
+    //       true
+    //     );
+    //   },
 
-      5000
-    );
+    //   5000
+    // );
 
     //create 50  ui elements , and animate them in a random fashion , and change the text inside them in a random fashion
     let randomuirules = [
@@ -202,7 +229,7 @@ class Main {
       
       //combine all the random facts and rules
       randomfacts = randomfacts.concat(randomuirules).concat(randomprogrammingtips) 
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 50; i++) {
       let randomsize =  new THREE.Vector2( Math.random() * 100 + 250, Math.random() * 100 + 250);
        let entity = new Entity();
       let randomposition = new THREE.Vector3(
@@ -244,7 +271,7 @@ class Main {
       );
       let deathtimeout = Math.random() * 32000 + 2000;
       let randommobility = Math.random() * 6 + 1;
-      if (randommobility  > 2.5) {
+      if (randommobility  > 20.5) {
         setInterval(
           () => {
             tween({
@@ -291,7 +318,7 @@ class Main {
             StaticCLI.typeInside(
               randomui.htmlElement,
               "uk-card-title",
-              "YASMINE OS OS BUILD 5",
+              "YASMINE OS OS BUILD 9",
               25,
               true
             );
@@ -336,12 +363,22 @@ class Main {
       let randomentity = this.entityManager.Entities[
         Math.floor(Math.random() * this.entityManager.Entities.length)
       ];
+      
+      // randomentity.Broadcast({
+      //   topic: "zoom",
+      //   data: {},
+      // });
       randomentity.Broadcast({
-        topic: "zoom",
-        data: {},
+        topic: "setSize",
+        data: {
+          size: new THREE.Vector2(
+            Math.random() * 250 + 150,
+            Math.random() * 150 + 150
+          ),
+        },
       });
     }
-    , 5000);
+    ,2000);
 
  
   

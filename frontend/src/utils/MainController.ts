@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrbitControls } from  "./OrbitControls";
+import { OrbitControls } from "./OrbitControls";
 import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 
 import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
@@ -14,6 +14,7 @@ import {
 } from "three-mesh-bvh";
 import { EntityManager } from "./EntityManager";
 import { cp } from "fs";
+import { UIComponent } from "./Components/UIComponent";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 //@ts-ignore
@@ -54,8 +55,6 @@ class MainController {
     this.css2drenderer.domElement.style.pointerEvents = "auto";
     this.css2drenderer.domElement.style.zIndex = "4";
 
-
-
     this.css2drendererl2 = new CSS2DRenderer();
     this.css2drendererl2.setSize(window.innerWidth, window.innerHeight);
     this.css2drendererl2.domElement.style.position = "absolute";
@@ -81,7 +80,7 @@ class MainController {
     document.body.appendChild(this.css2drenderer.domElement);
     document.body.appendChild(this.css2drendererl2.domElement);
     document.body.appendChild(this.webgpu.domElement);
-    
+
     // document.body.appendChild(this.css3drenderer.domElement);
     //document.body.appendChild(this.css2dRenderer.domElement);
 
@@ -128,14 +127,14 @@ class MainController {
       this.css2drenderer.domElement
     );
     this.orbitControls.target.set(0, 5, 0);
-     // this.orbitControls.maxAzimuthAngle = Math.PI  ;
+    // this.orbitControls.maxAzimuthAngle = Math.PI  ;
     // this.orbitControls.maxPolarAngle = Math.PI / 2;
     // this.orbitControls.minAzimuthAngle =- Math.PI / 2;
     // this.orbitControls.minPolarAngle = - Math.PI / 2;
     // this.orbitControls.enableDamping = true;
     // this.orbitControls.dampingFactor = 0.05;
     this.orbitControls.update();
-    
+
     window.addEventListener("resize", () => this.onWindowResize());
 
     document.addEventListener(
@@ -167,7 +166,7 @@ class MainController {
     //wait 1 s
     this.css2drenderer.render(this.css2dscene, this.camera);
     //  this.css3drenderer.render(this.css3dscene,  this.camera);
-    this.css2drendererl2.render(this.css2dscenel2, this.camera); 
+    this.css2drendererl2.render(this.css2dscenel2, this.camera);
     // this.camera.position.x += 0.01;
   }
 
@@ -176,22 +175,21 @@ class MainController {
     this.camera.updateProjectionMatrix();
     this.webgpu.setSize(window.innerWidth, window.innerHeight);
     this.css2drenderer.setSize(window.innerWidth, window.innerHeight);
-    this.css2drendererl2 .setSize(window.innerWidth, window.innerHeight);
+    this.css2drendererl2.setSize(window.innerWidth, window.innerHeight);
     // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-
   private resetview(): void {
-     // Repeat type enforcement for orbit controls target tween
-     
-      this.orbitControls.minAzimuthAngle = -Infinity;
-      this.orbitControls.maxAzimuthAngle = Infinity;
-      this.orbitControls.minPolarAngle = 0;
-      this.orbitControls.maxPolarAngle = Math.PI;
-      this.orbitControls.maxTargetRadius = Infinity;
-      this.orbitControls.minTargetRadius = 0;
-      this.orbitControls.maxDistance = Infinity;
-    } 
+    // Repeat type enforcement for orbit controls target tween
+
+    this.orbitControls.minAzimuthAngle = -Infinity;
+    this.orbitControls.maxAzimuthAngle = Infinity;
+    this.orbitControls.minPolarAngle = 0;
+    this.orbitControls.maxPolarAngle = Math.PI;
+    this.orbitControls.maxTargetRadius = Infinity;
+    this.orbitControls.minTargetRadius = 0;
+    this.orbitControls.maxDistance = Infinity;
+  }
 
   private async onDoubleClick(event: MouseEvent): Promise<void> {
     const raycaster = new THREE.Raycaster();
@@ -208,7 +206,6 @@ class MainController {
 
     //recursively get a list of all objects that have a component as userdata , break as soon as the first one is found for every object
 
-   
     // for (let i = 0; i < intersectionObjects.length; i++) {
     //     intersectionObjects[i].traverse((child) => {
     //         if (child instanceof THREE.Mesh) {
@@ -216,7 +213,10 @@ class MainController {
     //         }
     //     });
     // }
-    const intersects = raycaster.intersectObjects(this.webgpuscene.children, true);
+    const intersects = raycaster.intersectObjects(
+      this.webgpuscene.children,
+      true
+    );
     console.log(intersects);
     //get the first object that has a component as userdata
     let componententities = intersects.find((i) => i.object.userData.component);
@@ -226,22 +226,25 @@ class MainController {
       let quaternion = new THREE.Quaternion();
       if (component) {
         quaternion = component._entity.rotation;
-         this.zoomTo(p, 2, quaternion);
+        if (component instanceof UIComponent) {
+          component.zoom();
+          return;
+        }
+
+        this.zoomTo(p, 6, quaternion);
         if (!quaternion) {
           quaternion = new THREE.Quaternion();
         }
       }
-     
     }
 
-    
     // if (intersects.length > 0) {
     //   const p = intersects[0].point;
     //   let component = intersects[0].object.userData.component;
-      
+
     //   let quaternion = new THREE.Quaternion();
     //   if (component) {
-        
+
     //     quaternion = component._entity.rotation;
 
     //     if (!quaternion) {
@@ -250,17 +253,17 @@ class MainController {
     //   }
     //   this.zoomTo(p, 5 , quaternion);
     //   // tween the orbit controls phi and theta to face the new target
-    //   // 
- 
+    //   //
+
     // }
   }
 
-
-  async zoomTo(p: THREE.Vector3, newRadius: number, quat: THREE.Quaternion): Promise<void> {
-     
- 
-  
-     tween({
+  async zoomTo(
+    p: THREE.Vector3,
+    newRadius: number,
+    quat: THREE.Quaternion
+  ): Promise<void> {
+    tween({
       from: {
         x: Number(this.orbitControls.target.x),
         y: Number(this.orbitControls.target.y),
@@ -279,46 +282,44 @@ class MainController {
           Number(state.y),
           Number(state.z)
         );
-         
       },
     });
-   tween({
-              from: {
-                radius: this.orbitControls.target.distanceTo(this.camera.position),
-              },
-              to: {
-                radius: newRadius,
-              },
-              duration: 500,
-              easing: "cubicInOut",
-              render: (state) => {
-                 this.orbitControls.maxDistance  = Number(state.radius);
-                this.orbitControls.update();
-              },
-              finish: () => {
-                this.resetview();
-              }
-            });
+    tween({
+      from: {
+        radius: this.orbitControls.target.distanceTo(this.camera.position),
+      },
+      to: {
+        radius: newRadius,
+      },
+      duration: 500,
+      easing: "cubicInOut",
+      render: (state) => {
+        this.orbitControls.maxDistance = Number(state.radius);
+        this.orbitControls.minDistance = Number(state.radius);
+        this.orbitControls.update();
+      },
+      finish: () => {
+        this.resetview();
+      },
+    });
 
- 
-     let oldalpha = this.orbitControls.getAzimuthalAngle()
-     let oldbete= this.orbitControls.getPolarAngle() - Math.PI / 2
-     //make sure the new alpha and beta are within the range of the orbit controls
-      if (quat.y > Math.PI) {
-        quat.y = quat.y - 2 * Math.PI;
-      }
-      if (quat.y < -Math.PI) {
-        quat.y = quat.y + 2 * Math.PI;
-      }
-     tween({
-
+    let oldalpha = this.orbitControls.getAzimuthalAngle();
+    let oldbete = this.orbitControls.getPolarAngle() - Math.PI / 2;
+    //make sure the new alpha and beta are within the range of the orbit controls
+    if (quat.y > Math.PI) {
+      quat.y = quat.y - 2 * Math.PI;
+    }
+    if (quat.y < -Math.PI) {
+      quat.y = quat.y + 2 * Math.PI;
+    }
+    tween({
       from: {
         alpha: oldalpha,
         beta: oldbete,
       },
       to: {
-        alpha: quat.y,
-        beta: quat.x,
+        alpha: quat.y + Math.random()  * 0.5,
+        beta: quat.x + Math.random() * 0.5
       },
       duration: 500,
       easing: "cubicInOut",
@@ -328,33 +329,18 @@ class MainController {
 
         this.orbitControls.maxPolarAngle = Number(state.beta) + Math.PI / 2;
         this.orbitControls.minPolarAngle = Number(state.beta) + Math.PI / 2;
-  
+
         this.orbitControls.update();
       },
       finish: () => {
-    
-   // this.orbitControls.maxDistance  = newRadius;
-     //   this.orbitControls.update();
-         this.resetview();
-         
-
-         
-            
-         
+        // this.orbitControls.maxDistance  = newRadius;
+        //   this.orbitControls.update();
+        this.resetview();
       },
     });
 
-    
-     //tween     this.orbitControls.maxDistance  = newRadius;
-            // this.orbitControls.update();
-
-         
-  
-     
+   
   }
- 
-
-
 }
 
 export { MainController };

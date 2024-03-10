@@ -75,8 +75,8 @@ class Entity {
 
 
 
-
-    _RegisterHandler(topic: string, h: (m: unknown) => void) {
+    //takes an object with the topic and the async function to be called
+    _RegisterHandler(topic: string, h: (message: unknown) => void) {
         if (!(topic in this._handlers)) {
             this._handlers[topic] = [];
         }
@@ -97,7 +97,7 @@ class Entity {
             return;
         }
         for (const curHandler of this._handlers[msg.topic]) {
-            await curHandler(msg);
+            await curHandler(msg.data);
         }
     }
 
