@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { Entity } from "../Entity";
 import { CSS2DObject } from "three/examples/jsm/Addons.js";
 import { tween } from "shifty";
-class UIComponent extends Component {
+class twoDUIComponent extends Component {
   private _html: string;
   private _css2dobject: CSS2DObject;
   private _webgpuplane: THREE.Mesh;
@@ -15,7 +15,7 @@ class UIComponent extends Component {
 
   constructor(html: string, size?: THREE.Vector2) {
     super();
-    this._componentname = "CharacterComponent";
+    this._componentname = "2dUIComponent";
     this._html = html;
     this._size = size ? size : new THREE.Vector2(500, 500);
   }
@@ -67,7 +67,7 @@ class UIComponent extends Component {
 
   async InitEntity(): Promise<void> {
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
-    this._entity._entityManager._mc.css2dscenel2.add(this._css2dgroup);
+    this._entity._entityManager._mc.html2dScene.add(this._css2dgroup);
     this._entity._RegisterHandler("zoom", async () => {
       await this.zoom();
     });
@@ -78,11 +78,11 @@ class UIComponent extends Component {
     });
   }
 
-  async zoom() {
-    let newRadius = 7; // Distance in front of the plane
+  async zoom(radius =5) {
+    
     let p = this._entity.position.clone(); // Make sure to clone so you don't accidentally modify the original position
     let quat = this._entity.rotation.clone();
-    this._entity._entityManager._mc.zoomTo(p, newRadius, quat);
+    this._entity._entityManager._mc.zoomTo(p, radius, quat);
   }
 
   async setSizeSmoothly(size: THREE.Vector2) {
@@ -160,4 +160,4 @@ class UIComponent extends Component {
   }
 }
 
-export { UIComponent };
+export { twoDUIComponent };

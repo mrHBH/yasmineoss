@@ -13,8 +13,8 @@ import {
   disposeBoundsTree,
 } from "three-mesh-bvh";
 import { EntityManager } from "./EntityManager";
-import { cp } from "fs";
-import { UIComponent } from "./Components/UIComponent";
+import { CSS3DRenderer } from "three/examples/jsm/Addons.js";
+import { twoDUIComponent } from "./Components/2dUIComponent";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 //@ts-ignore
@@ -27,16 +27,18 @@ class MainController {
   orbitControls: OrbitControls;
   scene: THREE.Scene;
   webgpu: WebGPURenderer;
-  css2drenderer: CSS2DRenderer;
-  css2dscene: THREE.Scene = new THREE.Scene();
+  annotationRenderer: CSS2DRenderer;
+  annoationsScene: THREE.Scene = new THREE.Scene();
   entitymanager: EntityManager;
-  css2drendererl2: CSS2DRenderer;
-  css2dscenel2: THREE.Scene = new THREE.Scene();
+  html2dRenderer: CSS2DRenderer;
+  html2dScene: THREE.Scene = new THREE.Scene();
+  html3dScene: THREE.Scene = new THREE.Scene();
 
   webgpuscene: THREE.Scene = new THREE.Scene();
   clock: THREE.Clock;
   grid: any;
   fpsGraph: any;
+  html3dRenderer: CSS3DRenderer;
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
 
@@ -48,38 +50,47 @@ class MainController {
     this.webgpu.setClearColor(new THREE.Color(0x000000));
     this.entitymanager = entityManager;
     this.entitymanager._mc = this;
-    this.css2drenderer = new CSS2DRenderer();
-    this.css2drenderer.setSize(window.innerWidth, window.innerHeight);
-    this.css2drenderer.domElement.style.position = "absolute";
-    this.css2drenderer.domElement.style.top = "0px";
-    this.css2drenderer.domElement.style.pointerEvents = "auto";
-    this.css2drenderer.domElement.style.zIndex = "4";
+    this.annotationRenderer = new CSS2DRenderer();
+    this.annotationRenderer.setSize(window.innerWidth, window.innerHeight);
+    this.annotationRenderer.domElement.style.position = "absolute";
+    this.annotationRenderer.domElement.style.top = "0px";
+    this.annotationRenderer.domElement.style.pointerEvents = "auto";
+    this.annotationRenderer.domElement.style.zIndex = "4";
 
-    this.css2drendererl2 = new CSS2DRenderer();
-    this.css2drendererl2.setSize(window.innerWidth, window.innerHeight);
-    this.css2drendererl2.domElement.style.position = "absolute";
-    this.css2drendererl2.domElement.style.top = "0px";
-    this.css2drendererl2.domElement.style.pointerEvents = "auto";
-    this.css2drendererl2.domElement.style.zIndex = "2";
+    this.html2dRenderer = new CSS2DRenderer();
+    this.html2dRenderer.setSize(window.innerWidth, window.innerHeight);
+    this.html2dRenderer.domElement.style.position = "absolute";
+    this.html2dRenderer.domElement.style.top = "0px";
+    this.html2dRenderer.domElement.style.pointerEvents = "auto";
+    this.html2dRenderer.domElement.style.zIndex = "2";
 
     this.webgpu.domElement.style.position = "absolute";
+    this.webgpu.setSize(window.innerWidth, window.innerHeight);
+
     this.webgpu.domElement.style.top = "0px";
     this.webgpu.domElement.style.pointerEvents = "none";
     this.webgpu.domElement.style.zIndex = "3";
 
-    // this.css3drenderer = new CSS3DRenderer();
-    // this.css3drenderer.domElement.style.position = "absolute";
-    // //this.rendererCSS.domElement.style.transition = "all 5.5s ease";
-    // this.css3drenderer.domElement.style.top = "0";
-    // this.css3drenderer.domElement.style.zIndex = "2";
-    // this.css3drenderer.domElement.style.pointerEvents = "none";
+    this.html3dRenderer = new CSS3DRenderer();
+    this.html3dRenderer.domElement.style.position = "absolute";
+    //this.rendererCSS.domElement.style.transition = "all 5.5s ease";
+    this.html3dRenderer.domElement.style.top = "0";
+    this.html3dRenderer.domElement.style.zIndex = "0";
+    this.html3dRenderer?.setSize(window.innerWidth, window.innerHeight);
+    this.html3dRenderer.domElement.style.pointerEvents = "none";
+
+    // this.html3dScene.scale.set(0.1, 0.1, 0.1);
+    // this.html3dScene.updateMatrixWorld(false);
+    // this.html3dScene.matrixAutoUpdate = false;
+    // this.html3dScene.matrixWorldNeedsUpdate = false;
 
     // //this.rendererCSS.domElement.style.transition = "all 0.5s ease";
     // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
 
-    document.body.appendChild(this.css2drenderer.domElement);
-    document.body.appendChild(this.css2drendererl2.domElement);
+    document.body.appendChild(this.annotationRenderer.domElement);
+    document.body.appendChild(this.html2dRenderer.domElement);
     document.body.appendChild(this.webgpu.domElement);
+    document.body.appendChild(this.html3dRenderer.domElement);
 
     // document.body.appendChild(this.css3drenderer.domElement);
     //document.body.appendChild(this.css2dRenderer.domElement);
@@ -124,7 +135,7 @@ class MainController {
 
     this.orbitControls = new OrbitControls(
       this.camera,
-      this.css2drenderer.domElement
+      this.annotationRenderer.domElement
     );
     this.orbitControls.target.set(0, 5, 0);
     // this.orbitControls.maxAzimuthAngle = Math.PI  ;
@@ -164,9 +175,10 @@ class MainController {
     this.fpsGraph?.begin();
     this.fpsGraph?.end();
     //wait 1 s
-    this.css2drenderer.render(this.css2dscene, this.camera);
-    //  this.css3drenderer.render(this.css3dscene,  this.camera);
-    this.css2drendererl2.render(this.css2dscenel2, this.camera);
+    this.annotationRenderer.render(this.annoationsScene, this.camera);
+    // //  this.css3drenderer.render(this.css3dscene,  this.camera);
+    this.html2dRenderer.render(this.html2dScene, this.camera);
+    this.html3dRenderer.render(this.html3dScene, this.camera);
     // this.camera.position.x += 0.01;
   }
 
@@ -174,8 +186,10 @@ class MainController {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.webgpu.setSize(window.innerWidth, window.innerHeight);
-    this.css2drenderer.setSize(window.innerWidth, window.innerHeight);
-    this.css2drendererl2.setSize(window.innerWidth, window.innerHeight);
+    this.annotationRenderer?.setSize(window.innerWidth, window.innerHeight);
+    this.html2dRenderer?.setSize(window.innerWidth, window.innerHeight);
+    this.html3dRenderer?.setSize(window.innerWidth, window.innerHeight);
+
     // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
   }
 
@@ -226,7 +240,7 @@ class MainController {
       let quaternion = new THREE.Quaternion();
       if (component) {
         quaternion = component._entity.rotation;
-        if (component instanceof UIComponent) {
+        if (component instanceof twoDUIComponent) {
           component.zoom();
           return;
         }
@@ -307,10 +321,10 @@ class MainController {
     let oldbete = this.orbitControls.getPolarAngle() - Math.PI / 2;
     //make sure the new alpha and beta are within the range of the orbit controls
     if (quat.y > Math.PI) {
-      quat.y = quat.y - 2 * Math.PI;
+      quat.y = quat.y * Math.PI;
     }
     if (quat.y < -Math.PI) {
-      quat.y = quat.y + 2 * Math.PI;
+      quat.y = quat.y * Math.PI;
     }
     tween({
       from: {
@@ -318,8 +332,8 @@ class MainController {
         beta: oldbete,
       },
       to: {
-        alpha: quat.y + Math.random()  * 0.5,
-        beta: quat.x + Math.random() * 0.5
+        alpha: quat.y,
+        beta: quat.x,
       },
       duration: 500,
       easing: "cubicInOut",
@@ -338,8 +352,6 @@ class MainController {
         this.resetview();
       },
     });
-
-   
   }
 }
 

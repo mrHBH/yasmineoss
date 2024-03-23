@@ -2,8 +2,7 @@ import { Component } from "../Component";
 import * as THREE from "three";
 import { Entity } from "../Entity";
 import { LoadingManager } from "../LoadingManager";
-import { uniform, skinning, PointsNodeMaterial, SkinningNode, ShaderNodeObject } from 'three/nodes';
-import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { MeshBVHHelper } from "three-mesh-bvh";
 
 
@@ -116,7 +115,7 @@ class CharacterComponent extends Component {
 
  
         this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
-        this._entity._entityManager._mc.css2dscene.add(this._css2dgroup);
+        this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
 
     }
 
@@ -162,7 +161,7 @@ class CharacterComponent extends Component {
                 this._css2dgroup.remove(this._css2dgroup.children[i]);
             }
         }
-        this._entity._entityManager._mc.css2dscene.remove(this._css2dgroup);
+        this._entity._entityManager._mc.annoationsScene.remove(this._css2dgroup);
     }
 
 
