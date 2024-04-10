@@ -1,7 +1,7 @@
 import { Component } from "../Component";
 import * as THREE from "three";
 import { Entity } from "../Entity";
-import { CSS2DObject } from "three/examples/jsm/Addons.js";
+import { CSS2DObject } from "../CSS2D";
 import { tween } from "shifty";
 class twoDUIComponent extends Component {
   private _html: string;

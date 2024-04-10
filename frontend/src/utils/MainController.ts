@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "./OrbitControls";
-import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
+import { CSS2DRenderer } from  "./CSS2D"
 
 import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
 import { InfiniteGridHelper } from "./InfiniteGridHelper";
@@ -13,7 +13,7 @@ import {
   disposeBoundsTree,
 } from "three-mesh-bvh";
 import { EntityManager } from "./EntityManager";
-import { CSS3DRenderer } from "three/examples/jsm/Addons.js";
+import { CSS3DRenderer } from  "./CSS3D"
 import { twoDUIComponent } from "./Components/2dUIComponent";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
