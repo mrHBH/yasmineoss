@@ -13,6 +13,8 @@ import { twoDUIComponent } from "./utils/Components/2dUIComponent";
 import { threeDUIComponent } from "./utils/Components/3dUIComponent";
 import { StaticCLI } from "./SimpleCLI";
 // InfiniteGridHelper class definition ends here
+import { tween } from "shifty";
+import { asin } from "three/examples/jsm/nodes/Nodes.js";
 
 //define a structire that holds the address of the backends. it is a collection of ports and addresses
 let backends;
@@ -125,12 +127,46 @@ class Main {
     //   }
     //   //check if json
     // }
-
+    const animations = [
+      { url: "animations/gltf/ybot2@Backwardwalking.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@BackwardwalkingM.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@bigjump.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@Driving.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@Drumming.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@DyingForward.glb"  },
+      { url: "animations/gltf/ybot2@DyingForward2.glb"  },
+      { url: "animations/gltf/ybot2@EnteringCar.glb", skipTracks: [0, 2] },
+      { url: "animations/gltf/ybot2@ExitingCar.glb", skipTracks: [0, 2] },
+      { url: "animations/gltf/ybot2@Falling.glb", skipTracks: [0] },
+      { url: "animations/gltf/ybot2@Idle.glb" },
+      { url: "animations/gltf/ybot2@JumpFromStill.glb" },
+      { url: "animations/gltf/ybot2@JumpFromWalk.glb", skipTracks: [0] },
+      { url: "animations/gltf/ybot2@JumpingUP.glb" },
+      { url: "animations/gltf/ybot2@JumpRunning.glb", skipTracks: [0] },
+      { url: "animations/gltf/ybot2@Kickedfall.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@Landing.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@Pain.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@PlayingGuitar.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@PlayingPiano.glb", skipTracks: [0] },
+      { url: "animations/gltf/ybot2@Praying.glb" },
+      { url: "animations/gltf/ybot2@Pushing.glb" },
+      { url: "animations/gltf/ybot2@Run.glb" },
+      { url: "animations/gltf/ybot2@RunToStop.glb", skipTracks: [ 1 ] },
+      { url: "animations/gltf/ybot2@Salute.glb" },
+      { url: "animations/gltf/ybot2@Slowwalking.glb" },
+      { url: "animations/gltf/ybot2@UndyingForward.glb"  },
+      { url: "animations/gltf/ybot2@Walking.glb" }
+    ];
     const bob = new Entity();
     const bobcontroller = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
-      animationspath: "animations/gltf/ybot2@walking.glb",
+      animationspathslist:  animations ,
     });
+
+
+    await bob.AddComponent(bobcontroller);
+    await this.entityManager.AddEntity(bob, "Bob");
+
 
     const sydney = new Entity();
     sydney.position.set(2, 0, 2);
@@ -138,8 +174,17 @@ class Main {
     sydney.rotation.set(0, Math.PI / 2, 0, 1);
     const sydneycontroller = new CharacterComponent({
       modelpath: "models/gltf/Xbot.glb",
-      animationspath: "animations/gltf/ybot2@walking.glb",
+      animationspathslist: animations ,
     });
+
+
+    setTimeout(() => {
+      const h = async () => {
+    await sydney.AddComponent(sydneycontroller);
+    await this.entityManager.AddEntity(sydney, "Sydney");
+      }
+      h();
+    } , 5000);
 
     const html = /*html*/ `
     <div class="uk-container-expand" style="  background-color: #f2f2f2;   box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2); transition: 0.3s; margin: 10px ;height: 500px; width: 1000px  ">
@@ -481,11 +526,6 @@ const html2 = /*html*/ `
     // }
     // ,2000);
 
-    await sydney.AddComponent(sydneycontroller);
-    await this.entityManager.AddEntity(sydney, "Sydney");
-
-    await bob.AddComponent(bobcontroller);
-    await this.entityManager.AddEntity(bob, "Bob");
 
     // //add 50 random entities at random positions either bob or sydney all walking
     // for (let i = 0; i < 50; i++) {

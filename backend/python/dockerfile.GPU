@@ -33,7 +33,7 @@ ENV TRANSFORMERS_CACHE="/app/cache" \
 RUN pip install --force-reinstall charset-normalizer==3.1.0
 EXPOSE 8000
 RUN conda install -c conda-forge typing-extensions
-
+# RUN pip install lmql[hf]
 WORKDIR /app 
  
 CMD ["python", "src/main.py"]

@@ -4,12 +4,13 @@ import { Entity } from "../Entity";
 import { LoadingManager } from "../LoadingManager";
 import { CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 import { MeshBVHHelper } from "three-mesh-bvh";
-import { createMachine } from 'xstate';
+import { createMachine , createActor, Actor, StateMachine  } from 'xstate';
 
 class CharacterComponent extends Component {
   private _model: THREE.Object3D;
   private _modelpath: string;
-  private _animationspath: string;
+ 
+  private _animationspathslist:  { url: string; shiftTracks: boolean; }[];  
   private _animation: THREE.AnimationClip;
   private _scene: THREE.Scene;
   private _mixer: THREE.AnimationMixer;
@@ -18,13 +19,15 @@ class CharacterComponent extends Component {
   private _css2dgroup: THREE.Group;
   private _css3dgroup: THREE.Group;
   private _titlebar: HTMLElement;
-  private _AnimationFSM: any;
+  private _AnimationFSM:   any;
+  private _actor:  any;
+  private _animations: THREE.AnimationClip [];
 
-  constructor({ modelpath, animationspath }) {
+  constructor({ modelpath, animationspathslist }) {
     super();
     this._componentname = "CharacterComponent";
     this._modelpath = modelpath;
-    this._animationspath = animationspath;
+    this._animationspathslist = animationspathslist;
 
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
@@ -33,15 +36,17 @@ class CharacterComponent extends Component {
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
     this._model = await LoadingManager.loadGLTF(this._modelpath);
-    this._model.userData.component = this;
-    this._animation = await LoadingManager.loadGLTFAnimation(
-      "animations/gltf/ybot2@walking.glb"
-    );
+     
+    // this._animation = await LoadingManager.loadGLTFAnimation(
+    //   "animations/gltf/ybot2@walking.glb"
+    // );
+    this._animations = await LoadingManager.loadGLTFFirstAnimations(this._animationspathslist) 
+    
     this._model.userData.entity = this._entity;
     this._webgpugroup.add(this._model);
 
     this._mixer = new THREE.AnimationMixer(this._model);
-    this._mixer.clipAction(this._animation).play();
+    this._mixer.clipAction(this._animations[ 6]).play();
     this._model.traverse(
       function (child: any) {
         if (child.isMesh) {
@@ -105,7 +110,7 @@ class CharacterComponent extends Component {
           }, curAction.getClip().duration * 1000);
         }
       };
-    }
+    } 
     // FSM configuration using the higher-order function
     const fsmConfig = {
       actions: {
@@ -155,6 +160,10 @@ class CharacterComponent extends Component {
       },
 
     }) , fsmConfig;
+
+    this._actor= createActor(this._AnimationFSM);
+    this._actor.start();
+
 
   }
 
