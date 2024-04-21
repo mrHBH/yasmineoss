@@ -55,7 +55,7 @@ class twoDUIComponent extends Component {
     planeMaterial.side = THREE.DoubleSide;
     this._webgpuplane = new THREE.Mesh(
       new THREE.PlaneGeometry(
-        (2 * this._size.x) / 100,
+        (1.5 * this._size.x) / 100,
         (1.5 * this._size.y) / 100
       ),
       planeMaterial
@@ -80,8 +80,8 @@ class twoDUIComponent extends Component {
 
   async zoom(radius =5) {
     
-    let p = this._entity.position.clone(); // Make sure to clone so you don't accidentally modify the original position
-    let quat = this._entity.rotation.clone();
+    let p = this._entity.Position.clone(); // Make sure to clone so you don't accidentally modify the original position
+    let quat = this._entity.Quaternion.clone();
     this._entity._entityManager._mc.zoomTo(p, radius, quat);
   }
 
@@ -123,27 +123,29 @@ class twoDUIComponent extends Component {
 
   async Update(deltaTime: number): Promise<void> {
     this._webgpugroup?.position.set(
-      this._entity.position.x,
-      this._entity.position.y,
-      this._entity.position.z
+      this._entity.Position.x,
+      this._entity.Position.y,
+      this._entity.Position.z
     );
-    this._webgpugroup?.rotation.set(
-      this._entity.rotation.x,
-      this._entity.rotation.y,
-      this._entity.rotation.z
+    this._webgpugroup?.quaternion.set(
+      this._entity.Quaternion.x,
+      this._entity.Quaternion.y,
+      this._entity.Quaternion.z,
+      this._entity.Quaternion.w
     );
     this._css2dgroup?.position.set(
-      this._entity.position.x,
-      this._entity.position.y,
-      this._entity.position.z
+      this._entity.Position.x,
+      this._entity.Position.y,
+      this._entity.Position.z
     );
-    this._css2dgroup?.rotation.set(
-      this._entity.rotation.x,
-      this._entity.rotation.y,
-      this._entity.rotation.z
+    this._css2dgroup?.quaternion.set(
+      this._entity.Quaternion.x,
+      this._entity.Quaternion.y,
+      this._entity.Quaternion.z,
+      this._entity.Quaternion.w
     );
 
-    const distance = this._entity.position.distanceTo(
+    const distance = this._entity.Position.distanceTo(
       this._entity._entityManager._mc.camera.position
     );
     //hide the opacity of this._titlebar if the distance is greater than 10
@@ -153,7 +155,27 @@ class twoDUIComponent extends Component {
     if (distance > 15) {
       this._htmlElement.style.opacity = "0";
       this._htmlElement.style.pointerEvents = "none";
+        tween({
+        from: { x: this._webgpuplane.scale.x, y: this._webgpuplane.scale.y },
+        to: { x: (0.1 ) / 100, y: (0.1 ) / 100 },
+        duration: 500,
+        easing: "easeOutQuad",
+        render: (state: any) => {
+          this._webgpuplane.scale.set(state.x, state.y, 1);
+        },
+      });
+    
     } else {
+        tween({
+        from: { x: this._webgpuplane.scale.x, y: this._webgpuplane.scale.y },
+        to: { x: (0.1 * this._size.x) / 100, y: (0.1 * this._size.y ) / 100 },
+        duration: 500,
+        easing: "easeOutQuad",
+        render: (state: any) => {
+          this._webgpuplane.scale.set(state.x, state.y, 1);
+        },
+      });
+      
       this._htmlElement.style.opacity = "1";
       this._htmlElement.style.pointerEvents = "auto";
     }

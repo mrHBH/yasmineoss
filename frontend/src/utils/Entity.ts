@@ -5,7 +5,7 @@ class Entity {
     _name: string;
     id: number;
     _position: THREE.Vector3;
-    _rotation: THREE.Quaternion;
+    _quaternion: THREE.Quaternion;
     _components: Component[] = [];
     _entityManager: EntityManager;
     _handlers: {
@@ -19,7 +19,7 @@ class Entity {
 
     constructor() {
         this._position = new THREE.Vector3();
-        this._rotation = new THREE.Quaternion();
+        this._quaternion = new THREE.Quaternion();
         this._alive = true;
 
     }
@@ -29,12 +29,13 @@ class Entity {
     get name() {
         return this._name;
     }
-    get position() {
+    get Position() {
         return this._position;
     }
 
-    get rotation() {
-        return this._rotation;
+
+    get Quaternion() {
+        return this._quaternion;
     }
 
     get alive() {
@@ -51,12 +52,18 @@ class Entity {
 
 
 
-    set position(position: THREE.Vector3) {
-        this._position = position;
+    set Position(position: THREE.Vector3) {
+         this._position = position;
+        this.Broadcast({ topic: "position", data: this._position }).then(() => {
+         }
+        );
+
+
     }
 
-    set rotation(rotation: THREE.Quaternion) {
-        this._rotation = rotation;
+    set Quaternion(quaternion: THREE.Quaternion) {
+        this._quaternion = quaternion;
+        this.Broadcast({ topic: "quaternion", data: this._quaternion });
     }
 
 
@@ -72,6 +79,28 @@ class Entity {
         await component.InitComponent(this);
         this._components.push(component);
     }
+
+
+    //remove components with provided classnames 
+    async RemoveComponent( ...componentClassNames: string[]) {
+        for (const componentClassName of componentClassNames) {
+            //first destroy the component
+            const component = this._components.find((component) => component.constructor.name === componentClassName);
+            if (component) {
+                 await component.Destroy();
+                //remove the component from the list
+                this._components = this._components.filter((component) => component.constructor.name !== componentClassName);
+            }
+           
+        }
+        return
+    }
+
+    async getComponent(componentClassName: string) {
+        return this._components.find((component) => component.constructor.name === componentClassName);
+    }
+
+
 
 
 

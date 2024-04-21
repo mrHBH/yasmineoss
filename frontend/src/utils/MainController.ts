@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "./OrbitControls";
-import { CSS2DRenderer } from  "./CSS2D"
+import { CSS2DRenderer } from "./CSS2D";
 
 import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
 import { InfiniteGridHelper } from "./InfiniteGridHelper";
@@ -13,8 +13,11 @@ import {
   disposeBoundsTree,
 } from "three-mesh-bvh";
 import { EntityManager } from "./EntityManager";
-import { CSS3DRenderer } from  "./CSS3D"
+import { CSS3DRenderer } from "./CSS3D";
 import { twoDUIComponent } from "./Components/2dUIComponent";
+import { PhysicsManager } from "./PhysicsManager";
+import { distance } from "three/examples/jsm/nodes/Nodes.js";
+import {  UIManager } from "./UIManager";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 //@ts-ignore
@@ -33,12 +36,14 @@ class MainController {
   html2dRenderer: CSS2DRenderer;
   html2dScene: THREE.Scene = new THREE.Scene();
   html3dScene: THREE.Scene = new THREE.Scene();
-
+  physicsmanager: PhysicsManager;
   webgpuscene: THREE.Scene = new THREE.Scene();
   clock: THREE.Clock;
   grid: any;
   fpsGraph: any;
   html3dRenderer: CSS3DRenderer;
+  UIManager: UIManager;
+
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
 
@@ -73,28 +78,15 @@ class MainController {
 
     this.html3dRenderer = new CSS3DRenderer();
     this.html3dRenderer.domElement.style.position = "absolute";
-    //this.rendererCSS.domElement.style.transition = "all 5.5s ease";
     this.html3dRenderer.domElement.style.top = "0";
     this.html3dRenderer.domElement.style.zIndex = "0";
     this.html3dRenderer?.setSize(window.innerWidth, window.innerHeight);
     this.html3dRenderer.domElement.style.pointerEvents = "none";
 
-    // this.html3dScene.scale.set(0.1, 0.1, 0.1);
-    // this.html3dScene.updateMatrixWorld(false);
-    // this.html3dScene.matrixAutoUpdate = false;
-    // this.html3dScene.matrixWorldNeedsUpdate = false;
-
-    // //this.rendererCSS.domElement.style.transition = "all 0.5s ease";
-    // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
-
     document.body.appendChild(this.annotationRenderer.domElement);
     document.body.appendChild(this.html2dRenderer.domElement);
     document.body.appendChild(this.webgpu.domElement);
     document.body.appendChild(this.html3dRenderer.domElement);
-
-    // document.body.appendChild(this.css3drenderer.domElement);
-    //document.body.appendChild(this.css2dRenderer.domElement);
-
     this.camera = new THREE.PerspectiveCamera(
       50,
       window.innerWidth / window.innerHeight,
@@ -142,8 +134,8 @@ class MainController {
     // this.orbitControls.maxPolarAngle = Math.PI / 2;
     // this.orbitControls.minAzimuthAngle =- Math.PI / 2;
     // this.orbitControls.minPolarAngle = - Math.PI / 2;
-    // this.orbitControls.enableDamping = true;
-    // this.orbitControls.dampingFactor = 0.05;
+    this.orbitControls.enableDamping = false;
+    this.orbitControls.dampingFactor = 0.01;
     this.orbitControls.update();
 
     window.addEventListener("resize", () => this.onWindowResize());
@@ -153,6 +145,12 @@ class MainController {
       (event) => this.onDoubleClick(event),
       false
     );
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "p") {
+        this.panAround();
+      }
+    });
 
     const light = new THREE.PointLight(0xffffff, 1);
     light.position.set(0, 1, 5);
@@ -167,19 +165,25 @@ class MainController {
       new THREE.Color(0x444444)
     );
     this.webgpuscene.add(this.grid);
-  }
 
+    this.physicsmanager = new PhysicsManager({ scene: this.webgpuscene });
+    this.clock = new THREE.Clock();
+ 
+    this.UIManager = new UIManager(this);
+ 
+   }
+
+ 
   async update(delta: number) {
     await this.webgpu.renderAsync(this.webgpuscene, this.camera);
     //  TWEEN.update();
-    this.fpsGraph?.begin();
-    this.fpsGraph?.end();
-    //wait 1 s
+    this.fpsGraph?.begin(); 
     this.annotationRenderer.render(this.annoationsScene, this.camera);
-    // //  this.css3drenderer.render(this.css3dscene,  this.camera);
-    this.html2dRenderer.render(this.html2dScene, this.camera);
+     this.html2dRenderer.render(this.html2dScene, this.camera);
     this.html3dRenderer.render(this.html3dScene, this.camera);
-    // this.camera.position.x += 0.01;
+    this.physicsmanager?.Update(delta);
+    this.UIManager?.Update(); 
+    this.fpsGraph?.end();
   }
 
   private onWindowResize(): void {
@@ -239,7 +243,7 @@ class MainController {
       let component = componententities.object.userData.component;
       let quaternion = new THREE.Quaternion();
       if (component) {
-        quaternion = component._entity.rotation;
+        quaternion = component._entity.Quaternion;
         if (component instanceof twoDUIComponent) {
           component.zoom();
           return;
@@ -349,6 +353,29 @@ class MainController {
       finish: () => {
         // this.orbitControls.maxDistance  = newRadius;
         //   this.orbitControls.update();
+        this.resetview();
+      },
+    });
+  }
+
+  async panAround(): Promise<void> {
+    //tween the orbit controls by increasing the azimuthal angle by 0.1
+    //   tween({
+    tween({
+      from: {
+        alpha: this.orbitControls.getAzimuthalAngle(),
+      },
+      to: {
+        alpha: this.orbitControls.getAzimuthalAngle() + 0.1,
+      },
+      duration: 1500,
+      easing: "cubicInOut",
+      render: (state) => {
+        this.orbitControls.maxAzimuthAngle = Number(state.alpha);
+        this.orbitControls.minAzimuthAngle = Number(state.alpha);
+        this.orbitControls.update();
+      },
+      finish: () => {
         this.resetview();
       },
     });

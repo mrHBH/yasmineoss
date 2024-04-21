@@ -81,8 +81,8 @@ class threeDUIComponent extends Component {
 
   async zoom(radius =5) {
     
-    let p = this._entity.position.clone(); // Make sure to clone so you don't accidentally modify the original position
-    let quat = this._entity.rotation.clone();
+    let p = this._entity.Position.clone(); // Make sure to clone so you don't accidentally modify the original position
+    let quat = this._entity.Quaternion.clone();
     this._entity._entityManager._mc.zoomTo(p, radius, quat);
   }
 
@@ -124,24 +124,26 @@ class threeDUIComponent extends Component {
 
   async Update(deltaTime: number): Promise<void> {
     this._webgpugroup?.position.set(
-      this._entity.position.x,
-      this._entity.position.y,
-      this._entity.position.z
+      this._entity.Position.x,
+      this._entity.Position.y,
+      this._entity.Position.z
     );
-    this._webgpugroup?.rotation.set(
-      this._entity.rotation.x,
-      this._entity.rotation.y,
-      this._entity.rotation.z
+    this._webgpugroup?.quaternion.set(
+      this._entity.Quaternion.x,
+      this._entity.Quaternion.y,
+      this._entity.Quaternion.z,
+      this._entity.Quaternion.w
     );
     this._css3dgroup?.position.set(
-      this._entity.position.x,
-      this._entity.position.y,
-      this._entity.position.z
+      this._entity.Position.x,
+      this._entity.Position.y,
+      this._entity.Position.z
     );
-    this._css3dgroup?.rotation.set(
-      this._entity.rotation.x,
-      this._entity.rotation.y,
-      this._entity.rotation.z
+    this._css3dgroup?.quaternion.set(
+      this._entity.Quaternion.x,
+      this._entity.Quaternion.y,
+      this._entity.Quaternion.z,
+      this._entity.Quaternion.w
     );
 
     // const distance = this._entity.position.distanceTo(

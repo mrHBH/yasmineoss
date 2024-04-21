@@ -8,6 +8,7 @@ interface AnimationItem {
     skipTracks?: number[];
   }
 // Adjusted method signatures or added comments to indicate changes
+
 class LoadingManager {
     // Stays the same for caching
     static assets = new Map<string, GLTF>();
@@ -35,8 +36,10 @@ class LoadingManager {
       
         const loader = new GLTFLoader();
         const gltf = await loader.loadAsync(url);
-      
+        
         if (gltf.animations.length > 0) {
+          
+   
           this.animationClips.set(url, gltf.animations[0]);
           console.log("Loaded GLTF Animation:", url);
           return gltf.animations[0];
@@ -49,8 +52,10 @@ class LoadingManager {
 
       static async loadGLTFFirstAnimations(
         animationspathslist: AnimationItem[]
-      ): Promise<AnimationClip[]> {
-        const animationClips: AnimationClip[] = [];
+      ): Promise< {string, AnimationClip} > {
+
+
+        const  animationClips =   {} as {string, AnimationClip};
         const promises = animationspathslist.map(async (item) => {
           try {
             let animation = await this.loadGLTFAnimation(item.url);
@@ -70,7 +75,10 @@ class LoadingManager {
         }
                 
             }
-            animationClips.push(animation);
+                 
+          //animation name is whatis after @ and before the dot
+          let animationName = item.url.split('@')[1].split('.')[0];
+            animationClips[animationName] = animation;
           } catch (error) {
             console.error(`Error loading animation: ${item.url}`, error);
           }

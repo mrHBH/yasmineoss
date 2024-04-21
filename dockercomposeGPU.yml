@@ -51,29 +51,29 @@ services:
       - yasminenet
 
 
-  cppbackend:
-    container_name: cppbackend
-    build:
-      context: ./backend/c++/
-      dockerfile: Dockerfile
-    restart: unless-stopped
+  # cppbackend:
+  #   container_name: cppbackend
+  #   build:
+  #     context: ./backend/c++/
+  #     dockerfile: Dockerfile
+  #   restart: unless-stopped
  
-    ports:
-      - '8080:8080'
-    networks:
-      - yasminenet
+  #   ports:
+  #     - '8080:8080'
+  #   networks:
+  #     - yasminenet
 
 
-  rustbackend:
-    container_name: rustbackend
-    build:      
-      context: ./backend/rust/
-      dockerfile: Dockerfile
-    restart: unless-stopped 
-    ports:
-      - '8420:8420'
-    networks:
-      - yasminenet
+  # rustbackend:
+  #   container_name: rustbackend
+  #   build:      
+  #     context: ./backend/rust/
+  #     dockerfile: Dockerfile
+  #   restart: unless-stopped 
+  #   ports:
+  #     - '8420:8420'
+  #   networks:
+  #     - yasminenet
  
 networks:
   yasminenet:

@@ -1,8 +1,9 @@
 # Use the official bun image as base
 FROM oven/bun:1-debian
 
-# Set the working directory
+ # Set the working directory
 WORKDIR /frontend
+
  
 
 # Copy the package.json file into the container
@@ -10,5 +11,8 @@ COPY package.json /frontend/package.json
 # Install dependencies
 RUN bun install
 
-
-CMD ["bun", "run", "dev"]
+COPY entrypoint.sh /frontend/entrypoint.sh
+RUN chmod +x /frontend/entrypoint.sh
+CMD ["/bin/bash", "/frontend/entrypoint.sh"]
+ 
+ 
