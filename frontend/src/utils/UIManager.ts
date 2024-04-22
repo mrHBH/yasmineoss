@@ -176,20 +176,20 @@ class UIManager {
         //   });
         await this.mc.entitymanager.AddEntity(introui, "UI" + i);
       }
-      let introui2 = new Entity();
+      // let introui2 = new Entity();
 
-      introui2.Position.set(
-        this.splinePath.points[4].x,
-        this.splinePath.points[4].y,
-        this.splinePath.points[4].z - 2
-      );
-      await introui2.AddComponent(
-        new twoDUIComponent(
-          html,
-          new THREE.Vector2(window.innerWidth * 3.2, window.innerHeight * 1.6)
-        )
-      );
-      await this.mc.entitymanager.AddEntity(introui2, "UIflat");
+      // introui2.Position.set(
+      //   this.splinePath.points[4].x,
+      //   this.splinePath.points[4].y,
+      //   this.splinePath.points[4].z - 2
+      // );
+      // await introui2.AddComponent(
+      //   new twoDUIComponent(
+      //     html,
+      //     new THREE.Vector2(window.innerWidth * 3.2, window.innerHeight * 1.6)
+      //   )
+      // );
+      // await this.mc.entitymanager.AddEntity(introui2, "UIflat");
 
       // const loadingTask = pdfjsLib.getDocument("resumeEN.pdf");
 
@@ -256,7 +256,7 @@ class UIManager {
       new THREE.Vector3(0, 5, 0),
       new THREE.Vector3(-5, 2, 10),
 
-      new THREE.Vector3(-50, 2, 10),
+      new THREE.Vector3(-5, 2, 10),
     ];
     this.splinePath = new THREE.CatmullRomCurve3(controlPoints);
     const points = this.splinePath.getPoints(1000);
