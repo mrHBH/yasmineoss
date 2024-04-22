@@ -256,7 +256,9 @@ class UIManager {
       new THREE.Vector3(0, 5, 0),
       new THREE.Vector3(-5, 2, 10),
 
-      new THREE.Vector3(-5, 2, 10),
+      new THREE.Vector3(-10, 2, 10),
+      new THREE.Vector3(-15, 2, 13),
+      new THREE.Vector3(-20, 2,  10),
     ];
     this.splinePath = new THREE.CatmullRomCurve3(controlPoints);
     const points = this.splinePath.getPoints(1000);

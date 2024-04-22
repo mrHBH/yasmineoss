@@ -92,7 +92,7 @@ class Main {
   private async init(): Promise<void> {
     this.entityManager = new EntityManager();
     this.maincController = new MainController(this.entityManager);
-    this.maincController.physicsmanager.debug = true;
+    //this.maincController.physicsmanager.debug = false;
     // const ws2 = new WebSocket(backends.pythonbackendws);
     //   ws2.onopen = function open() {
     //     // setInterval(() => {
