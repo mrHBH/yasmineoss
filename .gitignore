@@ -3,3 +3,4 @@ backend/typescript/bun.lockb
 *.env
 bun.lockb
 frontend/bun.lockb
+frontend/bun.lockb
