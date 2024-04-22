@@ -20,7 +20,7 @@ class twoDUIComponent extends Component {
     this._size = size ? size : new THREE.Vector2(500, 500);
   }
 
-  get htmlElement() {
+  get HtmlElement() {
     return this._htmlElement;
   }
   get Size() {
@@ -35,6 +35,9 @@ class twoDUIComponent extends Component {
     //this._webgpuplane.geometry = new THREE.PlaneGeometry(2*this._size.x/100, 1.5*this._size.y/100);
   }
 
+  set HtmlElement (htmlElement: HTMLElement) {
+    this._htmlElement = htmlElement;
+  }
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
     this._htmlElement = document.createElement("div");

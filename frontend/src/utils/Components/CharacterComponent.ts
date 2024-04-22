@@ -11,6 +11,7 @@ import { cp } from "fs";
 import { MainController } from "../MainController";
 import { ITask } from "../TaskManager";
  
+ 
 
 class CharacterComponent extends Component {
   private _model: THREE.Object3D;
@@ -42,7 +43,7 @@ class CharacterComponent extends Component {
   BehaviourFSM_: any;
   BehaviourFSM_Service_: any;
   AIinputkeys_: any;
-  Activities: [];
+  taskintervals: any;
    Input: any;
 
   constructor({ modelpath, animationspathslist }) {
@@ -141,10 +142,11 @@ class CharacterComponent extends Component {
     this.body.linearDamping = 0.9;
     this.body.angularFactor.set(0, 1, 0);
     this.body.fixedRotation = true;
-
+    this.taskintervals = [];
     this.CreateFSM_();
-    
-    this.walktopos( new THREE.Vector3( Math.random() * 150, 0, Math.random() * 190));
+
+     
+   // this.walktopos( new THREE.Vector3( Math.random() * 150, 0, Math.random() * 190));
  
   }
 
@@ -988,7 +990,6 @@ class CharacterComponent extends Component {
     }
   }
 
- 
 
   walktopos(locationposition : THREE.Vector3) {
 
@@ -996,13 +997,42 @@ class CharacterComponent extends Component {
     //   console.log("Input not initialized");
     //   return;
     // }
+      if (this.taskintervals){ 
+
+        for (let i = 0; i < this.taskintervals.length; i++) {
+          clearInterval(this.taskintervals[i]);
+        }
+      }
+ 
    let interval= setInterval(() => {
       //console.log(	this.Input._keys)
+      //clear existing intervals
+  
+     
+      
+
       const controlObject = new THREE.Object3D();
 				controlObject.position.copy(this._entity.Position );
 				controlObject.quaternion.copy( this._entity.Quaternion);
 				controlObject.lookAt( locationposition);
 				const distance = controlObject.position.distanceTo( locationposition);
+                //rotation 
+                const targetDirection = new THREE.Vector3()
+                .subVectors(
+                  locationposition,
+                  this._entity.Position
+                )
+                .normalize();
+              const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
+                this._entity.Quaternion
+              );
+              const crossProduct = new THREE.Vector3().crossVectors(
+                currentDirection,
+                targetDirection
+              );
+              const deadZone = 0.05; // Change this value according to required dead zone size.
+        
+               
         //  console.log(distance);
  				if (distance > 2) {
           console.log("walking");
@@ -1013,13 +1043,83 @@ class CharacterComponent extends Component {
 							this.AnimationFSMService_.state.value == "Running"
 						) {
 							//shift
-							this.Input._keys.shift = true;
+              if (distance >8) {
+                this.Input._keys.shift = true;
+              }
 						} else {
 							this.Input._keys.shift =false;
 						}
 					} catch (error) {
 						console.log(error);
 					}
+
+  
+          if (crossProduct.y < -deadZone) {
+            // Needs to turn right
+            this.Input._keys.right = true;
+            this.Input._keys.left = false;
+          } else if (crossProduct.y > deadZone) {
+            // Needs to turn left
+            this.Input._keys.right = false;
+            this.Input._keys.left = true;
+          } else {
+            // Within the dead zone, maintain current direction
+            //we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
+            const deviation = controlObject.quaternion.angleTo(
+              this._entity.Quaternion
+            );
+            if (Math.abs(deviation) > 1) {
+              this.Input._keys.left = true;
+              this.Input._keys.right = false;
+            } else {
+              this.Input._keys.left = false;
+              this.Input._keys.right = false;
+            }
+         
+            this.Input._keys.forward = true;
+          
+          const targetDirection = new THREE.Vector3()
+            .subVectors(
+              locationposition,
+              controlObject.position 
+            )
+            .normalize();
+          const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
+            this._entity.Quaternion
+          );
+          const crossProduct = new THREE.Vector3().crossVectors(
+            currentDirection,
+            targetDirection
+          );
+          const deadZone = 0.05; // Change this value according to required dead zone size.
+  
+          try {
+            if (crossProduct.y < -deadZone) {
+              // Needs to turn right
+              this.Input._keys.right = true;
+              this.Input._keys.left = false;
+            } else if (crossProduct.y > deadZone) {
+              // Needs to turn left
+              this.Input._keys.right = false;
+              this.Input._keys.left = true;
+            } else {
+              // Within the dead zone, maintain current direction
+              //we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
+              const deviation = controlObject.quaternion.angleTo(
+                this._entity.Quaternion
+              );
+              if (Math.abs(deviation) > 1) {
+                this.Input._keys.left = true;
+                this.Input._keys.right = false;
+              } else {
+                this.Input._keys.left = false;
+                this.Input._keys.right = false;
+              }
+            }
+            this.Input._keys.forward = true;
+          } catch (error) {
+            console.log(error);
+          }}
 				} else {
 					try {
             this.Input._keys.shift =false;
@@ -1033,90 +1133,11 @@ class CharacterComponent extends Component {
 					}
 				}
 
-        const targetDirection = new THREE.Vector3()
-        .subVectors(
-          locationposition,
-          this._entity.Position
-        )
-        .normalize();
-      const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
-        this._entity.Quaternion
-      );
-      const crossProduct = new THREE.Vector3().crossVectors(
-        currentDirection,
-        targetDirection
-      );
-      const deadZone = 0.05; // Change this value according to required dead zone size.
-
-       
-        if (crossProduct.y < -deadZone) {
-          // Needs to turn right
-          this.Input._keys.right = true;
-          this.Input._keys.left = false;
-        } else if (crossProduct.y > deadZone) {
-          // Needs to turn left
-          this.Input._keys.right = false;
-          this.Input._keys.left = true;
-        } else {
-          // Within the dead zone, maintain current direction
-          //we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
-          const deviation = controlObject.quaternion.angleTo(
-            this._entity.Quaternion
-          );
-          if (Math.abs(deviation) > 1) {
-            this.Input._keys.left = true;
-            this.Input._keys.right = false;
-          } else {
-            this.Input._keys.left = false;
-            this.Input._keys.right = false;
-          }
-       
-          this.Input._keys.forward = true;
-        
-        const targetDirection = new THREE.Vector3()
-					.subVectors(
-            locationposition,
-						controlObject.position 
-					)
-					.normalize();
-				const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
-          this._entity.Quaternion
-				);
-				const crossProduct = new THREE.Vector3().crossVectors(
-					currentDirection,
-					targetDirection
-				);
-				const deadZone = 0.05; // Change this value according to required dead zone size.
-
-				try {
-					if (crossProduct.y < -deadZone) {
-						// Needs to turn right
-						this.Input._keys.right = true;
-						this.Input._keys.left = false;
-					} else if (crossProduct.y > deadZone) {
-						// Needs to turn left
-						this.Input._keys.right = false;
-						this.Input._keys.left = true;
-					} else {
-						// Within the dead zone, maintain current direction
-						//we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
-						const deviation = controlObject.quaternion.angleTo(
-              this._entity.Quaternion
-						);
-						if (Math.abs(deviation) > 1) {
-              this.Input._keys.left = true;
-              this.Input._keys.right = false;
-						} else {
-              this.Input._keys.left = false;
-              this.Input._keys.right = false;
-						}
-					}
-          this.Input._keys.forward = true;
-				} catch (error) {
-					console.log(error);
-				}}
+   
       
       } , 50);
+
+      this.taskintervals.push(interval);
 
 
 					 
@@ -1180,16 +1201,29 @@ class CharacterComponent extends Component {
     
 
   }
+  showui() {
+       //create a ui card and add it to the css2dgroup
+       let html = /*html*/ `<div class="uk-card uk
+        -card-default uk-card-body"> <h3 class="uk-card-title">Title</h3> <p>Content</p> </div>`;
+        let div = document.createElement("div");
+        div.innerHTML = html;
+        div.style.transition = "opacity 0.5s";
+        const label = new CSS2DObject(div);
+
+        label.position.set(0, 2, 0);
+        this._css2dgroup.add(label);
+
+   }
 
   async InitEntity(): Promise<void> {
     console.log("InitEntity CharacterComponent");
     const htmlelelementinnerHTML = /*html*/ `<ul class="uk-iconnav">      
-		
-		<li><a href="#" uk-tooltip="Chat!" uk-icon="icon:  reply; ratio: 1.0"></a>
  
-	</li>
         <li><a id="name" class="namenode" href="#" ></span> ${this._entity._name}</a></li>
     </ul>`;
+
+    //when name is clicked , toggle the visibility of the ui card
+   
     this._titlebar = document.createElement("div");
     this._titlebar.innerHTML = htmlelelementinnerHTML;
     this._titlebar.style.transition = "opacity 0.5s";
@@ -1201,12 +1235,26 @@ class CharacterComponent extends Component {
     this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
     this._entity._entityManager._mc.physicsmanager.world.addBody(this.body);
 
+    let name = this._titlebar.querySelector("#name");
+    name.addEventListener("click", () => {
+      console.log("clicked");
+      this.showui();
+    });
     this._entity._RegisterHandler("zoom", async () => {
       await this.zoom();
     });
     this._entity._RegisterHandler("panaround", async () => {
       await this.panaround();
     });
+
+     //register handler for     this._entity.Broadcast({ topic: "inputinitialized", data: {input : this} });
+     this._entity._RegisterHandler(
+      "walk",
+      (data: { position: any }) => {
+          this.walktopos(data.position);
+          
+      }
+    );
 
     //register handler for     this._entity.Broadcast({ topic: "inputinitialized", data: {input : this} });
     this._entity._RegisterHandler(

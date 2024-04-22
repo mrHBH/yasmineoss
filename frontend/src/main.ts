@@ -168,6 +168,24 @@ class Main {
     await bob.AddComponent(bobcontroller);
      await bob.AddComponent(new AIInput());
     await this.entityManager.AddEntity(bob, "Bob");
+    setInterval(() => {
+      let pos = this.maincController.UIManager.attentionCursor.position;
+  
+      bob.Broadcast({
+        topic: "walk",
+        data: { position: new THREE.Vector3( pos.x, 0, pos.z) },
+      });
+    }
+    , 1000);
+//check if  the attention cursor
+    if (this.maincController.UIManager.cubePosition > 0.5 && this.maincController.UIManager.cubePosition < 0.8) {
+      bob.Broadcast({
+        topic: "showui",
+        data: {},
+      });
+    }  
+
+   
 
 
     const car = new Entity();
@@ -191,8 +209,8 @@ class Main {
     setTimeout(() => {
     
       const h = async () => {
-        await car.AddComponent(carcontroller);
-        await this.entityManager.AddEntity(car, "Car");
+        // await car.AddComponent(carcontroller);
+        // await this.entityManager.AddEntity(car, "Car");
     
         const keyboardinput = new KeyboardInput();
 
