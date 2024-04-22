@@ -16,7 +16,7 @@ services:
       - LLM_MODELS_PATH=/app/models/
       - LLM_MODEL_URL=https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q8_0.gguf
     networks:
-      - yasminenet
+      - yasminenett
 
 
   tsbackend:
@@ -28,32 +28,32 @@ services:
     ports:
       - '8089:8089'
     networks:
-      - yasminenet
+      - yasminenett
  
 
  
-  cppbackend:
-    container_name: cppbackend
-    build:
-      context: ./backend/c++/
-      dockerfile: Dockerfile
-    restart: unless-stopped
+  # cppbackend:
+  #   container_name: cppbackend
+  #   build:
+  #     context: ./backend/c++/
+  #     dockerfile: Dockerfile
+  #   restart: unless-stopped
  
-    ports:
-      - '8080:8080'
-    networks:
-      - yasminenet
+  #   ports:
+  #     - '8080:8080'
+  #   networks:
+  #     - yasminenet
 
-  rustbackend:
-    container_name: rustbackend
-    build:      
-      context: ./backend/rust/
-      dockerfile: Dockerfile
-    restart: unless-stopped 
-    ports:
-      - '8420:8420'
-    networks:
-      - yasminenet
+  # rustbackend:
+  #   container_name: rustbackend
+  #   build:      
+  #     context: ./backend/rust/
+  #     dockerfile: Dockerfile
+  #   restart: unless-stopped 
+  #   ports:
+  #     - '8420:8420'
+  #   networks:
+  #     - yasminenet
  
 
   browserfrontend:
@@ -68,8 +68,8 @@ services:
     ports:
       - '3001:3001'
     networks:
-      - yasminenet
+      - yasminenett
 
 networks:
-  yasminenet:
+  yasminenett:
 
