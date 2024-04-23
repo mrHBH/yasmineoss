@@ -21,6 +21,12 @@ class EntityManager {
     }
 
     async AddEntity(entity: Entity , name: string) {
+        //check if entity with the same name already exists
+        let existingEntity = this._entities.find(e => e._name === name);
+        if (existingEntity) {
+            console.log("Entity with name", name, "already exists");
+            return -1;
+        }
         entity._name = name;
         entity.id = this._ids;          
         this._entities.push(entity);
@@ -30,6 +36,14 @@ class EntityManager {
         await entity.Initialize();
  
        
+    }
+
+    async RemoveEntity(entity: Entity) {
+       entity.Destroy().then(() => {
+            this._entities = this._entities.filter(e => e !== entity);
+            this._entitiesMap.delete(entity.id);
+        }
+        );
     }
  
     Update(deltaTime: number) {

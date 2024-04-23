@@ -92,7 +92,7 @@ class Main {
   private async init(): Promise<void> {
     this.entityManager = new EntityManager();
     this.maincController = new MainController(this.entityManager);
-    //this.maincController.physicsmanager.debug = false;
+    this.maincController.physicsmanager.debug = true;
     // const ws2 = new WebSocket(backends.pythonbackendws);
     //   ws2.onopen = function open() {
     //     // setInterval(() => {
@@ -106,15 +106,15 @@ class Main {
     //     console.log('received from python backend:', event.data);
     //   }
 
-    // this.inferencewebsocket = new WebSocket(backends.pythonbackendws);
-    // this.inferencewebsocket.onopen = function open() {
-    //   // setInterval(() => {
-    //   // ws2.send('something for python');
-    //   // } , 1000);
-    //   // ws2.send('hello from the frontend');
-    //   let jsoncmd = JSON.stringify({cmd: "gen" , topic : "random fact about programming"}) ;
-    //   this.send(jsoncmd);
-    // };
+    this.inferencewebsocket = new WebSocket(backends.pythonbackendws);
+    this.inferencewebsocket.onopen = function open() {
+      // setInterval(() => {
+      // ws2.send('something for python');
+      // } , 1000);
+      // ws2.send('hello from the frontend');
+      let jsoncmd = JSON.stringify({cmd: "gen" , topic : "random fact about programming"}) ;
+      this.send(jsoncmd);
+    };
 
     // this.inferencewebsocket.onmessage = function incoming(event) {
 
@@ -136,14 +136,14 @@ class Main {
       { url: "animations/gltf/ybot2@DyingForward2.glb" , skipTracks: [ 1] },
       // { url: "animations/gltf/ybot2@EnteringCar.glb",  },
       // { url: "animations/gltf/ybot2@ExitingCar.glb", skipTracks: [0, 2] },
-      // { url: "animations/gltf/ybot2@Falling.glb", skipTracks: [0] },
+      { url: "animations/gltf/ybot2@Falling.glb", skipTracks: [0] },
       { url: "animations/gltf/ybot2@Ideling.glb" },
-      // { url: "animations/gltf/ybot2@JumpFromStill.glb" },
-      // { url: "animations/gltf/ybot2@JumpFromWalk.glb", skipTracks: [0] },
+      { url: "animations/gltf/ybot2@JumpingFromStill.glb" },
+      { url: "animations/gltf/ybot2@JumpingFromWalk.glb", skipTracks: [ 1 ,0] },
       // { url: "animations/gltf/ybot2@Jumping.glb" },
-      // { url: "animations/gltf/ybot2@JumpRunning.glb", skipTracks: [0] },
+      { url: "animations/gltf/ybot2@JumpingFromRun.glb", skipTracks: [0] },
       // { url: "animations/gltf/ybot2@Kickedfall.glb", skipTracks: [1] },
-      // { url: "animations/gltf/ybot2@Landing.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@Landing.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@Pain.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@PlayingGuitar.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@PlayingPiano.glb", skipTracks: [0] },
@@ -168,9 +168,9 @@ class Main {
     await bob.AddComponent(bobcontroller);
      await bob.AddComponent(new AIInput());
     await this.entityManager.AddEntity(bob, "Bob");
+    this.maincController.MainEntity = bob;
     setInterval(() => {
       let pos = this.maincController.UIManager.attentionCursor.position;
-  
       bob.Broadcast({
         topic: "walk",
         data: { position: new THREE.Vector3( pos.x, 0, pos.z) },

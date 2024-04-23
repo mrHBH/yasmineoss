@@ -183,6 +183,14 @@ class twoDUIComponent extends Component {
       this._htmlElement.style.pointerEvents = "auto";
     }
   }
+
+   async Destroy(): Promise<void> {
+    this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+    this._entity._entityManager._mc.html2dScene.remove(this._css2dgroup);
+    this._htmlElement.remove();
+    
+
+  }
 }
 
 export { twoDUIComponent };

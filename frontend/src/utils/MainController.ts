@@ -18,6 +18,7 @@ import { twoDUIComponent } from "./Components/2dUIComponent";
 import { PhysicsManager } from "./PhysicsManager";
 import { distance } from "three/examples/jsm/nodes/Nodes.js";
 import {  UIManager } from "./UIManager";
+import { Entity } from "./Entity";
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 //@ts-ignore
@@ -43,6 +44,7 @@ class MainController {
   fpsGraph: any;
   html3dRenderer: CSS3DRenderer;
   UIManager: UIManager;
+  mainEntity: Entity;
 
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
@@ -59,7 +61,7 @@ class MainController {
     this.annotationRenderer.setSize(window.innerWidth, window.innerHeight);
     this.annotationRenderer.domElement.style.position = "absolute";
     this.annotationRenderer.domElement.style.top = "0px";
-    this.annotationRenderer.domElement.style.pointerEvents = "auto";
+    this.annotationRenderer.domElement.style.pointerEvents = "none";
     this.annotationRenderer.domElement.style.zIndex = "4";
 
     this.html2dRenderer = new CSS2DRenderer();
@@ -84,7 +86,7 @@ class MainController {
     this.html3dRenderer.domElement.style.pointerEvents = "none";
 
     document.body.appendChild(this.annotationRenderer.domElement);
-    document.body.appendChild(this.html2dRenderer.domElement);
+     document.body.appendChild(this.html2dRenderer.domElement);
     document.body.appendChild(this.webgpu.domElement);
     document.body.appendChild(this.html3dRenderer.domElement);
     this.camera = new THREE.PerspectiveCamera(
@@ -127,8 +129,8 @@ class MainController {
 
     this.orbitControls = new OrbitControls(
       this.camera,
-      this.annotationRenderer.domElement
-    );
+      this.html2dRenderer.domElement
+    ) as OrbitControls;
     this.orbitControls.target.set(0, 5, 0);
     // this.orbitControls.maxAzimuthAngle = Math.PI  ;
     // this.orbitControls.maxPolarAngle = Math.PI / 2;
@@ -137,7 +139,7 @@ class MainController {
     this.orbitControls.enableDamping = false;
     this.orbitControls.dampingFactor = 0.01;
     this.orbitControls.update();
-
+     
     window.addEventListener("resize", () => this.onWindowResize());
 
     document.addEventListener(
@@ -149,6 +151,8 @@ class MainController {
     document.addEventListener("keydown", (event) => {
       if (event.key === "p") {
         this.panAround();
+        //if still pressed senda a new event
+        
       }
     });
 
@@ -170,16 +174,21 @@ class MainController {
     this.clock = new THREE.Clock();
  
     this.UIManager = new UIManager(this);
- 
+  
    }
 
- 
+   set MainEntity (entity: any) {
+    this.mainEntity = entity;
+   }
+   get MainEntity() {
+      return this.mainEntity;
+    }
   async update(delta: number) {
     await this.webgpu.renderAsync(this.webgpuscene, this.camera);
     //  TWEEN.update();
     this.fpsGraph?.begin(); 
     this.annotationRenderer.render(this.annoationsScene, this.camera);
-     this.html2dRenderer.render(this.html2dScene, this.camera);
+    this.html2dRenderer.render(this.html2dScene, this.camera);
     this.html3dRenderer.render(this.html3dScene, this.camera);
     this.physicsmanager?.Update(delta);
     this.UIManager?.Update(); 

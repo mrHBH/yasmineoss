@@ -10,6 +10,7 @@ class Component {
 
     }
 
+    
 
     Update(deltaTime: number) {
         //Update the component

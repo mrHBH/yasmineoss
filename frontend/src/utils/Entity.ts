@@ -42,8 +42,10 @@ class Entity {
         return this._alive;
     }
 
-    kill() {
+   async kill() {
         this._alive = false;
+        //resolve the promise when the entity is killed
+        
     }
 
     set name(name: string) {
@@ -157,7 +159,7 @@ class Entity {
     async Destroy() {
 
         for (const component of this._components) {
-            component.Destroy();
+         await   component.Destroy();
         }
     }
 

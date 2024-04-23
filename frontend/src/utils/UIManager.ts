@@ -24,8 +24,10 @@ class UIManager {
   scrollbarContainer: HTMLDivElement;
   scrollbarContent: HTMLDivElement;
   mc: MainController;
+  controlpointsmeshes: THREE.Object3D[];
   constructor(parent: MainController) {
     this.mc = parent;
+    this.controlpointsmeshes = [];
     this.createAttentionCursor();
     this.createSplinePath();
     this.createUIButtons();
@@ -33,211 +35,243 @@ class UIManager {
     this.moveCubeAlongPath(0);
     this.createInitialUI();
   }
-  private createInitialUI(): void {
+  private async createInitialUI(): Promise<void> {
     const html = /*html*/ `
-<div class="<div class=" uk-section uk-section-secondary uk-light">
-  <div class="uk-container">
-    <div class="uk-grid-match uk-child-width-1-2@m" uk-grid>
-      <div>
-        <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
-          <article class="uk-comment uk-comment-secondary" role="comment">
-            <header class="uk-comment-header">
-              <div class="uk-grid-medium uk-flex-middle" uk-grid>
-                <div class="uk-width-auto"> <img class="uk-comment-avatar uk-border-circle" src="Hamza012.jpg" width="80"
-                    height="80" alt=""> </div>
-                <div class="uk-width-expand">
-                  <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
-                  <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
-                    <li><a href="#">Electrical Engineer</a></li>
-                  </ul>
+     <div class="uk-container">
+      <div class="uk-grid-match uk-child-width-1-2@m" uk-grid>
+        <div>
+          <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+            <article class="uk-comment uk-comment-secondary" role="comment">
+              <header class="uk-comment-header">
+                <div class="uk-grid-medium uk-flex-middle" uk-grid>
+                  <div class="uk-width-auto"> <img class="uk-comment-avatar uk-border-circle" src="Hamza012.jpg" width="80"
+                      height="80" alt=""> </div>
+                  <div class="uk-width-expand">
+                    <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
+                    <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
+                      <li><a href="#">Electrical Engineer</a></li>
+                    </ul>
+                  </div>
+                </div>
+              </header>
+              <div class="uk-comment-body">
+                <p>Welcome to my personal website!</p>            </div>
+            </article>
+          </div>
+        </div>
+        <div>
+          <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-right; repeat: true">
+            <h3 class="uk-card-title">Navigation</h3>
+            <div class="uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match" uk-grid>
+              <div>
+                <div class="uk-card uk-card-secondary uk-card-body uk-card-hover uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+                  <span uk-icon="icon: mail; ratio: 2"></span>
+                  <div class="uk-grid-small uk-child-width-auto" uk-grid>
+                      <div>
+                        <a class="uk-button  uk-button-text"  id="contactButton" href="#">Contact</a>
+                      </div>
+                
+            </div>
+                  
                 </div>
               </div>
-            </header>
-            <div class="uk-comment-body">
-              <p>Welcome to my personal website!</p>
-            </div>
-          </article>
-        </div>
-      </div>
-      <div>
-        <div class="uk-card uk-card-default uk-card-body" uk-scrollspy="cls: uk-animation-slide-right; repeat: true">
-          <h3 class="uk-card-title">About Me</h3>
-          <p>I am an electrical engineer with a passion for innovation and problem-solving. With expertise in embedded
-            systems, automation, and human-machine interfaces, I strive to create cutting-edge solutions that enhance
-            user experiences and drive technological advancements.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="uk-section uk-section-muted " uk-scrollspy="cls: uk-animation-slide-left; repeat: true ; ">
-  <div class="uk-container">
-    <h2 class="uk-text-center">Skills</h2>
-    <div class="uk-child-width-1-2@s uk-child-width-1-4@m uk-grid-match" uk-grid>
-      <div>
-        <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-          <span uk-icon="icon: code; ratio: 2"></span>
-          <h3 class="uk-card-title">Programming</h3>
-          <p>Proficient in Python, JavaScript, TypeScript, C, and C#</p>
-        </div>
-      </div>
-      <div>
-        <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-          <span uk-icon="icon: bolt; ratio: 2"></span>
-          <h3 class="uk-card-title">Embedded Systems</h3>
-          <p>Experience with Bluetooth Low Energy, ZigBee, and Modbus</p>
-        </div>
-      </div>
-      <div>
-        <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-          <span uk-icon="icon: comments; ratio: 2"></span>
-          <h3 class="uk-card-title">Languages</h3>
-          <p>Fluent in German, English, French, and Arabic</p>
-        </div>
-      </div>
-      <div>
-        <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-          <span uk-icon="icon: future; ratio: 2"></span>
-          <h3 class="uk-card-title">Interests</h3>
-          <p>Generative AI pipelines for ASR, TTS, language understanding, and reasoning</p>
-        </div>
-      </div>
-    </div>
-  </div>
- </div> `;
+              <div>
+                <div class="uk-card uk-card-secondary uk-card-body uk-card-hover uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+                  <span uk-icon="icon: code; ratio: 2"></span>
+                   <a class="uk-button  uk-button-text"  id="projectsButton" href="#">Projects</a>
+
+                 </div>
+              </div>
+              <div>
+                <div class="uk-card uk-card-secondary uk-card-body  uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+                  <span uk-icon="icon: user; ratio: 2"></span>
+                   <a class="uk-button  uk-button-text"  id="aboutButton" href="#">About</a>
 
  
-    let canvas = document.createElement("canvas");
-    // Loading a document.
-    const loadingTask = pdfjsLib.getDocument("resumeEN.pdf");
-    loadingTask.promise
-      .then(function (pdfDocument) {
-        // Request a first page
-        return pdfDocument.getPage(1).then(function (pdfPage) {
-          // Display page on the existing canvas with 100% scale.
-          const viewport = pdfPage.getViewport({ scale: 4.0 });
+              </div>
+            </div>
+          </div>
+           </div>
+    </div>
+   `;
 
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext("2d");
-          const renderTask = pdfPage.render({
-            canvasContext: ctx,
-            viewport,
-          });
-          //document.body.appendChild(canvas);
-          return renderTask.promise;
-        });
-      })
-      .catch(function (reason) {
-        console.error("Error: " + reason);
-      });
+    const uicomponent = new twoDUIComponent(
+      html,
+      new THREE.Vector2(window.innerWidth * 0.8, window.innerHeight * 1.0)
+    );
 
     const h = async () => {
-      for (let i = 0; i < 1; i++) {
-        let introui = new Entity();
-        introui.Position.set(
-          this.splinePath.points[i].x,
-          this.splinePath.points[i].y  ,
-          this.splinePath.points[i].z - 2
-        );
-        await introui.AddComponent(
-          new twoDUIComponent(
-            html,
-            new THREE.Vector2(window.innerWidth * 0.8, window.innerHeight * 1.0)
-          )
-        );
-        // const loadingTask = pdfjsLib.getDocument("resumeEN.pdf");
-        // loadingTask.promise
-        //   .then(function (pdfDocument) {
-        //     // Request a first page
-        //     return pdfDocument.getPage(1).then(function (pdfPage) {
-        //       // Display page on the existing canvas with 100% scale.
-        //       const viewport = pdfPage.getViewport({ scale: 15});
+      let introui = new Entity();
+      introui.Position.set(
+        this.splinePath.points[0].x,
+        this.splinePath.points[0].y,
+        this.splinePath.points[0].z - 2
+      );
+      await introui.AddComponent(uicomponent);
 
-        //       canvas.width = viewport.width;
-        //       canvas.height = viewport.height;
-        //       const ctx = canvas.getContext("2d");
-        //       const renderTask = pdfPage.render({
-        //         canvasContext: ctx,
-        //         viewport,
-        //       });
-        //       //document.body.appendChild(canvas);
-        //       //get ui component
-        //       let uicomponent = introui.getComponent ("twoDUIComponent") as  Promise<twoDUIComponent>;
-        //       // uicomponent.then((value) => {
-        //       //   value.HtmlElement.appendChild(canvas);
-        //       // });
-
-        //       return renderTask.promise;
-        //     });
-        //   })
-        //   .catch(function (reason) {
-        //     console.error("Error: " + reason);
-        //   });
-        await this.mc.entitymanager.AddEntity(introui, "UI" + i);
+      let res = await this.mc.entitymanager.AddEntity(introui, "mainUI");
+      if (res == -1) {
+        return;
       }
-      // let introui2 = new Entity();
 
-      // introui2.Position.set(
-      //   this.splinePath.points[4].x,
-      //   this.splinePath.points[4].y,
-      //   this.splinePath.points[4].z - 2
-      // );
-      // await introui2.AddComponent(
-      //   new twoDUIComponent(
-      //     html,
-      //     new THREE.Vector2(window.innerWidth * 3.2, window.innerHeight * 1.6)
-      //   )
-      // );
-      // await this.mc.entitymanager.AddEntity(introui2, "UIflat");
+      let contactButton = uicomponent.HtmlElement.querySelector(
+        "#contactButton"
+      ) as HTMLButtonElement;
+      let projectsButton = uicomponent.HtmlElement.querySelector(
+        "#projectsButton"
+      ) as HTMLButtonElement;
+      let aboutButton = uicomponent.HtmlElement.querySelector(
+        "#aboutButton"
+      ) as HTMLButtonElement;
 
-      // const loadingTask = pdfjsLib.getDocument("resumeEN.pdf");
+      contactButton.onclick = () => {
+        let contactFlow = [
+          new THREE.Vector3(0, 15, 0),
+          new THREE.Vector3(-2, 15, 0),
+          new THREE.Vector3(-14, 19, 0),
+        ];
+        this.splinePath.points = contactFlow;
 
-      // loadingTask.promise
-      //   .then(function (pdfDocument) {
-      //     // Request a first page
-      //     return pdfDocument.getPage(1).then(function (pdfPage) {
-      //       // Display page on the existing canvas with 100% scale.
-      //       const viewport = pdfPage.getViewport({ scale: 15});
+        let introui2 = new Entity();
+        introui2.Position.set(
+          this.splinePath.points[2].x,
+          this.splinePath.points[2].y - 2,
+          this.splinePath.points[2].z - 2
+        );
+        const h = async () => {
+          let html = /*html*/ `
+          <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+            <h3 class="uk-card-title">Contact</h3>
+            <p>Feel free to reach out to me at <a href="mailto:hamza@ben-hassen.com">hamza@ben-hassen.com</a></p>
+            <form class="uk-form-stacked">
+              <div class="uk-margin">
+                <label class="uk-form-label" for="form-stacked-text">Name</label>
+                <div class="uk-form-controls">
+                  <input       
+                       </div>
+              </div>
+              <div class="uk-margin">
+                <label class="uk-form-label" for="form-stacked-email">Email</label>
+                <div class="uk-form-controls">
+                  <input class="uk-input" id="form-stacked-email" type="email" placeholder="Your Email">
+                </div>
+              </div>
+              <div class="uk-margin">
+                <label class="uk-form-label" for="form-stacked-message">Message</label>
+                <div class="uk-form-controls">
+                  <textarea class="uk-textarea" id="form-stacked-message" rows="5" placeholder="Your Message"></textarea>
+                </div>
+              </div>
+              <button class="uk-button uk-button-primary">Send</button>
+            </form>
+          </div>`;
+          const uicomponent = new twoDUIComponent(
+            html,
+            new THREE.Vector2(window.innerWidth * 0.8, window.innerHeight * 1.2)
+          );
+          await introui2.AddComponent(uicomponent);
+          await this.mc.entitymanager.AddEntity(introui2, "contactUI");
+        };
+        h();
+        this.cubePosition = 1;
+        this.updateScrollbarPosition();
+        this.updateSplineObject();
+      };
 
-      //       canvas.width = viewport.width;
-      //       canvas.height = viewport.height;
-      //       const ctx = canvas.getContext("2d");
-      //       const renderTask = pdfPage.render({
-      //         canvasContext: ctx,
-      //         viewport,
-      //       });
-      //       //document.body.appendChild(canvas);
-      //       //get ui component
-      //       let uicomponent = introui.getComponent ("twoDUIComponent") as  Promise<twoDUIComponent>;
-      //       // uicomponent.then((value) => {
-      //       //   value.HtmlElement.appendChild(canvas);
-      //       // });
+      projectsButton.onclick = () => {
+        let projectsFlow = [
+          new THREE.Vector3(0, 15, -5),
+          new THREE.Vector3(0,10, -5),
+          new THREE.Vector3(0, 8, -5),
+          new THREE.Vector3(0, 3, -5),
+          new THREE.Vector3(0, 1.5, -5),
+        ];
+        this.splinePath.points = projectsFlow;
 
-      //       return renderTask.promise;
-      //     });
-      //   })
-      //   .catch(function (reason) {
-      //     console.error("Error: " + reason);
-      //   });
+        // for (let i = 1; i < projectsFlow.length; i++) {
+        //   let introui = new Entity();
+        //   introui.Position.set(
+        //     this.splinePath.points[i].x,
+        //     this.splinePath.points[i].y -2,
+        //     this.splinePath.points[i].z - 2
+        //   );
+        //   const h = async () => {
+        //     let html = /*html*/ `
+        //     <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+        //       <h3 class="uk-card-title">Project ${i + 1}</h3>
+        //       <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.</p>
+        //       <div class="uk-grid-small uk-child-width-auto" uk-grid>
+        //         <div>
+        //           <a class="uk-button uk-button-text" href="#">Read more</a>
+        //         </div>
+        //         <div>
+        //           <a class="uk-button uk-button-text" href="#">Source code</a>
+        //         </div>
+        //       </div>
+        //     </div>`;
+        //     const uicomponent = new twoDUIComponent(
+        //       html,
+        //       new THREE.Vector2(window.innerWidth * 0.8, window.innerHeight * 1)
+        //     );
+        //     await introui.AddComponent(uicomponent);
+        //     await this.mc.entitymanager.AddEntity(introui, `projectUI${i}`);
+        //   };
+        //   h();
+        // }
+        this.cubePosition = 0.01;
 
-      //  introui.rotation.set(-Math.PI / 2, 0, 0, 1);
-      //   const uicomponent = new twoDUIComponent(html, new THREE.Vector2(1000, 600));
+        this.updateScrollbarPosition();
+        this.updateSplineObject();
+      };
 
-      // await   introui.AddComponent(uicomponent);
-      //   await this.mc.entitymanager.AddEntity(introui, "UI");
+      aboutButton.onclick = () => {
+        let aboutFlow = [
+          new THREE.Vector3(0, 15, 0),
+          new THREE.Vector3(2, 14, -2),
+          new THREE.Vector3(12, 10, 0),
+          new THREE.Vector3(22, 10, 0),
+        ];
+        this.splinePath.points = aboutFlow;
+        this.cubePosition = 0.5;
 
-      // const introui3 = new Entity();
-      // introui3.Position.set(0, 0.1, 0);
-      // introui3.AddComponent (new threeDUIComponent(html2, new THREE.Vector2(1000, 600) ));
-      // this.mc.entitymanager.AddEntity(introui3, "UI3");
-
-      // const introui4 = new Entity();
-      // introui4.Position.set(0, 0.1, 0);
-      // introui4.AddComponent (new threeDUIComponent(html2, new THREE.Vector2(1000, 600) ));
-      // this.mc.entitymanager.AddEntity(introui4, "UI4");
+        let introui2 = new Entity();
+        introui2.Position.set(
+          this.splinePath.points[2].x,
+          this.splinePath.points[2].y,
+          this.splinePath.points[2].z - 2
+        );
+        const h = async () => {
+          let html = /*html*/ `
+          <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+            <h3 class="uk-card-title">About Me</h3>
+            <p>I am an electrical engineer with a passion for innovation and problem-solving. With expertise in embedded systems, automation, and human-machine interfaces, I strive to create cutting-edge solutions that enhance user experiences and drive technological advancements.</p>
+            <div class="uk-grid-small uk-child-width-auto" uk-grid>
+              <div>
+                <a class="uk-button uk-button-text" href="#">Resume</a>
+              </div>
+              <div>
+                <a class="uk-button uk-button-text" href="#">Portfolio</a>
+              </div>
+            </div>
+          </div>`;
+          const uicomponent = new twoDUIComponent(
+            html,
+            new THREE.Vector2(window.innerWidth * 0.4, window.innerHeight * 0.8)
+          );
+          await introui2.AddComponent(uicomponent);
+          await this.mc.entitymanager.AddEntity(introui2, "aboutUI");
+        };
+        h();
+        this.updateScrollbarPosition();
+        this.updateSplineObject();
+      };
     };
+
     h();
+    this.cubePosition = 0.0;
+
+    this.updateScrollbarPosition();
+    this.updateSplineObject();
   }
   private createAttentionCursor(): void {
     const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
@@ -253,15 +287,15 @@ class UIManager {
       new THREE.Vector3(0, 15, 0),
       new THREE.Vector3(0, 10, -3),
 
-      new THREE.Vector3(0, 5, 0),
-      new THREE.Vector3(-5, 2, 10),
+      //  new THREE.Vector3(0, 5, 0),
+      // new THREE.Vector3(-5, 2, 10),
 
-      new THREE.Vector3(-10, 2, 10),
-      new THREE.Vector3(-15, 2, 13),
-      new THREE.Vector3(-20, 2,  10),
+      // new THREE.Vector3(-10, 2, 10),
+      // new THREE.Vector3(-15, 2, 13),
+      // new THREE.Vector3(-20, 2,  10),
     ];
     this.splinePath = new THREE.CatmullRomCurve3(controlPoints);
-    const points = this.splinePath.getPoints(1000);
+    const points = this.splinePath.getPoints(100);
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
     this.splineObject = new THREE.Line(geometry, material);
@@ -273,6 +307,7 @@ class UIManager {
       const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.copy(point);
+      this.controlpointsmeshes?.push(sphere);
       this.mc.webgpuscene.add(sphere);
     });
   }
@@ -420,7 +455,7 @@ class UIManager {
   private mousewheelistener = (event: WheelEvent) => {
     if (!this.mc.orbitControls.enableZoom) {
       // event.preventDefault();
-      const delta = Math.sign(event.deltaY) * 0.01;
+      const delta = Math.sign(event.deltaY) * 0.1;
       this.cubePosition = Math.max(0, Math.min(1, this.cubePosition + delta));
       this.moveCubeAlongPath(0);
       this.updateScrollbarPosition();
@@ -471,7 +506,9 @@ class UIManager {
     document.getElementById("debugButton")?.addEventListener("click", () => {
       document.getElementById("offcanvas-usage")?.classList.toggle("uk-hidden");
     });
-    document.getElementById("homeButton")?.addEventListener("click", () => {});
+    document.getElementById("homeButton")?.addEventListener("click", () => {
+      this.resetSplinePath();
+    });
 
     document
       .getElementById("togglemousecontrolsbutton")
@@ -479,13 +516,16 @@ class UIManager {
         //toggle the first person view
         if (this.mc.orbitControls.enableZoom) {
           this.mc.orbitControls.enableZoom = false;
-          // this.orbitControls.enableRotate = false;
+          this.mc.orbitControls.enabled = false;
+          this.mc.orbitControls.enableRotate = false;
           window.addEventListener("wheel", this.mousewheelistener.bind(this));
           document
             .getElementById("togglemousecontrolsbutton")
             ?.classList.add("uk-text-danger");
           this.scrollmodenavigation = true;
         } else {
+          this.mc.orbitControls.enabled = true;
+
           this.mc.orbitControls.enableZoom = true;
           this.mc.orbitControls.enableRotate = true;
           document
@@ -503,15 +543,64 @@ class UIManager {
       // this.toggleVoice();
     });
   }
+  private updateSplineObject(): void {
+    const points = this.splinePath.getPoints(10);
+    this.splineObject.geometry.setFromPoints(points);
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
+    this.mc.webgpuscene.remove(this.splineObject);
+    this.splineObject = new THREE.Line(geometry, material);
+    this.mc.webgpuscene.add(this.splineObject);
+  }
+  private resetSplinePath(): void {
+    const controlPoints = [
+      new THREE.Vector3(0, 15, 0),
+      new THREE.Vector3(0, 10, 0),
+    ];
+    this.splinePath.points = controlPoints;
+    this.cubePosition = 0;
+    this.updateScrollbarPosition();
+    this.updateSplineObject();
+
+    for (let i = 0; i < this.controlpointsmeshes?.length; i++) {
+      this.mc.webgpuscene.remove(this.controlpointsmeshes[i]);
+    }
+
+    //destroy all entities with ui component
+    for (let i = 0; i < this.mc.entitymanager.Entities.length; i++) {
+      this.mc.entitymanager.Entities[i]
+        .getComponent("twoDUIComponent")
+        .then((value) => {
+          if (value) {
+            this.mc.entitymanager
+              .RemoveEntity(this.mc.entitymanager.Entities[i])
+              .then(() => {
+                this.createInitialUI();
+              });
+          }
+        });
+    }
+
+    this.controlpointsmeshes = [];
+    // Create control points
+    controlPoints.forEach((point, index) => {
+      const sphereGeometry = new THREE.SphereGeometry(0.1);
+      const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+      sphere.position.copy(point);
+      this.controlpointsmeshes.push(sphere);
+      this.mc.webgpuscene.add(sphere);
+    });
+  }
 
   private followCursor(): void {
     this.mc.zoomTo(this.attentionCursor.position, 6, new THREE.Quaternion());
   }
 
-  Update() {
+  async Update() {
     if (this.scrollmodenavigation) {
       // this.trackCamera();
-      this.followCursor(); // Call the new function
+      await this.followCursor(); // Call the new function
     }
   }
 }

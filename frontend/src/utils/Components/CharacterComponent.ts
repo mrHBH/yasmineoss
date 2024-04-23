@@ -45,6 +45,8 @@ class CharacterComponent extends Component {
   AIinputkeys_: any;
   taskintervals: any;
    Input: any;
+  htmlcontainer: HTMLDivElement;
+  state : string;
 
   constructor({ modelpath, animationspathslist }) {
     super();
@@ -514,7 +516,7 @@ class CharacterComponent extends Component {
             entry: "StartJumping",
             on: {
               LAND: {
-                target: "Ideling",
+                target: "StoppingRunning",
               },
             },
           },
@@ -566,7 +568,7 @@ class CharacterComponent extends Component {
 
             //get forward vector
             const forward = new THREE.Vector3(0, 0, 1);
-            forward.applyQuaternion(this.group_.quaternion);
+            forward.applyQuaternion(this._webgpugroup.quaternion);
             forward.normalize();
             //apply a force to the body
 
@@ -613,6 +615,8 @@ class CharacterComponent extends Component {
             curAction.play();
 
             setTimeout(() => {
+              curAction.crossFadeFrom(prevAction, 0.25, true);
+
               this.AnimationFSMService_.send("LAND");
             }, (curAction.getClip().duration * 1000) / 1);
           },
@@ -865,7 +869,10 @@ class CharacterComponent extends Component {
     );
 
     this.AnimationFSMService_ = interpret(this.AnimationFSM_).start();
-  }
+    this.AnimationFSMService_.onTransition((state) => {
+       this.state = state.value;
+    });
+  } 
   UpdateFSM(input: any) {
     if (!input._keys) {
       return;
@@ -891,8 +898,9 @@ class CharacterComponent extends Component {
     ) {
       this.AnimationFSMService_.send("JUMP");
       this.canJump = false;
-      setTimeout(() => {
-        this.body.velocity.y += 15;
+       setTimeout(() => {
+        this.body.velocity.y += 5;
+    
       }, 150);
     }
 
@@ -1203,6 +1211,9 @@ class CharacterComponent extends Component {
   }
   showui() {
        //create a ui card and add it to the css2dgroup
+       // 
+       if (this.htmlcontainer == null) {
+       this.htmlcontainer = document.createElement("div");
        let html = /*html*/ `<div class="uk-card uk
         -card-default uk-card-body"> <h3 class="uk-card-title">Title</h3> <p>Content</p> </div>`;
         let div = document.createElement("div");
@@ -1212,20 +1223,65 @@ class CharacterComponent extends Component {
 
         label.position.set(0, 2, 0);
         this._css2dgroup.add(label);
+       }
+       else{
+         this.htmlcontainer.style.opacity = "1";
+         this.htmlcontainer.style.display = "block";
+         
+       }
+
 
    }
 
+   hideui() {
+    if (this.htmlcontainer) {
+      this.htmlcontainer.style.opacity = "0";
+      this.htmlcontainer.style.display = "none";
+    }
+  }
+
   async InitEntity(): Promise<void> {
+
+  //   <div class="uk-width-expand">
+  //   <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
+  //   <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
+  //     <li><a href="#">Electrical Engineer</a></li>
+
+  //   </ul>
+
+  //   <button class="uk-button" id="contactbutton">Contact </button>
+  // </div>
     console.log("InitEntity CharacterComponent");
-    const htmlelelementinnerHTML = /*html*/ `<ul class="uk-iconnav">      
+    
+    const nameTag = document.createElement('div');
+    nameTag.className = 'name-tag';
  
-        <li><a id="name" class="namenode" href="#" ></span> ${this._entity._name}</a></li>
-    </ul>`;
+    const namet = document.createElement('div');
+    namet.className = 'name';
+    namet.style.fontSize = '16px';
+    namet.style.fontWeight = 'bold';
+    namet.style.color = '#333';
+    namet.textContent =  this._entity.name;
+    namet.id = "name";
+    //clickable on hover 
+    namet.style.cursor = "pointer";
+
+    
+    const status = document.createElement('div');
+    status.className = 'status';
+    status.style.fontSize = '12px';
+    status.style.fontWeight = 'regular';
+    status.style.color = '#666';
+    status.style.marginTop = '-2px';
+    status.textContent = 'Online';
+    
+    nameTag.appendChild(namet);
+    nameTag.appendChild(status);
 
     //when name is clicked , toggle the visibility of the ui card
    
     this._titlebar = document.createElement("div");
-    this._titlebar.innerHTML = htmlelelementinnerHTML;
+    this._titlebar.appendChild( nameTag);
     this._titlebar.style.transition = "opacity 0.5s";
     const label = new CSS2DObject(this._titlebar);
     label.position.set(0, 2, 0);
@@ -1236,9 +1292,15 @@ class CharacterComponent extends Component {
     this._entity._entityManager._mc.physicsmanager.world.addBody(this.body);
 
     let name = this._titlebar.querySelector("#name");
-    name.addEventListener("click", () => {
+    if ( name){
+     name.addEventListener("click", () => {
       console.log("clicked");
-      this.showui();
+      if  (! this.htmlcontainer  || this.htmlcontainer.style.display == "none") {
+        this.showui();
+      }
+      else {
+      this.hideui();
+      }
     });
     this._entity._RegisterHandler("zoom", async () => {
       await this.zoom();
@@ -1246,7 +1308,7 @@ class CharacterComponent extends Component {
     this._entity._RegisterHandler("panaround", async () => {
       await this.panaround();
     });
-
+  }
      //register handler for     this._entity.Broadcast({ topic: "inputinitialized", data: {input : this} });
      this._entity._RegisterHandler(
       "walk",
@@ -1307,6 +1369,10 @@ class CharacterComponent extends Component {
   }
 
   async Update(deltaTime: number): Promise<void> {
+
+    //update state name in the title bar
+    this._titlebar.querySelector(".status").textContent = this.state;
+    
     this._mixer.update(deltaTime);
 
     const controlObject = this._webgpugroup;
@@ -1367,6 +1433,7 @@ class CharacterComponent extends Component {
       if (this.Input._keys.backward) {
         velocity.z -= acc.z * deltaTime;
       }
+      if (this.state != "Executing"    && this.state != "EndExecuting" )
       controlObject.quaternion.copy(_R);
 
       const oldPosition = new THREE.Vector3();
@@ -1513,18 +1580,21 @@ class CharacterComponent extends Component {
       case "Ideling":
         return 0;
       case "Walking":
-        return 6;
-      case "Running":
-        return 15;
-      case "BackwardWalking":
         return 4;
+      case "Running":
+        return 9;
+      case "BackwardWalking":
+        return 1.45;
       case "SlowWalking":
-        return 2;
+        return 1.35;
       case "Landing":
+        return 0 ;
         setTimeout(() => {
           return 0;
-        }, 250);
+        }, 75);
         return 5;
+      case "JumpingFromWalk":
+        return 2;
 
       case "JumpingFromRun":
         return 15;

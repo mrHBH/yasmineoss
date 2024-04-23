@@ -1052,7 +1052,7 @@ class OrbitControls extends EventDispatcher {
                 onMouseDown( event );
 
             }
-
+            
         }
 
         function onPointerMove( event ) {
