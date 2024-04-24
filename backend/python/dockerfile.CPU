@@ -2,7 +2,7 @@
 FROM python:latest
 # Install system packages required by the application
 ARG DEBIAN_FRONTEND=noninteractive
-
+RUN apt-get update
 RUN apt-get --allow-releaseinfo-change  update && apt-get install git -y --no-install-recommends \
     build-essential \
     cmake \
