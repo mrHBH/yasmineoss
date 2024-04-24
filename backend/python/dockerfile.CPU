@@ -1,5 +1,5 @@
 # Use the official Python image as base
-FROM python:latest
+FROM python:slim-bullseye
 # Install system packages required by the application
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
