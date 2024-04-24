@@ -17,7 +17,8 @@ class UIManager {
   attentionCursor: THREE.Mesh | null = null;
   cubePosition: number = 0;
   private scrollmodenavigation: boolean = false;
-
+  private touchStartY: number = 0;
+ 
    splineObject: THREE.Line<
     THREE.BufferGeometry<THREE.NormalBufferAttributes>,
     THREE.LineBasicMaterial,
@@ -72,7 +73,6 @@ class UIManager {
 
     this.mc.webgpuscene.add(this.attentionCursor);
   }
-  private touchStartY: number = 0;
 
   private touchStartHandler(event: TouchEvent): void {
     if (event.touches.length === 1) {
@@ -264,7 +264,7 @@ class UIManager {
   private mousewheelistener = (event: WheelEvent) => {
     if (!this.mc.orbitControls.enableZoom) {
       // event.preventDefault();
-      const delta = Math.sign(event.deltaY) * 0.1;
+      const delta = Math.sign(event.deltaY) * 0.05;
       this.cubePosition = Math.max(0, Math.min(1, this.cubePosition + delta));
       this.moveCubeAlongPath(0);
       this.updateScrollbarPosition();
@@ -329,6 +329,7 @@ class UIManager {
           this.mc.orbitControls.enableZoom = false;
           this.mc.orbitControls.enabled = false;
           this.mc.orbitControls.enableRotate = false;
+
           window.addEventListener("wheel", this.mousewheelistener.bind(this));
           window.addEventListener("touchstart", this.touchStartHandler.bind(this));
           window.addEventListener("touchmove", this.touchMoveHandler.bind(this));
