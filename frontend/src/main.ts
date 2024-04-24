@@ -168,25 +168,25 @@ class Main {
     });
    
 
-    await bob.AddComponent(bobcontroller);
-     await bob.AddComponent(new AIInput());
-    await this.entityManager.AddEntity(bob, "Bob");
-    this.maincController.MainEntity = bob;
-    setInterval(() => {
-      let pos = this.maincController.UIManager.attentionCursor.position;
-      bob.Broadcast({
-        topic: "walk",
-        data: { position: new THREE.Vector3( pos.x, 0, pos.z) },
-      });
-    }
-    , 1000);
-//check if  the attention cursor
-    if (this.maincController.UIManager.cubePosition > 0.5 && this.maincController.UIManager.cubePosition < 0.8) {
-      bob.Broadcast({
-        topic: "showui",
-        data: {},
-      });
-    }  
+//     await bob.AddComponent(bobcontroller);
+//      await bob.AddComponent(new AIInput());
+//     await this.entityManager.AddEntity(bob, "Bob");
+//     this.maincController.MainEntity = bob;
+//     setInterval(() => {
+//       let pos = this.maincController.UIManager.attentionCursor.position;
+//       bob.Broadcast({
+//         topic: "walk",
+//         data: { position: new THREE.Vector3( pos.x, 0, pos.z) },
+//       });
+//     }
+//     , 1000);
+// //check if  the attention cursor
+//     if (this.maincController.UIManager.cubePosition > 0.5 && this.maincController.UIManager.cubePosition < 0.8) {
+//       bob.Broadcast({
+//         topic: "showui",
+//         data: {},
+//       });
+//     }  
 
    
 
@@ -215,61 +215,61 @@ class Main {
     // await heli.AddComponent(keyboardinput);
     // await this.entityManager.AddEntity(heli, "Heli");
     
-    const sydney = new Entity();
-    sydney.Position= new THREE.Vector3(0, 6, 0);
-    //rotate sydney 90 degrees
-    sydney.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
-    const sydneycontroller = new CharacterComponent({
-      modelpath: "models/gltf/Xbot.glb",
-      animationspathslist: animations,
-    });
+    // const sydney = new Entity();
+    // sydney.Position= new THREE.Vector3(0, 6, 0);
+    // //rotate sydney 90 degrees
+    // sydney.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
+    // const sydneycontroller = new CharacterComponent({
+    //   modelpath: "models/gltf/Xbot.glb",
+    //   animationspathslist: animations,
+    // });
 
 
 
 
-    setTimeout(() => {
+    // setTimeout(() => {
     
-      const h = async () => {
-        // await car.AddComponent(carcontroller);
-        // await this.entityManager.AddEntity(car, "Car");
+    //   const h = async () => {
+    //     // await car.AddComponent(carcontroller);
+    //     // await this.entityManager.AddEntity(car, "Car");
     
-        const keyboardinput = new KeyboardInput();
+    //     const keyboardinput = new KeyboardInput();
 
-        await sydney.AddComponent(sydneycontroller);
-        await sydney.AddComponent(keyboardinput);
+    //     await sydney.AddComponent(sydneycontroller);
+    //     await sydney.AddComponent(keyboardinput);
 
-        await this.entityManager.AddEntity(sydney, "Sydney");
-        // setTimeout(() => {
-        //     sydney.RemoveComponent("KeyboardInput").then(() => {
-        //       console.log("removed keyboard input");
-        //     } );
-        // } , 5000);
-      };
-      //create 60 more random entities , and animate them in a random fashion
-      // for (let i = 0; i < 6; i++) {
-      //   let entity = new Entity();
-      //   let randoemclass =
-      //     Math.random() < 0.5 ? "models/gltf/ybot2.glb" : "models/gltf/Xbot.glb";
-      //   let randomposition = new THREE.Vector3(
-      //     Math.random() * 200,
-      //     0,
-      //     Math.random() * 500
-      //   );
-      //   let randomcontroller = new CharacterComponent({
-      //     modelpath: randoemclass,
-      //     animationspathslist: animations,
-      //   });
-      //   entity.position.set(randomposition.x, randomposition.y, randomposition.z);
-      //   entity.AddComponent(randomcontroller).then(() => {
-      //   this.entityManager.AddEntity(entity, "RandomEntity" + i);
-      //   })
-      //   let deathtimeout = Math.random() * 32000 + 2000;
-      //   setTimeout(() => {
-      //    // entity.kill();
-      //   }, deathtimeout);
-      // }
-      h();
-    }, 1000);
+    //     await this.entityManager.AddEntity(sydney, "Sydney");
+    //     // setTimeout(() => {
+    //     //     sydney.RemoveComponent("KeyboardInput").then(() => {
+    //     //       console.log("removed keyboard input");
+    //     //     } );
+    //     // } , 5000);
+    //   };
+    //   //create 60 more random entities , and animate them in a random fashion
+    //   // for (let i = 0; i < 6; i++) {
+    //   //   let entity = new Entity();
+    //   //   let randoemclass =
+    //   //     Math.random() < 0.5 ? "models/gltf/ybot2.glb" : "models/gltf/Xbot.glb";
+    //   //   let randomposition = new THREE.Vector3(
+    //   //     Math.random() * 200,
+    //   //     0,
+    //   //     Math.random() * 500
+    //   //   );
+    //   //   let randomcontroller = new CharacterComponent({
+    //   //     modelpath: randoemclass,
+    //   //     animationspathslist: animations,
+    //   //   });
+    //   //   entity.position.set(randomposition.x, randomposition.y, randomposition.z);
+    //   //   entity.AddComponent(randomcontroller).then(() => {
+    //   //   this.entityManager.AddEntity(entity, "RandomEntity" + i);
+    //   //   })
+    //   //   let deathtimeout = Math.random() * 32000 + 2000;
+    //   //   setTimeout(() => {
+    //   //    // entity.kill();
+    //   //   }, deathtimeout);
+    //   // }
+    //   h();
+    // }, 1000);
 
     //add an entity every 5 seconds and zoom to it
     // setInterval(() => {
