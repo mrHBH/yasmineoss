@@ -6,13 +6,16 @@ UIkit.use(Icons);
 
 import * as THREE from "three";
 import { Entity } from "./utils/Entity";
-import { AIInput, CharacterComponent , KeyboardInput} from "./utils/Components/CharacterComponent";
+import { CharacterComponent} from "./utils/Components/CharacterComponent";
+import { AIInput } from "./utils/Components/AIInput";
+import { KeyboardInput } from "./utils/Components/KeyboardInput";
 import { EntityManager } from "./utils/EntityManager";
 import { MainController } from "./utils/MainController";
  import {CarComponent} from "./utils/Components/CarComponent";
 import { StaticCLI } from "./SimpleCLI";
 // InfiniteGridHelper class definition ends here
 import { tween } from "shifty";
+import { HelicopterComponent } from "./utils/Components/HelicopterComponent";
 
 //define a structire that holds the address of the backends. it is a collection of ports and addresses
 let backends;
@@ -106,15 +109,15 @@ class Main {
     //     console.log('received from python backend:', event.data);
     //   }
 
-    this.inferencewebsocket = new WebSocket(backends.pythonbackendws);
-    this.inferencewebsocket.onopen = function open() {
-      // setInterval(() => {
-      // ws2.send('something for python');
-      // } , 1000);
-      // ws2.send('hello from the frontend');
-      let jsoncmd = JSON.stringify({cmd: "gen" , topic : "random fact about programming"}) ;
-      this.send(jsoncmd);
-    };
+    // this.inferencewebsocket = new WebSocket(backends.pythonbackendws);
+    // this.inferencewebsocket.onopen = function open() {
+    //   // setInterval(() => {
+    //   // ws2.send('something for python');
+    //   // } , 1000);
+    //   // ws2.send('hello from the frontend');
+    //   let jsoncmd = JSON.stringify({cmd: "gen" , topic : "random fact about llm"}) ;
+    //   this.send(jsoncmd);
+    // };
 
     // this.inferencewebsocket.onmessage = function incoming(event) {
 
@@ -188,12 +191,30 @@ class Main {
    
 
 
-    const car = new Entity();
-    const carcontroller = new CarComponent({
+    // const car = new Entity();
+    // const carcontroller = new CarComponent({
       
-    });
+    // });
+    // car.Position = new THREE.Vector3(0, 1, 0);
+    // await car.AddComponent(carcontroller);
+    // const keyboardinput = new KeyboardInput();
+    // await car.AddComponent(keyboardinput);
+ 
+
+    // await this.entityManager.AddEntity(car, "Car");
+    // carcontroller.Reset()
 
 
+    // const heli = new Entity();
+   
+    // const helicontroller = new HelicopterComponent ({});
+    // heli.Position = new THREE.Vector3(10 , 2.5,10);
+    // heli.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
+    // await heli.AddComponent(helicontroller);
+    // const keyboardinput = new KeyboardInput();
+    // await heli.AddComponent(keyboardinput);
+    // await this.entityManager.AddEntity(heli, "Heli");
+    
     const sydney = new Entity();
     sydney.Position= new THREE.Vector3(0, 6, 0);
     //rotate sydney 90 degrees

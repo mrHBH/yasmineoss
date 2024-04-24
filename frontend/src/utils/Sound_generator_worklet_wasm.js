@@ -284,7 +284,7 @@ class EngineSoundGenerator extends SoundGenerator {
    }
 
    static load (loadingManager, listener, basePath="") {
-      SoundGenerator._load(loadingManager, listener, basePath+"/sound_generator_wasm/engine_sound_generator_worklet_webassembly.js");
+      SoundGenerator._load(loadingManager, listener, basePath+"/workers/engine_sound_generator_worklet_webassembly.js");
    }
 
 }

@@ -101,7 +101,7 @@ async def loadmodel():
         endloadingtime = dt.now()
 
     promptstarttime = dt.now()
-    prompt = "my name is bob. and I run locally on a gpu. I am quite smart because i can code , i have access to internet , and i have access to computing power. THat is why i am confident to "
+    prompt = "my name is bob. and I run locally on a gpu. I am a large language model dev"
     res = llm + prompt + gen("good", max_tokens=50, temperature=0.7)
     promptendtime = dt.now()
     if endloadingtime is None:

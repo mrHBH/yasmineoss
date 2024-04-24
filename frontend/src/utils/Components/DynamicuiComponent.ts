@@ -3,7 +3,8 @@ import * as THREE from "three";
 import { Entity } from "../Entity";
 import { CSS2DObject } from "../CSS2D";
 import { tween } from "shifty";
-class twoDUIComponent extends Component {
+import { watch } from "fs";
+class DynamicuiComponent extends Component {
   private _html: string;
   private _css2dobject: CSS2DObject;
   private _webgpuplane: THREE.Mesh;
@@ -12,12 +13,15 @@ class twoDUIComponent extends Component {
   private _webgpugroup: THREE.Group = new THREE.Group();
   private _size: THREE.Vector2;
   sticky: boolean = false;
+  uiWorker: Worker;
+  pagescriptpath: string;
 
-  constructor(html: string, size?: THREE.Vector2) {
+  constructor(pagescriptpath: string) {
     super();
-    this._html = html;
-    this._size = size ? size : new THREE.Vector2(500, 500);
-    
+    this.pagescriptpath = pagescriptpath;
+    this._size = new THREE.Vector2(500, 500);  
+    this._htmlElement = document.createElement("div");
+
   }
 
   get HtmlElement() {
@@ -28,7 +32,7 @@ class twoDUIComponent extends Component {
   }
 
   set Size(size: THREE.Vector2) {
-    this._size = size;
+    this.setSizeSmoothly(size);
     // this._htmlElement.style.height =  this._size.y  + "px"
     // this._htmlElement.style.width =    this._size.x  + "px"
     //  this._webgpuplane?.geometry.scale(2*this._size.x/100, 1.5*this._size.y/100, 1);
@@ -40,13 +44,6 @@ class twoDUIComponent extends Component {
   }
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
-    this._htmlElement = document.createElement("div");
-    this._htmlElement.innerHTML = this._html;
-    //opacity and position transitions
-    this._htmlElement.style.transition = " opacity 0.5s ";
-    this._htmlElement.style.height = this._size.y + "px";
-    this._htmlElement.style.width = this._size.x + "px";
-
     this._css2dobject = new CSS2DObject(this._htmlElement);
     this._css2dgroup.add(this._css2dobject);
 
@@ -66,9 +63,12 @@ class twoDUIComponent extends Component {
 
     this._webgpuplane.userData.component = this;
     this._webgpugroup.add(this._webgpuplane);
+
+   
   }
 
   async InitEntity(): Promise<void> {
+ 
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
     this._entity._entityManager._mc.html2dScene.add(this._css2dgroup);
     this._entity._RegisterHandler("zoom", async () => {
@@ -79,6 +79,38 @@ class twoDUIComponent extends Component {
       console.log(data);
       await this.setSizeSmoothly(data?.size as THREE.Vector2);
     });
+
+    this.uiWorker = new Worker("./workers/dynamicloader.js?" + Date.now());
+
+    this.uiWorker.onmessage = (e) => {
+      //	console.log("Message received from worker", e.data);
+      if (e.data.type === "boot") {
+        this.uiWorker.postMessage({
+          type: "init",
+          filename:    this.pagescriptpath ,
+          watch : true
+        });
+      }
+      if (e.data.type === "freshhtml") {
+        
+        this.HtmlElement.innerHTML = e.data.html;
+      }
+      if (e.data.type ==="jssetup"){
+        eval(e.data.js).bind(this)();
+      }
+      if (e.data.type === "tick") {
+        //	console.log(e.data.data);
+        //this._entity.Position = new THREE.Vector3(e.data.data.x, e.data.data.y, e.data.data.z);
+        //this._entity.Quaternion = new THREE.Quaternion(e.data.data.qx, e.data.data.qy, e.data.data.qz, e.data.data.qw);
+      }
+
+      if (e.data.type ==="size"){
+        this._size = new THREE.Vector2(e.data.width, e.data.height);
+    
+      }
+ 
+    };
+ 
   }
 
   async zoom(radius =5) {
@@ -193,4 +225,4 @@ class twoDUIComponent extends Component {
   }
 }
 
-export { twoDUIComponent };
+export { DynamicuiComponent  };

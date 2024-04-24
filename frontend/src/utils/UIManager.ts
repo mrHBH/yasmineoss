@@ -5,6 +5,9 @@ import { twoDUIComponent } from "../utils/Components/2dUIComponent";
 import { threeDUIComponent } from "../utils/Components/3dUIComponent";
 import { Entity } from "./Entity";
 import * as pdfjsLib from "pdfjs-dist";
+import { CarComponent } from "./Components/CarComponent.js";
+import { KeyboardInput } from "./Components/KeyboardInput.js";
+import { DynamicuiComponent } from "./Components/DynamicuiComponent.js";
 
 // //const {MediaPresenter, AudioStreamer , VideoStreamer } = require('sfmediastream');
 
@@ -95,10 +98,13 @@ class UIManager {
     </div>
    `;
 
+    
     const uicomponent = new twoDUIComponent(
       html,
       new THREE.Vector2(window.innerWidth * 0.8, window.innerHeight * 1.0)
     );
+
+    const dynamicuicomponent = new DynamicuiComponent("../pages/homepage.js")
 
     const h = async () => {
       let introui = new Entity();
@@ -107,164 +113,180 @@ class UIManager {
         this.splinePath.points[0].y,
         this.splinePath.points[0].z - 2
       );
-      await introui.AddComponent(uicomponent);
+//      await introui.AddComponent(uicomponent);
+      await introui.AddComponent(dynamicuicomponent);
 
       let res = await this.mc.entitymanager.AddEntity(introui, "mainUI");
       if (res == -1) {
         return;
       }
 
-      let contactButton = uicomponent.HtmlElement.querySelector(
-        "#contactButton"
-      ) as HTMLButtonElement;
-      let projectsButton = uicomponent.HtmlElement.querySelector(
-        "#projectsButton"
-      ) as HTMLButtonElement;
-      let aboutButton = uicomponent.HtmlElement.querySelector(
-        "#aboutButton"
-      ) as HTMLButtonElement;
+      // let contactButton = dynamicuicomponent.HtmlElement.querySelector(
+      //   "#contactButton"
+      // ) as HTMLButtonElement;
+      // let projectsButton = dynamicuicomponent.HtmlElement.querySelector(
+      //   "#projectsButton"
+      // ) as HTMLButtonElement;
+      // let aboutButton = dynamicuicomponent.HtmlElement.querySelector(
+      //   "#aboutButton"
+      // ) as HTMLButtonElement;
 
-      contactButton.onclick = () => {
-        let contactFlow = [
-          new THREE.Vector3(0, 15, 0),
-          new THREE.Vector3(-2, 15, 0),
-          new THREE.Vector3(-14, 19, 0),
-        ];
-        this.splinePath.points = contactFlow;
+      // contactButton.onclick = () => {
 
-        let introui2 = new Entity();
-        introui2.Position.set(
-          this.splinePath.points[2].x,
-          this.splinePath.points[2].y - 2,
-          this.splinePath.points[2].z - 2
-        );
-        const h = async () => {
-          let html = /*html*/ `
-          <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-            <h3 class="uk-card-title">Contact</h3>
-            <p>Feel free to reach out to me at <a href="mailto:hamza@ben-hassen.com">hamza@ben-hassen.com</a></p>
-            <form class="uk-form-stacked">
-              <div class="uk-margin">
-                <label class="uk-form-label" for="form-stacked-text">Name</label>
-                <div class="uk-form-controls">
-                  <input       
-                       </div>
-              </div>
-              <div class="uk-margin">
-                <label class="uk-form-label" for="form-stacked-email">Email</label>
-                <div class="uk-form-controls">
-                  <input class="uk-input" id="form-stacked-email" type="email" placeholder="Your Email">
-                </div>
-              </div>
-              <div class="uk-margin">
-                <label class="uk-form-label" for="form-stacked-message">Message</label>
-                <div class="uk-form-controls">
-                  <textarea class="uk-textarea" id="form-stacked-message" rows="5" placeholder="Your Message"></textarea>
-                </div>
-              </div>
-              <button class="uk-button uk-button-primary">Send</button>
-            </form>
-          </div>`;
-          const uicomponent = new twoDUIComponent(
-            html,
-            new THREE.Vector2(window.innerWidth * 0.8, window.innerHeight * 1.2)
-          );
-          await introui2.AddComponent(uicomponent);
-          await this.mc.entitymanager.AddEntity(introui2, "contactUI");
-        };
-        h();
-        this.cubePosition = 1;
-        this.updateScrollbarPosition();
-        this.updateSplineObject();
-      };
+    
+      //   let contactFlow = [
+      //     new THREE.Vector3(0, 15, 0),
+      //     new THREE.Vector3(-2, 15, 0),
+      //     new THREE.Vector3(-14, 19, 0),
+      //   ];
+      //   this.splinePath.points = contactFlow;
 
-      projectsButton.onclick = () => {
-        let projectsFlow = [
-          new THREE.Vector3(0, 15, -5),
-          new THREE.Vector3(0,10, -5),
-          new THREE.Vector3(0, 8, -5),
-          new THREE.Vector3(0, 3, -5),
-          new THREE.Vector3(0, 1.5, -5),
-        ];
-        this.splinePath.points = projectsFlow;
+      //   let introui2 = new Entity();
+      //   introui2.Position.set(
+      //     this.splinePath.points[2].x,
+      //     this.splinePath.points[2].y - 2,
+      //     this.splinePath.points[2].z - 2
+      //   );
+      //   const h = async () => {
+      //     let html = /*html*/ `
+      //     <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+      //       <h3 class="uk-card-title">Contact</h3>
+      //       <p>Feel free to reach out to me at <a href="mailto:hamza@ben-hassen.com">hamza@ben-hassen.com</a></p>
+      //       <form class="uk-form-stacked">
+      //         <div class="uk-margin">
+      //           <label class="uk-form-label" for="form-stacked-text">Name</label>
+      //           <div class="uk-form-controls">
+      //             <input       
+      //                  </div>
+      //         </div>
+      //         <div class="uk-margin">
+      //           <label class="uk-form-label" for="form-stacked-email">Email</label>
+      //           <div class="uk-form-controls">
+      //             <input class="uk-input" id="form-stacked-email" type="email" placeholder="Your Email">
+      //           </div>
+      //         </div>
+      //         <div class="uk-margin">
+      //           <label class="uk-form-label" for="form-stacked-message">Message</label>
+      //           <div class="uk-form-controls">
+      //             <textarea class="uk-textarea" id="form-stacked-message" rows="5" placeholder="Your Message"></textarea>
+      //           </div>
+      //         </div>
+      //         <button class="uk-button uk-button-primary">Send</button>
+      //       </form>
+      //     </div>`;
+      //     const uicomponent = new twoDUIComponent(
+      //       html,
+      //       new THREE.Vector2(window.innerWidth * 0.8, window.innerHeight * 1.2)
+      //     );
+      //     await introui2.AddComponent(uicomponent);
+      //     await this.mc.entitymanager.AddEntity(introui2, "contactUI");
+      //   };
+      //   h();
+      //   this.cubePosition = 1;
+      //   this.updateScrollbarPosition();
+      //   this.updateSplineObject();
+      // };
 
-        // for (let i = 1; i < projectsFlow.length; i++) {
-        //   let introui = new Entity();
-        //   introui.Position.set(
-        //     this.splinePath.points[i].x,
-        //     this.splinePath.points[i].y -2,
-        //     this.splinePath.points[i].z - 2
-        //   );
-        //   const h = async () => {
-        //     let html = /*html*/ `
-        //     <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-        //       <h3 class="uk-card-title">Project ${i + 1}</h3>
-        //       <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.</p>
-        //       <div class="uk-grid-small uk-child-width-auto" uk-grid>
-        //         <div>
-        //           <a class="uk-button uk-button-text" href="#">Read more</a>
-        //         </div>
-        //         <div>
-        //           <a class="uk-button uk-button-text" href="#">Source code</a>
-        //         </div>
-        //       </div>
-        //     </div>`;
-        //     const uicomponent = new twoDUIComponent(
-        //       html,
-        //       new THREE.Vector2(window.innerWidth * 0.8, window.innerHeight * 1)
-        //     );
-        //     await introui.AddComponent(uicomponent);
-        //     await this.mc.entitymanager.AddEntity(introui, `projectUI${i}`);
-        //   };
-        //   h();
-        // }
-        this.cubePosition = 0.01;
+      // projectsButton.onclick = () => {
 
-        this.updateScrollbarPosition();
-        this.updateSplineObject();
-      };
+      //   this.mc.listener = new  SoundGeneratorAudioListener();
+      //   const car = new Entity();
+      //   const carcontroller = new CarComponent({
+  
+      //   });
+      //   const keyboardinput = new KeyboardInput();
+     
+      //   car.Position = new THREE.Vector3(0, 1, 0);
+      //    car.AddComponent(carcontroller).then(() => {      
+      //     car.AddComponent(keyboardinput);    
+      //    this.mc.entitymanager.AddEntity(car, "Car"+Math.random())})
+      //   let projectsFlow = [
+      //     new THREE.Vector3(0, 15, -5),
+      //     new THREE.Vector3(5,10, -5),
+      //     new THREE.Vector3(8, 3, -5),
+      //     new THREE.Vector3(12, 3, -5),
+      //     new THREE.Vector3(15, 1.5, -5),
+      //   ];
 
-      aboutButton.onclick = () => {
-        let aboutFlow = [
-          new THREE.Vector3(0, 15, 0),
-          new THREE.Vector3(2, 14, -2),
-          new THREE.Vector3(12, 10, 0),
-          new THREE.Vector3(22, 10, 0),
-        ];
-        this.splinePath.points = aboutFlow;
-        this.cubePosition = 0.5;
+      //   this.splinePath.points = projectsFlow;
 
-        let introui2 = new Entity();
-        introui2.Position.set(
-          this.splinePath.points[2].x,
-          this.splinePath.points[2].y,
-          this.splinePath.points[2].z - 2
-        );
-        const h = async () => {
-          let html = /*html*/ `
-          <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-            <h3 class="uk-card-title">About Me</h3>
-            <p>I am an electrical engineer with a passion for innovation and problem-solving. With expertise in embedded systems, automation, and human-machine interfaces, I strive to create cutting-edge solutions that enhance user experiences and drive technological advancements.</p>
-            <div class="uk-grid-small uk-child-width-auto" uk-grid>
-              <div>
-                <a class="uk-button uk-button-text" href="#">Resume</a>
-              </div>
-              <div>
-                <a class="uk-button uk-button-text" href="#">Portfolio</a>
-              </div>
-            </div>
-          </div>`;
-          const uicomponent = new twoDUIComponent(
-            html,
-            new THREE.Vector2(window.innerWidth * 0.4, window.innerHeight * 0.8)
-          );
-          await introui2.AddComponent(uicomponent);
-          await this.mc.entitymanager.AddEntity(introui2, "aboutUI");
-        };
-        h();
-        this.updateScrollbarPosition();
-        this.updateSplineObject();
-      };
+      //   // for (let i = 1; i < projectsFlow.length; i++) {
+      //   //   let introui = new Entity();
+      //   //   introui.Position.set(
+      //   //     this.splinePath.points[i].x,
+      //   //     this.splinePath.points[i].y -2,
+      //   //     this.splinePath.points[i].z - 2
+      //   //   );
+      //   //   const h = async () => {
+      //   //     let html = /*html*/ `
+      //   //     <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+      //   //       <h3 class="uk-card-title">Project ${i + 1}</h3>
+      //   //       <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.</p>
+      //   //       <div class="uk-grid-small uk-child-width-auto" uk-grid>
+      //   //         <div>
+      //   //           <a class="uk-button uk-button-text" href="#">Read more</a>
+      //   //         </div>
+      //   //         <div>
+      //   //           <a class="uk-button uk-button-text" href="#">Source code</a>
+      //   //         </div>
+      //   //       </div>
+      //   //     </div>`;
+      //   //     const uicomponent = new twoDUIComponent(
+      //   //       html,
+      //   //       new THREE.Vector2(window.innerWidth * 0.8, window.innerHeight * 1)
+      //   //     );
+      //   //     await introui.AddComponent(uicomponent);
+      //   //     await this.mc.entitymanager.AddEntity(introui, `projectUI${i}`);
+      //   //   };
+      //   //   h();
+      //   // }
+      //   this.cubePosition = 0.01;
+
+      //   this.updateScrollbarPosition();
+      //   this.updateSplineObject();
+      // };
+
+      // aboutButton.onclick = () => {
+      //   let aboutFlow = [
+      //     new THREE.Vector3(0, 15, 0),
+      //     new THREE.Vector3(2, 14, -2),
+      //     new THREE.Vector3(12, 10, 0),
+      //     new THREE.Vector3(22, 10, 0),
+      //   ];
+      //   this.splinePath.points = aboutFlow;
+      //   this.cubePosition = 0.5;
+
+      //   let introui2 = new Entity();
+      //   introui2.Position.set(
+      //     this.splinePath.points[2].x,
+      //     this.splinePath.points[2].y,
+      //     this.splinePath.points[2].z - 2
+      //   );
+      //   const h = async () => {
+      //     let html = /*html*/ `
+      //     <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+      //       <h3 class="uk-card-title">About Me</h3>
+      //       <p>I am an electrical engineer with a passion for innovation and problem-solving. With expertise in embedded systems, automation, and human-machine interfaces, I strive to create cutting-edge solutions that enhance user experiences and drive technological advancements.</p>
+      //       <div class="uk-grid-small uk-child-width-auto" uk-grid>
+      //         <div>
+      //           <a class="uk-button uk-button-text" href="#">Resume</a>
+      //         </div>
+      //         <div>
+      //           <a class="uk-button uk-button-text" href="#">Portfolio</a>
+      //         </div>
+      //       </div>
+      //     </div>`;
+      //     const uicomponent = new twoDUIComponent(
+      //       html,
+      //       new THREE.Vector2(window.innerWidth * 0.4, window.innerHeight * 0.8)
+      //     );
+      //     await introui2.AddComponent(uicomponent);
+      //     await this.mc.entitymanager.AddEntity(introui2, "aboutUI");
+      //   };
+      //   h();
+      //   this.updateScrollbarPosition();
+      //   this.updateSplineObject();
+      // };
     };
 
     h();

@@ -19,6 +19,10 @@ import { PhysicsManager } from "./PhysicsManager";
 import { distance } from "three/examples/jsm/nodes/Nodes.js";
 import {  UIManager } from "./UIManager";
 import { Entity } from "./Entity";
+import { CarComponent } from "./Components/CarComponent";
+import { KeyboardInput } from "./Components/KeyboardInput.js";
+import { HelicopterComponent } from "./Components/HelicopterComponent.js";
+import {SoundGeneratorAudioListener, } from "./Sound_generator_worklet_wasm.js"
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 //@ts-ignore
@@ -45,6 +49,7 @@ class MainController {
   html3dRenderer: CSS3DRenderer;
   UIManager: UIManager;
   mainEntity: Entity;
+  listener: any;
 
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
@@ -98,6 +103,8 @@ class MainController {
     this.camera.position.set(2.5, 20, 5);
     this.camera.position.multiplyScalar(0.8);
     this.camera.lookAt(0, 5, 0);
+
+
     this.webgpuscene.add(this.camera);
 
     const pane = new Pane({});
@@ -156,6 +163,58 @@ class MainController {
       }
     });
 
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "r") {
+        //reset all cars by calling Reset on the car component
+        for (let entity of this.entitymanager.Entities) {
+          if (entity._components.find((c) => c instanceof CarComponent)) {
+            entity._components.find((c) => c instanceof CarComponent).Reset();
+        }
+
+        //same for HelicopterComponent
+        if (entity._components.find((c) => c instanceof HelicopterComponent)) {
+          entity._components.find((c) => c instanceof HelicopterComponent).Reset();
+        }
+
+        
+      }}
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "c") {
+        const car = new Entity();
+        const carcontroller = new CarComponent({
+  
+        });
+        const keyboardinput = new KeyboardInput();
+     
+        car.Position = new THREE.Vector3(0, 1, 0);
+         car.AddComponent(carcontroller).then(() => {      
+          car.AddComponent(keyboardinput);    
+         this.entitymanager.AddEntity(car, "Car"+Math.random()).then(() => {
+        this.mainEntity = car;
+       
+         });});}
+
+
+        
+
+       
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "k") {
+        //remove all entities with car component
+        for (let entity of this.entitymanager.Entities) {
+          if (entity._components.find((c) => c instanceof CarComponent)) {
+            this.entitymanager.RemoveEntity(entity);
+          }
+        }
+        //if still pressed senda a new event
+        
+      }
+    });
+
     const light = new THREE.PointLight(0xffffff, 1);
     light.position.set(0, 1, 5);
     this.webgpuscene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
@@ -194,7 +253,31 @@ class MainController {
     this.UIManager?.Update(); 
     this.fpsGraph?.end();
   }
+  initSound()
+  {
+    if (!this.listener)
+      {
+        this.listener = new SoundGeneratorAudioListener();
+        this.camera.add(this.listener);
+      
+      }
+       
+  }
+  spwancar(){
+    const car = new Entity();
+    const carcontroller = new CarComponent({
 
+    });
+    const keyboardinput = new KeyboardInput();
+ 
+    car.Position = new THREE.Vector3(0, 1, 0);
+     car.AddComponent(carcontroller).then(() => {      
+      car.AddComponent(keyboardinput);    
+     this.entitymanager.AddEntity(car, "Car"+Math.random()).then(() => {
+    this.mainEntity = car;
+   
+     });});
+  }
   private onWindowResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();

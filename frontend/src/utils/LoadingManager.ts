@@ -22,6 +22,8 @@ class LoadingManager {
             const gltf = await loader.loadAsync(url);
             this.assets.set(url, gltf);  // Store the raw GLTF
             console.log("Loaded GLTF:", url);
+            return   gltf.scene; 
+
         }
 
         //return a clone of the model using SkeletonUtils
