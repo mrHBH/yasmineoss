@@ -1,5 +1,7 @@
 let ver = "0.0.306";
-const html = /*html*/ `
+
+  
+const fronthtml = /*html*/ `
 <div class="uk-container">
  <div class="uk-grid-match uk-child-width-1-2@m" uk-grid>
    <div>
@@ -12,7 +14,7 @@ const html = /*html*/ `
              <div class="uk-width-expand">
                <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
                <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
-                 <li><a href="#">Electrical Enginee r</a></li>
+                 <li><a href="#">Electrical Engineer</a></li>
                </ul>
              </div>
            </div>
@@ -24,14 +26,14 @@ const html = /*html*/ `
    </div>
    <div>
      <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-right; repeat: true">
-       <h3 class="uk-card-title">Navigation</h3>
+       <h3 class="uk-card-title uk-text-center">Navigation</h3> 
        <div class="uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match" uk-grid>
          <div>
            <div class="uk-card uk-card-secondary uk-card-body uk-card-hover uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
              <span uk-icon="icon: mail; ratio: 2"></span>
-             <div class="uk-grid-small uk-child-width-auto" uk-grid>
+             <div class="uk-grid-small uk-child-width-auto  uk-center" uk-grid>
                  <div>
-                   <a class="uk-button  uk-button-text"  id="contactButton" href="#">Contact</a>
+                   <a class="uk-button  uk-button-text  uk-text-center "  id="contactButton" href="#">Contact</a>
                  </div>
            
        </div>
@@ -41,7 +43,7 @@ const html = /*html*/ `
          <div>
            <div class="uk-card uk-card-secondary uk-card-body uk-card-hover uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
              <span uk-icon="icon: code; ratio: 2"></span>
-              <a class="uk-button  uk-button-text"  id="projectsButton" href="#">Projec</a>
+              <a class="uk-button  uk-button-text"  id="projectsButton" href="#">Projects</a>
 
             </div>
          </div>
@@ -57,10 +59,42 @@ const html = /*html*/ `
       </div>
 </div>
 `;
-
 let cb = function (e) {
-  
-  
+
+const interestshtml = /*html*/ `
+<div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+
+  <h3 class="uk-card-title">Interests</h3>
+  <ul class="uk-list uk-list-divider">
+
+    <li><a href="#">Embedded Systems</a></li>
+    <li><a href="#">Automation</a></li>
+    <li><a href="#">Human-Machine Interfaces</a></li>
+    <li><a href="#">LLM driven agents</a></li>
+
+  </ul>
+</div>
+`;
+const contacthtml =/*html*/ `
+<div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+  <h3 class="uk-card-title">Contact</h3>
+  <form>
+    <fieldset class="uk-fieldset">
+      <div class="uk-margin">
+        <input class="uk-input" type="text" placeholder="Name" required>
+      </div>
+      <div class="uk-margin">
+        <input class="uk-input" type="email" placeholder="Email" required>
+      </div>
+      <div class="uk-margin">
+        <textarea class="uk-textarea" rows="5" placeholder="Message" required></textarea>
+      </div>
+      <button class="uk-button uk-button-primary" type="submit">Send</button>
+    </fieldset>
+  </form>
+</div>
+`;
+
    let mc =   this._entity._entityManager._mc
    console.log(mc);
    if (mc){
@@ -74,19 +108,21 @@ let cb = function (e) {
       let aboutButton = this.HtmlElement.querySelector(
         "#aboutButton"
       )  
-
+      
+      let startpos = new THREE.Vector3(0, 15, 0);
       contactButton.onclick = () => {
-     
+        let pos =   new THREE.Vector3(-15, 10, 0)  
         let contactFlow = [
-          new THREE.Vector3(0, 15, 0),
-          new THREE.Vector3(-2, 15, 0),
-          new THREE.Vector3(-14, 19, 0),
+          startpos,
+          pos,
+ 
         ];
         mc.UIManager.splinePath.points = contactFlow;   
       
         mc.UIManager.cubePosition = 1;
         mc.UIManager.updateScrollbarPosition();
         mc.UIManager.updateSplineObject();
+        mc.UIManager.adduiElement("contactui", contacthtml, pos);
 
       };
 
@@ -94,9 +130,12 @@ let cb = function (e) {
         mc.initSound();
 
         let contactFlow = [
-          new THREE.Vector3(0, 15, 0),
+          startpos,
           new THREE.Vector3(0, 10, 0),
           new THREE.Vector3(0,3, 5),
+          new THREE.Vector3(5,3, 15),
+          new THREE.Vector3(15,3, 20),
+          new THREE.Vector3(25,3, 20),
         ];
         mc.UIManager.splinePath.points = contactFlow;   
       
@@ -104,54 +143,32 @@ let cb = function (e) {
         mc.UIManager.updateScrollbarPosition();
         mc.UIManager.updateSplineObject();
 
-        mc.spwancar();
+      //  mc.spwancar();
       };
 
       aboutButton.onclick = () => {
+      let pos =           new THREE.Vector3(15, 10, 2)
+
+
         let aboutFlow = [
-          new THREE.Vector3(0, 15, 0),
-          new THREE.Vector3(2, 14, -2),
-          new THREE.Vector3(12, 10, 0),
-          new THREE.Vector3(22, 10, 0),
+          startpos,
+          pos,
+     
         ];
         mc.UIManager.splinePath.points = aboutFlow;
-        this.cubePosition = 0.5;
+        mc.UIManager.cubePosition = 1;
 
-        let introui2 = new Entity();
-        introui2.Position.set(
-          mc.UIManager.splinePath.points[2].x,
-          mc.UIManager.splinePath.points[2].y,
-          mc.UIManager.splinePath.points[2].z - 2
-        );
-        const h = async () => {
-          let html = /*html*/ `
-          <div class="uk-card uk-card-default uk-card-body uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-            <h3 class="uk-card-title">About Me</h3>
-            <p>I am an electrical engineer with a passion for innovation and problem-solving. With expertise in embedded systems, automation, and human-machine interfaces, I strive to create cutting-edge solutions that enhance user experiences and drive technological advancements.</p>
-            <div class="uk-grid-small uk-child-width-auto" uk-grid>
-              <div>
-                <a class="uk-button uk-button-text" href="#">Resume</a>
-              </div>
-              <div>
-                <a class="uk-button uk-button-text" href="#">Portfolio</a>
-              </div>
-            </div>
-          </div>`;
-          const uicomponent = new twoDUIComponent(
-            html,
-            new THREE.Vector2(window.innerWidth * 0.4, window.innerHeight * 0.8)
-          );
-          await introui2.AddComponent(uicomponent);
-          await this.mc.entitymanager.AddEntity(introui2, "aboutUI");
+        mc.UIManager.updateScrollbarPosition();  
+        mc.UIManager.adduiElement("aboutui",interestshtml , pos); 
         };
-        h();
-        this.updateScrollbarPosition();
-        this.updateSplineObject();
+      
+        mc.UIManager.updateScrollbarPosition();
+        mc.UIManager.updateSplineObject();
       };
     };
-};
  
-postMessage({ type: 'freshhtml' , html : html });
+ 
+postMessage({ type: 'freshhtml' , html : fronthtml });
 postMessage({ type: 'size', width: 1500, height: 1000 });
 
 

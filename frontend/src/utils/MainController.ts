@@ -253,31 +253,7 @@ class MainController {
     this.UIManager?.Update(); 
     this.fpsGraph?.end();
   }
-  initSound()
-  {
-    if (!this.listener)
-      {
-        this.listener = new SoundGeneratorAudioListener();
-        this.camera.add(this.listener);
-      
-      }
-       
-  }
-  spwancar(){
-    const car = new Entity();
-    const carcontroller = new CarComponent({
-
-    });
-    const keyboardinput = new KeyboardInput();
  
-    car.Position = new THREE.Vector3(0, 1, 0);
-     car.AddComponent(carcontroller).then(() => {      
-      car.AddComponent(keyboardinput);    
-     this.entitymanager.AddEntity(car, "Car"+Math.random()).then(() => {
-    this.mainEntity = car;
-   
-     });});
-  }
   private onWindowResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
@@ -471,6 +447,33 @@ class MainController {
         this.resetview();
       },
     });
+  }
+
+
+  initSound()
+  {
+    if (!this.listener)
+      {
+        this.listener = new SoundGeneratorAudioListener();
+        this.camera.add(this.listener);
+      
+      }
+       
+  }
+  spwancar(){
+    const car = new Entity();
+    const carcontroller = new CarComponent({
+
+    });
+    const keyboardinput = new KeyboardInput();
+ 
+    car.Position = new THREE.Vector3(0, 1, 0);
+     car.AddComponent(carcontroller).then(() => {      
+      car.AddComponent(keyboardinput);    
+     this.entitymanager.AddEntity(car, "Car"+Math.random()).then(() => {
+    this.mainEntity = car;
+   
+     });});
   }
 }
 

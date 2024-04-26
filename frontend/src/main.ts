@@ -6,12 +6,12 @@ UIkit.use(Icons);
 
 import * as THREE from "three";
 import { Entity } from "./utils/Entity";
-import { CharacterComponent} from "./utils/Components/CharacterComponent";
+import { CharacterComponent } from "./utils/Components/CharacterComponent";
 import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
 import { EntityManager } from "./utils/EntityManager";
 import { MainController } from "./utils/MainController";
- import {CarComponent} from "./utils/Components/CarComponent";
+import { CarComponent } from "./utils/Components/CarComponent";
 import { StaticCLI } from "./SimpleCLI";
 // InfiniteGridHelper class definition ends here
 import { tween } from "shifty";
@@ -95,7 +95,7 @@ class Main {
   private async init(): Promise<void> {
     this.entityManager = new EntityManager();
     this.maincController = new MainController(this.entityManager);
-    this.maincController.physicsmanager.debug = true;
+    // this.maincController.physicsmanager.debug = true;
     // const ws2 = new WebSocket(backends.pythonbackendws);
     //   ws2.onopen = function open() {
     //     // setInterval(() => {
@@ -131,18 +131,18 @@ class Main {
     // }
     const animations = [
       { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
-     //s { url: "animations/gltf/ybot2@BackwardWalkingM.glb", skipTracks: [1] },
+      //s { url: "animations/gltf/ybot2@BackwardWalkingM.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@bigjump.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@Driving.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@Drumming.glb", skipTracks: [1] },
-      { url: "animations/gltf/ybot2@DyingForward.glb" , skipTracks: [  1 ] },
-      { url: "animations/gltf/ybot2@DyingForward2.glb" , skipTracks: [ 1] },
+      { url: "animations/gltf/ybot2@DyingForward.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@DyingForward2.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@EnteringCar.glb",  },
       // { url: "animations/gltf/ybot2@ExitingCar.glb", skipTracks: [0, 2] },
       { url: "animations/gltf/ybot2@Falling.glb", skipTracks: [0] },
       { url: "animations/gltf/ybot2@Ideling.glb" },
       { url: "animations/gltf/ybot2@JumpingFromStill.glb" },
-      { url: "animations/gltf/ybot2@JumpingFromWalk.glb", skipTracks: [ 1 ,0] },
+      { url: "animations/gltf/ybot2@JumpingFromWalk.glb", skipTracks: [1, 0] },
       // { url: "animations/gltf/ybot2@Jumping.glb" },
       { url: "animations/gltf/ybot2@JumpingFromRun.glb", skipTracks: [0] },
       // { url: "animations/gltf/ybot2@Kickedfall.glb", skipTracks: [1] },
@@ -152,7 +152,7 @@ class Main {
       // { url: "animations/gltf/ybot2@PlayingPiano.glb", skipTracks: [0] },
       // { url: "animations/gltf/ybot2@Praying.glb" },
       // { url: "animations/gltf/ybot2@Pushing.glb" },
-       { url: "animations/gltf/ybot2@Running.glb" },
+      { url: "animations/gltf/ybot2@Running.glb" },
       { url: "animations/gltf/ybot2@StoppingRunning.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@Salute.glb" },
       { url: "animations/gltf/ybot2@SlowWalking.glb" },
@@ -160,53 +160,43 @@ class Main {
       { url: "animations/gltf/ybot2@Walking.glb" },
       { url: "animations/gltf/ybot2@TurningLeft.glb" },
       { url: "animations/gltf/ybot2@TurningRight.glb" },
-     ];
+    ];
     const bob = new Entity();
     const bobcontroller = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
       animationspathslist: animations,
     });
-   
 
-//     await bob.AddComponent(bobcontroller);
-//      await bob.AddComponent(new AIInput());
-//     await this.entityManager.AddEntity(bob, "Bob");
-//     this.maincController.MainEntity = bob;
-//     setInterval(() => {
-//       let pos = this.maincController.UIManager.attentionCursor.position;
-//       bob.Broadcast({
-//         topic: "walk",
-//         data: { position: new THREE.Vector3( pos.x, 0, pos.z) },
-//       });
-//     }
-//     , 1000);
-// //check if  the attention cursor
-//     if (this.maincController.UIManager.cubePosition > 0.5 && this.maincController.UIManager.cubePosition < 0.8) {
-//       bob.Broadcast({
-//         topic: "showui",
-//         data: {},
-//       });
-//     }  
+    await bob.AddComponent(bobcontroller);
+    await bob.AddComponent(new AIInput());
+    await this.entityManager.AddEntity(bob, "Bob");
+    this.maincController.MainEntity = bob;
 
-   
-
+    //check if  the attention cursor
+    if (
+      this.maincController.UIManager.cubePosition > 0.5 &&
+      this.maincController.UIManager.cubePosition < 0.8
+    ) {
+      bob.Broadcast({
+        topic: "showui",
+        data: {},
+      });
+    }
 
     // const car = new Entity();
     // const carcontroller = new CarComponent({
-      
+
     // });
     // car.Position = new THREE.Vector3(0, 1, 0);
     // await car.AddComponent(carcontroller);
     // const keyboardinput = new KeyboardInput();
     // await car.AddComponent(keyboardinput);
- 
 
     // await this.entityManager.AddEntity(car, "Car");
     // carcontroller.Reset()
 
-
     // const heli = new Entity();
-   
+
     // const helicontroller = new HelicopterComponent ({});
     // heli.Position = new THREE.Vector3(10 , 2.5,10);
     // heli.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
@@ -214,7 +204,7 @@ class Main {
     // const keyboardinput = new KeyboardInput();
     // await heli.AddComponent(keyboardinput);
     // await this.entityManager.AddEntity(heli, "Heli");
-    
+
     // const sydney = new Entity();
     // sydney.Position= new THREE.Vector3(0, 6, 0);
     // //rotate sydney 90 degrees
@@ -224,15 +214,12 @@ class Main {
     //   animationspathslist: animations,
     // });
 
-
-
-
     // setTimeout(() => {
-    
+
     //   const h = async () => {
     //     // await car.AddComponent(carcontroller);
     //     // await this.entityManager.AddEntity(car, "Car");
-    
+
     //     const keyboardinput = new KeyboardInput();
 
     //     await sydney.AddComponent(sydneycontroller);
@@ -349,8 +336,6 @@ class Main {
     //    // entity.kill();
     //   }, deathtimeout);
     // }
-
-  
 
     //   setInterval(
     //     () => {
@@ -675,8 +660,5 @@ class Main {
     await this.entityManager.Update(delta);
     await this.maincController.update(delta);
   }
-
-
-  
 }
 new Main();

@@ -10,6 +10,7 @@ import { cursorTo } from "readline";
 import { cp } from "fs";
 import { MainController } from "../MainController";
 import { ITask } from "../TaskManager";
+import { keys } from "xstate/lib/utils";
  
 
 class CharacterComponent extends Component {
@@ -40,17 +41,22 @@ class CharacterComponent extends Component {
    Input: any;
   htmlcontainer: HTMLDivElement;
   state : string;
+  task:  string;
+  worker: Worker;
 
   constructor({ modelpath, animationspathslist }) {
     super();
     this._componentname = "CharacterComponent";
     this._modelpath = modelpath;
+    this.task = "N";
     this._animationspathslist = animationspathslist;
     this.canJump = true;
     this.isColliding_ = false;
 
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
+    this.CreateInputFSM();
+
   }
 
   
@@ -991,13 +997,52 @@ class CharacterComponent extends Component {
     }
   }
 
+  CreateInputFSM() {
+  
+      
+    this.worker = new Worker("./workers/dynamicloader.js?" + Date.now());
+
+    this.worker.onmessage = (e) => {
+      //	console.log("Message received from worker", e.data);
+      if (e.data.type === "boot") {
+        this.worker.postMessage({
+          type: "init",
+          filename:    "botbasicbehavior.js",
+          watch : true
+        });
+      }
+ 
+      
+      if (e.data.type === "input") {
+        console.log("AI input " )
+        console.log(e.data.input);
+        this.Input =  {_keys: e.data.input};
+        this.UpdateFSM(this.Input);
+      }
+
+      //jssetup
+      
+        if (e.data.type ==="jssetup"){
+          try {
+          eval(e.data.js).bind(this)();
+          }
+          catch (error) {
+            console.log(error);
+          }
+        }
+      
+     
+    };
+ 
+  }
+
+
+ 
+
 
   walktopos(locationposition : THREE.Vector3) {
 
-    // if (!this.Input) {
-    //   console.log("Input not initialized");
-    //   return;
-    // }
+     
       if (this.taskintervals){ 
 
         for (let i = 0; i < this.taskintervals.length; i++) {
@@ -1005,13 +1050,7 @@ class CharacterComponent extends Component {
         }
       }
  
-   let interval= setInterval(() => {
-      //console.log(	this.Input._keys)
-      //clear existing intervals
-  
-     
-      
-
+   let interval= setInterval(() => { 
       const controlObject = new THREE.Object3D();
 				controlObject.position.copy(this._entity.Position );
 				controlObject.quaternion.copy( this._entity.Quaternion);
@@ -1233,19 +1272,9 @@ class CharacterComponent extends Component {
     }
   }
 
-  async InitEntity(): Promise<void> {
 
-  //   <div class="uk-width-expand">
-  //   <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
-  //   <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
-  //     <li><a href="#">Electrical Engineer</a></li>
-
-  //   </ul>
-
-  //   <button class="uk-button" id="contactbutton">Contact </button>
-  // </div>
-    console.log("InitEntity CharacterComponent");
-    
+  createnameTag() {
+   
     const nameTag = document.createElement('div');
     nameTag.className = 'name-tag';
  
@@ -1280,28 +1309,70 @@ class CharacterComponent extends Component {
     label.position.set(0, 2, 0);
     this._css2dgroup.add(label);
 
+    let name = this._titlebar.querySelector("#name");
+    if ( name){
+     name.addEventListener("click", () => {
+
+      // console.log("clicked");
+      // if  (! this.htmlcontainer  || this.htmlcontainer.style.display == "none") {
+      //   this.showui();
+      // }
+      // else {
+      // this.hideui();
+      // }
+
+      this.Reset();
+    });
+
+  }
+
+  
+  }
+  Reset() {
+    this.worker?.postMessage({
+      type: "reload",
+      filename: "car.js",
+    });
+
+    //clear all intervals
+    if (this.taskintervals) {
+      for (let i = 0; i < this.taskintervals.length; i++) {
+        clearInterval(this.taskintervals[i]);
+      }
+    }
+    //reset inputs 
+    this.Input._keys = {
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+      space: false,
+      shift: false,
+    };
+
+    this.task= "notask";
+
+
+  }
+  async InitEntity(): Promise<void> {
+
+  //   <div class="uk-width-expand">
+  //   <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
+  //   <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
+  //     <li><a href="#">Electrical Engineer</a></li>
+
+  //   </ul>
+
+  //   <button class="uk-button" id="contactbutton">Contact </button>
+  // </div>
+  this.createnameTag();
+    console.log("InitEntity CharacterComponent");
+   
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
     this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
     this._entity._entityManager._mc.physicsmanager.world.addBody(this.body);
 
-    let name = this._titlebar.querySelector("#name");
-    if ( name){
-     name.addEventListener("click", () => {
-      console.log("clicked");
-      if  (! this.htmlcontainer  || this.htmlcontainer.style.display == "none") {
-        this.showui();
-      }
-      else {
-      this.hideui();
-      }
-    });
-    this._entity._RegisterHandler("zoom", async () => {
-      await this.zoom();
-    });
-    this._entity._RegisterHandler("panaround", async () => {
-      await this.panaround();
-    });
-  }
+   
      //register handler for     this._entity.Broadcast({ topic: "inputinitialized", data: {input : this} });
      this._entity._RegisterHandler(
       "walk",
@@ -1345,6 +1416,12 @@ class CharacterComponent extends Component {
 
       this._css2dgroup?.quaternion.set(q.x, q.y, q.z, q.w);
     });
+    this._entity._RegisterHandler("zoom", async () => {
+      await this.zoom();
+    });
+    this._entity._RegisterHandler("panaround", async () => {
+      await this.panaround();
+    });
   }
 
   async zoom(radius = 5) {
@@ -1364,7 +1441,7 @@ class CharacterComponent extends Component {
   async Update(deltaTime: number): Promise<void> {
 
     //update state name in the title bar
-    this._titlebar.querySelector(".status").textContent = this.state;
+    this._titlebar.querySelector(".status").textContent = this.state + " " +  this.task
     
     this._mixer.update(deltaTime);
 
@@ -1534,7 +1611,7 @@ class CharacterComponent extends Component {
     );
     //hide the opacity of this._titlebar if the distance is greater than 10
 
-    if (distance > 10) {
+    if (distance > 15) {
       this._titlebar.style.opacity = "0";
       this._titlebar.style.pointerEvents = "none";
     } else {

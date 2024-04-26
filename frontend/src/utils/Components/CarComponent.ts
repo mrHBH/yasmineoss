@@ -3,6 +3,7 @@ import { Component } from "../Component.js";
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
 import { LoadingManager } from "../LoadingManager";
+import { CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 
 import {
   SoundGeneratorAudioListener,
@@ -55,9 +56,13 @@ class CarComponent extends Component {
   Parent: any;
   Input: any;
   _webgpugroup: any;
+  private _titlebar: any;
+  private _css2dgroup: any;
   constructor(params: any) {
     super();
     this._webgpugroup = new THREE.Group();
+    this._css2dgroup = new THREE.Group();
+
     //  this.name = "PhysicsComponent";
     // this.Parent.Position
     this.wheelBodies = [];
@@ -163,7 +168,53 @@ class CarComponent extends Component {
 
     this._webgpugroup.add(this.soundCarEngine);
   }
+  createnameTag() {
+   
+    const nameTag = document.createElement('div');
+    nameTag.className = 'name-tag';
+ 
+    const namet = document.createElement('div');
+    namet.className = 'name';
+    namet.style.fontSize = '16px';
+    namet.style.fontWeight = 'bold';
+    namet.style.color = '#333';
+    namet.textContent =  this._entity.name;
+    namet.id = "name";
+    //clickable on hover 
+    namet.style.cursor = "pointer";
 
+    
+    const status = document.createElement('div');
+    status.className = 'status';
+    status.style.fontSize = '12px';
+    status.style.fontWeight = 'regular';
+    status.style.color = '#666';
+    status.style.marginTop = '-2px';
+    status.textContent = 'Online';
+    
+    nameTag.appendChild(namet);
+    nameTag.appendChild(status);
+
+    //when name is clicked , toggle the visibility of the ui card
+   
+    this._titlebar = document.createElement("div");
+    this._titlebar.appendChild( nameTag);
+    this._titlebar.style.transition = "opacity 0.5s";
+    const label = new CSS2DObject(this._titlebar);
+    label.position.set(0, 2, 0);
+    this._css2dgroup.add(label);
+
+    let name = this._titlebar.querySelector("#name");
+    if ( name){
+     name.addEventListener("click", () => {
+      this.Reset();
+      this.ReloadEngine();
+     });
+
+  }
+
+  
+  }
   async CreateCar() {
     this.body = new CANNON.Body({
       mass: 5500,
@@ -204,7 +255,7 @@ class CarComponent extends Component {
 
     this.body.position.set(0, 5, 0);
     this.body.angularVelocity.set(0, 0, 0);
-
+  
     this.vehicle = new CANNON.RaycastVehicle({
       chassisBody: this.body,
       // indexRightAxis: 0,
@@ -213,7 +264,7 @@ class CarComponent extends Component {
     });
 
     const wheelOptions = {
-      radius: 0.5,
+      radius: 0.8,
       directionLocal: new CANNON.Vec3(0, -1, 0),
       suspensionStiffness: 15,
       suspensionRestLength: 0.4,
@@ -285,6 +336,7 @@ class CarComponent extends Component {
       let wheelMesh2 = await LoadingManager.loadGLTF("models/gltf/wheel.gltf");
 
       let wheelMesh1 = SkeletonUtils.clone(wheelMesh2);
+	  wheelMesh1.scale.set(1.3, 1.3, 1.3);
 
       this.wheelMeshes.push(wheelMesh1);
       wheelMesh1.position.copy(
@@ -336,21 +388,7 @@ class CarComponent extends Component {
 
         let wheelOptions = e.data.wheelOptions;
 
-        // let wheelOptions = {
-        // 	radius: 0.5,
-        // 	 suspensionStiffness: 15,
-        // 	suspensionRestLength: 0.4,
-        // 	frictionSlip: 0.52,
-        // 	dampingRelaxation: 0.3,
-        // 	dampingCompression: 1.4,
-        // 	maxSuspensionForce: 150000,
-        // 	rollInfluence: 0.6,
-
-        // 	maxSuspensionTravel: 2.3,
-        // 	customSlidingRotationalSpeed: 30,
-        // 	useCustomSlidingRotationalSpeed: false,
-        // //	material : this.wheelMaterial,
-        // };
+    
         for (let i = 0; i < this.vehicle.wheelInfos.length; i++) {
           this.vehicle.wheelInfos[i].radius = wheelOptions.radius;
           this.vehicle.wheelInfos[i].suspensionStiffness =
@@ -383,26 +421,7 @@ class CarComponent extends Component {
             });
           });
         }
-
-        //	 this.vehicle.wheelInfos[0].frictionSlip = 850
-
-        //	for  (let i = 0; i < this.vehicle.constraints
-        // 	//radius: 0.6,
-        // directionLocal: new CANNON.Vec3(0, -1, 0),
-        // suspensionStiffness: 15,
-        // suspensionRestLength: 0.4,
-        // frictionSlip: 0.52,
-        // dampingRelaxation: 0.3,
-        // dampingCompression: 1.4,
-        // maxSuspensionForce: 150000,
-        // rollInfluence: 0.6,
-        // axleLocal: new CANNON.Vec3(0, 0, 1),
-        // chassisConnectionPointLocal: new CANNON.Vec3(-1, 0, 1),
-        // maxSuspensionTravel: 2.3,
-        // customSlidingRotationalSpeed: 30,
-        // useCustomSlidingRotationalSpeed: false,
-
-        //upgrade the wheels
+ 
       }
       if (e.data.type === "soundupdate") {
         console.log("soundupdate", e.data);
@@ -454,7 +473,8 @@ class CarComponent extends Component {
   }
   async InitEntity(): Promise<void> {
     this.listener = this._entity._entityManager._mc.listener;
-
+    this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
+    this.createnameTag();
     this.mass = 550;
     //this.input = params.input;
 
@@ -494,6 +514,8 @@ class CarComponent extends Component {
       let p = data as THREE.Vector3;
 
       this._webgpugroup?.position.set(p.x, p.y, p.z);
+      this._css2dgroup?.position.set(p.x, p.y, p.z);
+
     });
 
     this._entity._RegisterHandler("quaternion", (data: any) => {
@@ -574,7 +596,20 @@ class CarComponent extends Component {
       this.body.quaternion.z,
       this.body.quaternion.w
     );
+    const distance = this._entity.Position.distanceTo(
+      this._entity._entityManager._mc.camera.position
+    );
+    if (distance > 15) {
+      
+      this._titlebar.style.opacity = "0";
+      this._titlebar.style.pointerEvents = "none";
+    } else {
+      this._titlebar.style.opacity = "1";
+      this._titlebar.style.pointerEvents = "auto";
+    }
   }
+
+
 
   Destroy() {
     this.world.removeBody(this.body);

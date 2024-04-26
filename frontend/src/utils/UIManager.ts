@@ -73,7 +73,21 @@ class UIManager {
 
     this.mc.webgpuscene.add(this.attentionCursor);
   }
+  adduiElement(name : string ,html: string, position: THREE.Vector3): void {
 
+    const uicomponent = new twoDUIComponent(html);
+    const h = async () => {
+      let introui = new Entity();
+      introui.Position.set(position.x, position.y, position.z);
+      await introui.AddComponent(uicomponent);
+      let res = await this.mc.entitymanager.AddEntity(introui,  name);
+      if (res == -1) {
+        return;
+      }
+    };
+
+    h();
+  }
   private touchStartHandler(event: TouchEvent): void {
     if (event.touches.length === 1) {
       this.touchStartY = event.touches[0].clientY;

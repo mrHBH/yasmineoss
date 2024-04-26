@@ -149,24 +149,7 @@ class SoundGenerator extends THREE.PositionalAudio {
 
 
 
-class SineWaveSoundGenerator extends SoundGenerator {
 
-   constructor ({listener}) {
-      super(listener);
-      let options = {numberOfInputs: 0, numberOfOutputs: 1};
-      this.addWorkletNode(options);
-   }
-
-   addWorkletNode (options) {
-      this.worklet = new AudioWorkletNode (this.listener.context, "sine-wave-audio-processor", options);
-      this._setNodeSources ([this.worklet]);
-   }
-
-   static load (loadingManager, listener, basePath="") {
-      SoundGenerator._load(loadingManager, listener, basePath+"/sound_generator_wasm/sine_wave_sound_generator_worklet_webassembly.js");
-   }
-
-}
 class AudioSoundGenerator extends SoundGenerator {
    constructor (listener, buffer) {
        super(listener);
@@ -289,4 +272,4 @@ class EngineSoundGenerator extends SoundGenerator {
 
 }
 
-export {SoundGeneratorAudioListener, SineWaveSoundGenerator, EngineSoundGenerator , AudioSoundGenerator};
+export {SoundGeneratorAudioListener, EngineSoundGenerator , AudioSoundGenerator};

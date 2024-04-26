@@ -245,7 +245,7 @@ let soundoptions = {
 
     exhaustOpenReflectionFactor: 0.01,
     exhaustClosedReflectionFactor: 0.95,
-    ignitionTime: 9.036,
+    ignitionTime: 2.036,
 
     straightPipeWaveguideLength: 1280,
     straightPipeReflectionFactor: 0.01,
@@ -258,9 +258,9 @@ let soundoptions = {
 
 
     let clamp = false;
-    let gain = 0.008;
-    let gainEngineBlockVibrations = 0.004;
-    let gainOutlet = 0.002;
+    let gain = 0.08;
+    let gainEngineBlockVibrations = 0.04;
+    let gainOutlet = 0.02;
 
 
  postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });
