@@ -6,7 +6,7 @@
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
   background-color: #242424;
-
+ 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -203,4 +203,4 @@ body.dark-background {
 .base0E-background { background-color: #ba8baf; }
 .base0F-background { background-color: #a16946; }
 
-
+ 

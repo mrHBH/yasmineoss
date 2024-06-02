@@ -7,8 +7,10 @@ function stop() {
 }
 let lastsize = 0;
 let currentsize = 0;
+let filename;
 function  getFileStats(url) {
 	let fileBlob;
+    filename = url;
 	fetch(url)
 		.then((res) => {
 			fileBlob = res.blob();
@@ -19,12 +21,14 @@ function  getFileStats(url) {
             //current size of file
             currentsize = fileBlob.size;
             if (currentsize != lastsize) {  
-                worker = new Worker(filename);
+                worker = new Worker(filename  );
                 worker.onmessage = onmessage;
                 lastsize = currentsize;
             }
 		//	console.log([fileBlob.size, fileBl  ob.type]);
 		});
+
+        
 }
 
 
@@ -38,7 +42,7 @@ onmessage = function (data) {
 
 function reload() {
     worker.terminate();
-    worker = new Worker(filename+"?" + Date.now());
+    worker = new Worker(filename+"?" + Date.now() );
     worker.postMessage({ type: 'boot', key: "data", value: "data.value" });
     worker.onmessage =  onmessage;
     console.log('reload');
@@ -46,9 +50,9 @@ function reload() {
 }
 function init(data){
     filename = data.filename; 
-    watch = data.watch;
-    if (!watch) {
-        worker = new Worker(filename);
+    let watch = data.watch;
+    if (!watch  && filename) {
+        worker = new Worker(filename );
         worker.onmessage = onmessage;
         worker.postMessage({ type: 'boot', key: "data", value: "data.value" });
         return;

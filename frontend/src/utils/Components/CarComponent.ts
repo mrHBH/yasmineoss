@@ -56,6 +56,9 @@ class CarComponent extends Component {
   Parent: any;
   Input: any;
   _webgpugroup: any;
+
+  fpsoffset: THREE.Vector3 = new THREE.Vector3(0, 2, 0);
+  fpsquat: THREE.Quaternion = new THREE.Quaternion().setFromAxisAngle( new THREE.Vector3(0, 1, 0), -Math.PI/2);
   private _titlebar: any;
   private _css2dgroup: any;
   constructor(params: any) {
@@ -506,6 +509,8 @@ class CarComponent extends Component {
       }
     );
 
+    
+
     this._entity._RegisterHandler("inputdestroyed", (data: any) => {
       this.Input = null;
       console.log("input destroyed");
@@ -520,7 +525,8 @@ class CarComponent extends Component {
 
     this._entity._RegisterHandler("quaternion", (data: any) => {
       let q = data as THREE.Quaternion;
-
+        //rotate 90 around y 
+        
       this._webgpugroup?.quaternion.set(q.x, q.y, q.z, q.w);
     });
     await this.CreateCar();

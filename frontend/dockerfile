@@ -1,5 +1,5 @@
 # Use the official bun image as base
-FROM oven/bun:1-debian
+FROM imbios/bun-node:latest
 
  # Set the working directory
 WORKDIR /frontend

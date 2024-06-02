@@ -7,27 +7,37 @@ import { Entity } from "./Entity";
 import * as pdfjsLib from "pdfjs-dist";
 import { CarComponent } from "./Components/CarComponent.js";
 import { KeyboardInput } from "./Components/KeyboardInput.js";
-import { DynamicuiComponent } from "./Components/DynamicuiComponent.js";
+import { DynamicuiWorkerComponent } from "./Components/DynamicuiWorkerComponent.js";
 
 // //const {MediaPresenter, AudioStreamer , VideoStreamer } = require('sfmediastream');
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.mjs";
 class UIManager {
-  private splinePath: THREE.CatmullRomCurve3 | null = null;
-  attentionCursor: THREE.Mesh | null = null;
+   splinePath: THREE.CatmullRomCurve3 | null = null;
+   lookatPath: THREE.Vector3[] = [];
+  attentionCursor: THREE.Mesh | any;
   cubePosition: number = 0;
   private scrollmodenavigation: boolean = false;
   private touchStartY: number = 0;
+  private birdEyeviewOffset = new THREE.Vector3(0, 0, 0);
+  private fpsposoffset = new THREE.Vector3(0, 0, 0);
  
-   splineObject: THREE.Line<
+  splineObject: THREE.Line<
     THREE.BufferGeometry<THREE.NormalBufferAttributes>,
     THREE.LineBasicMaterial,
     THREE.Object3DEventMap
   >;
+
   scrollbarContainer: HTMLDivElement;
   scrollbarContent: HTMLDivElement;
+
   mc: MainController;
   controlpointsmeshes: THREE.Object3D[];
+  fpsnavigation: any;
+  birdviewnavigation: any;
+  offsetpos: THREE.Vector3;
+  offsetrot: THREE.Quaternion;
+  fpsquatoffset: THREE.Quaternion;
   constructor(parent: MainController) {
     this.mc = parent;
     this.controlpointsmeshes = [];
@@ -38,9 +48,9 @@ class UIManager {
     this.moveCubeAlongPath(0);
     this.createInitialUI();
   }
+
   private async createInitialUI(): Promise<void> {
- 
-    const dynamicuicomponent = new DynamicuiComponent("../pages/homepage.js")
+    const dynamicuicomponent = new DynamicuiWorkerComponent("../pages/homepage.js");
 
     const h = async () => {
       let introui = new Entity();
@@ -49,14 +59,13 @@ class UIManager {
         this.splinePath.points[0].y,
         this.splinePath.points[0].z - 2
       );
-//      await introui.AddComponent(uicomponent);
+      //      await introui.AddComponent(uicomponent);
       await introui.AddComponent(dynamicuicomponent);
 
       let res = await this.mc.entitymanager.AddEntity(introui, "mainUI");
       if (res == -1) {
         return;
       }
- 
     };
 
     h();
@@ -66,21 +75,27 @@ class UIManager {
     this.updateSplineObject();
   }
   private createAttentionCursor(): void {
-    const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+    //let cube be an arrow helper mesh
+    const geometry = new THREE.ConeGeometry(0.5, 1, 32);
     const material = new THREE.MeshBasicMaterial({ color: 0xff11ff });
-    this.attentionCursor = new THREE.Mesh(geometry, material);
+    const ArrowHelper = new THREE.ArrowHelper(
+      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(0, 0, 0),
+      1,
+      0xff0000
+    );
+    this.attentionCursor = ArrowHelper;
     //make draggable along the path
 
     this.mc.webgpuscene.add(this.attentionCursor);
   }
-  adduiElement(name : string ,html: string, position: THREE.Vector3): void {
-
+  adduiElement(name: string, html: string, position: THREE.Vector3): void {
     const uicomponent = new twoDUIComponent(html);
     const h = async () => {
       let introui = new Entity();
       introui.Position.set(position.x, position.y, position.z);
       await introui.AddComponent(uicomponent);
-      let res = await this.mc.entitymanager.AddEntity(introui,  name);
+      let res = await this.mc.entitymanager.AddEntity(introui, name);
       if (res == -1) {
         return;
       }
@@ -93,7 +108,7 @@ class UIManager {
       this.touchStartY = event.touches[0].clientY;
     }
   }
-  
+
   private touchMoveHandler(event: TouchEvent): void {
     if (event.touches.length === 1) {
       const touchMoveY = event.touches[0].clientY;
@@ -108,7 +123,7 @@ class UIManager {
   private createSplinePath(): void {
     const controlPoints = [
       new THREE.Vector3(0, 15, 0),
-      new THREE.Vector3(0, 10, -3),
+      new THREE.Vector3(0, 10, 0 ),
 
       //  new THREE.Vector3(0, 5, 0),
       // new THREE.Vector3(-5, 2, 10),
@@ -118,11 +133,21 @@ class UIManager {
       // new THREE.Vector3(-20, 2,  10),
     ];
     this.splinePath = new THREE.CatmullRomCurve3(controlPoints);
+    this.lookatPath = [
+      new THREE.Vector3(0,  0, -1),
+      // new THREE.Vector3(1, 1, -1),
+
+ 
+
+
+     
+    ];
+
     const points = this.splinePath.getPoints(100);
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
     this.splineObject = new THREE.Line(geometry, material);
-    this.mc.webgpuscene.add(this.splineObject);
+     this.mc.webgpuscene.add(this.splineObject);
 
     // Create control points
     controlPoints.forEach((point, index) => {
@@ -174,6 +199,26 @@ class UIManager {
 
     // Update the cube position with the closest point
     this.attentionCursor.position.copy(closestPoint);
+     let nextlookatpoint =
+      this.lookatPath[Math.round(this.cubePosition * this.lookatPath.length)];
+    if (nextlookatpoint) {
+      console.log(nextlookatpoint);
+      const up = new THREE.Vector3(0, 1, 0);  // Default up vector
+
+      const quaternion = new THREE.Quaternion().setFromUnitVectors(up, nextlookatpoint.normalize());
+      this.attentionCursor.quaternion.copy(quaternion); 
+
+
+    }
+    // let nextlookatpoint =
+    //   this.lookatPath[Math.round(this.cubePosition * this.lookatPath.length)];
+    // if (nextlookatpoint) {
+    //   //look at path is a vector array with the direction of the camera
+
+    //   this.attentionCursor.quaternion.setFromEuler(
+    //     nextlookatpoint
+    //   );
+    // }
   }
   private addScrollbar(): void {
     if (!this.splinePath || !this.attentionCursor) return;
@@ -268,7 +313,7 @@ class UIManager {
     updateScrollbarPosition();
     document.body.appendChild(this.scrollbarContainer);
   }
-  private updateScrollbarPosition(): void {
+    updateScrollbarPosition(): void {
     this.scrollbarContainer.scrollTop =
       this.cubePosition *
       (this.scrollbarContent.offsetHeight -
@@ -276,7 +321,7 @@ class UIManager {
   }
 
   private mousewheelistener = (event: WheelEvent) => {
-    if (!this.mc.orbitControls.enableZoom) {
+    if (!this.mc.CameraControls.enableZoom) {
       // event.preventDefault();
       const delta = Math.sign(event.deltaY) * 0.05;
       this.cubePosition = Math.max(0, Math.min(1, this.cubePosition + delta));
@@ -284,8 +329,6 @@ class UIManager {
       this.updateScrollbarPosition();
     }
   };
- 
-  
 
   createUIButtons(): void {
     //check if the buttons already exist
@@ -309,10 +352,28 @@ class UIManager {
       <a
         href="#"
         id="togglemousecontrolsbutton"
-        uk-tooltip="First Person view"
-        uk-icon="icon:  user"
+        uk-tooltip="Navigation Mode"
+        uk-icon="icon:   file-text"
       ></a>
     </li>
+    <li>
+      <a
+        href="#"
+        id="cameramode"
+        uk-tooltip="First Person view"
+        uk-icon="icon:  video-camera"
+      ></a>
+    </li>
+    <li>
+      <a
+        href="#"
+        id="birdeyemode"
+        uk-tooltip="Bird View"
+        uk-icon="icon:  bluesky"
+      ></a>
+    </li>
+    
+    
     
   </ul>`;
 
@@ -339,77 +400,216 @@ class UIManager {
       .getElementById("togglemousecontrolsbutton")
       ?.addEventListener("click", () => {
         //toggle the first person view
-        if (this.mc.orbitControls.enableZoom) {
-          this.mc.orbitControls.enableZoom = false;
-          this.mc.orbitControls.enabled = false;
-          this.mc.orbitControls.enableRotate = false;
-
-          window.addEventListener("wheel", this.mousewheelistener.bind(this));
-          window.addEventListener("touchstart", this.touchStartHandler.bind(this));
-          window.addEventListener("touchmove", this.touchMoveHandler.bind(this));
-          document
-            .getElementById("togglemousecontrolsbutton")
-            ?.classList.add("uk-text-danger");
-          this.scrollmodenavigation = true;
-        } else {
-          this.mc.orbitControls.enabled = true;
-
-          this.mc.orbitControls.enableZoom = true;
-          this.mc.orbitControls.enableRotate = true;
-          document
-            .getElementById("togglemousecontrolsbutton")
-            ?.classList.remove("uk-text-danger");
-          window.removeEventListener(
-            "wheel",
-            this.mousewheelistener.bind(this)
-          );
-          window.removeEventListener("touchstart", this.touchStartHandler.bind(this));
-          window.removeEventListener("touchmove", this.touchMoveHandler.bind(this));
-       
-          this.scrollmodenavigation = false;
-        }
+        this.toggleScrollmode();
       });
-    document.getElementById("togglemousecontrolsbutton")?.click();
-    document.getElementById("voiceButton")?.addEventListener("click", () => {
-      // this.toggleVoice();
+
+    document.getElementById("cameramode")?.addEventListener("click", () => {
+      //toggle the first person view
+      this.toggleFPSmode( new THREE.Vector3(0,2,-5), new THREE.Quaternion());
     });
+
+    document.getElementById("birdeyemode")?.addEventListener("click", () => {
+      //toggle the first person view
+      this.toggleBirdEyemode();
+    });
+    // document.getElementById("togglemousecontrolsbutton")?.click();
+
   }
-  private updateSplineObject(): void {
+
+  toggleScrollmode() {
+    if (this.fpsnavigation) {
+      this.disableFPSNavigation();
+    }
+    if (this.birdviewnavigation) {
+      this.disableBirdViewNavigation();
+    }
+    if (this.scrollmodenavigation == false) {
+      this.enableScrollModeNavigation();
+    } else {
+      this.disableScrollModeNavigation();
+    }
+  }
+
+  toggleBirdEyemode(offsetpos: THREE.Vector3 = new THREE.Vector3(0, 1.5, 0)) {
+    
+      this.birdEyeviewOffset = offsetpos;
+     
+    if (this.scrollmodenavigation) {
+      this.disableScrollModeNavigation();
+    }
+    if (this.fpsnavigation) {
+      this.disableFPSNavigation();
+    }
+    if (this.birdviewnavigation) {
+      this.disableBirdViewNavigation();
+    } else {
+      this.enableBirdViewNavigation();
+    }
+  }
+
+  toggleFPSmode(offsetpos: THREE.Vector3 = new THREE.Vector3(0, 0, 0) , offsetrot: THREE.Quaternion = new THREE.Quaternion()) {
+
+    this.fpsposoffset = offsetpos;
+    this.fpsquatoffset = offsetrot;
+    if (this.scrollmodenavigation) {
+      this.disableScrollModeNavigation();
+    }
+    if (this.birdviewnavigation) {
+      this.disableBirdViewNavigation();
+    }
+    if (this.fpsnavigation) {
+      this.disableFPSNavigation();
+
+    }
+    else {
+      this.enableFPSNavigation();
+    }
+  }
+
+  private enableScrollModeNavigation(): void {
+    this.mc.CameraControls.enableZoom = false;
+    this.mc.CameraControls.enabled = false;
+    this.mc.CameraControls.enableRotate = false;
+
+    window.addEventListener("wheel", this.mousewheelistener.bind(this));
+    window.addEventListener("touchstart", this.touchStartHandler.bind(this));
+    window.addEventListener("touchmove", this.touchMoveHandler.bind(this));
+    document
+      .getElementById("togglemousecontrolsbutton")
+      ?.classList.add("uk-text-danger");
+    this.scrollmodenavigation = true;
+  }
+  private disableScrollModeNavigation(): void {
+    this.mc.CameraControls.enabled = true;
+
+    this.mc.CameraControls.enableZoom = true;
+    this.mc.CameraControls.enableRotate = true;
+    document
+      .getElementById("togglemousecontrolsbutton")
+      ?.classList.remove("uk-text-danger");
+    window.removeEventListener("wheel", this.mousewheelistener.bind(this));
+    window.removeEventListener("touchstart", this.touchStartHandler.bind(this));
+    window.removeEventListener("touchmove", this.touchMoveHandler.bind(this));
+
+    this.scrollmodenavigation = false;
+  }
+  private enableFPSNavigation(): void {
+
+    //check if one the components of entity contains an attribute fpsoffset
+     this.mc.mainEntity._components.forEach((component) => {
+      if (component instanceof CarComponent) {
+         this.fpsposoffset = component.fpsoffset;
+        this.fpsquatoffset = component.fpsquat;
+         
+      } 
+    
+    
+    });
+    this.mc.CameraControls.enableZoom = false;
+    this.mc.CameraControls.enabled = false;
+    this.mc.CameraControls.enableRotate = false;
+    this.mc.CameraControls.enablePan = false;
+    this.mc.CameraControls.enableKeys = false;
+
+    document
+      .getElementById("cameramode")
+      ?.classList.add("uk-text-danger");
+    this.fpsnavigation = true;
+  }
+
+  private disableFPSNavigation(): void {
+    this.mc.CameraControls.enabled = true;
+    this.mc.CameraControls.enableZoom = true;
+    this.mc.CameraControls.enableRotate = true;
+    this.mc.CameraControls.enablePan = true;
+    this.mc.CameraControls.enableKeys = true;
+    document
+      .getElementById("cameramode")
+      ?.classList.remove("uk-text-danger");
+    this.fpsnavigation = false;
+  }
+
+
+  private enableBirdViewNavigation(): void {
+    // this.mc.CameraControls.enableZoom = false;
+    // this.mc.CameraControls.enabled = false;
+    // this.mc.CameraControls.enableRotate = false;
+    // this.mc.CameraControls.enablePan = false;
+    // this.mc.CameraControls.enableKeys = false;
+     this.birdviewnavigation = true;
+    document
+    .getElementById("birdeyemode")
+    ?.classList.add("uk-text-danger");
+  }
+
+  private disableBirdViewNavigation(): void {
+    this.mc.CameraControls.enabled = true;
+    this.mc.CameraControls.enableZoom = true;
+    this.mc.CameraControls.enableRotate = true;
+    this.mc.CameraControls.enablePan = true;
+    this.mc.CameraControls.enableKeys = true;
+    this.birdviewnavigation = false;
+    document
+    .getElementById("birdeyemode")
+    ?.classList.remove("uk-text-danger");
+  }
+
+    updateSplineObject(): void {
     const points = this.splinePath.getPoints(10);
     this.splineObject.geometry.setFromPoints(points);
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
     this.mc.webgpuscene.remove(this.splineObject);
     this.splineObject = new THREE.Line(geometry, material);
-    this.mc.webgpuscene.add(this.splineObject);
+     this.mc.webgpuscene.add(this.splineObject);
   }
   private resetSplinePath(): void {
     const controlPoints = [
       new THREE.Vector3(0, 15, 0),
       new THREE.Vector3(0, 10, 0),
     ];
-    this.splinePath.points = controlPoints;
-    this.cubePosition = 0;
-    this.updateScrollbarPosition();
-    this.updateSplineObject();
+ 
+ 
+    this.splinePath = new THREE.CatmullRomCurve3(controlPoints);
+    this.lookatPath = [
+      new THREE.Vector3(0,  0, -1),
+      // new THREE.Vector3(1, 1, -1),
 
+ 
+
+
+     
+    ];
+
+    this.splinePath.points = controlPoints;
+    this.cubePosition = 0.01;
+    this.updateScrollbarPosition();
+
+    this.updateSplineObject();
+    this.updateScrollbarPosition();
+
+
+
+    
+ 
+ 
     for (let i = 0; i < this.controlpointsmeshes?.length; i++) {
       this.mc.webgpuscene.remove(this.controlpointsmeshes[i]);
     }
 
     //destroy all entities with ui component
     for (let i = 0; i < this.mc.entitymanager.Entities.length; i++) {
-      this.mc.entitymanager.Entities[i]
-        .getComponent("twoDUIComponent")
-        .then((value) => {
-          if (value) {
+      let component= this.mc.entitymanager.Entities[i].getComponent("DynamicuiWorkerComponent")
+      if (component) {
+
+        
             this.mc.entitymanager
               .RemoveEntity(this.mc.entitymanager.Entities[i])
               .then(() => {
                 this.createInitialUI();
               });
           }
-        });
+    
     }
 
     this.controlpointsmeshes = [];
@@ -422,17 +622,77 @@ class UIManager {
       this.controlpointsmeshes.push(sphere);
       this.mc.webgpuscene.add(sphere);
     });
+    this.mc.zoomTo(
+      this.attentionCursor.position,
+      5,
+      this.attentionCursor.quaternion
+    );
   }
 
+  
+
   private followCursor(): void {
-    this.mc.zoomTo(this.attentionCursor.position, 6, new THREE.Quaternion());
+    //rotate the normal vector by 180 degrees 
+       let normalvec = this.attentionCursor.quaternion.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2));
+    this.mc.zoomTo(
+      this.attentionCursor.position,
+      5,
+      normalvec
+    );
+   
+     //this.mc.CameraControls.setPosition( this.attentionCursor.position.x , this.attentionCursor.position.y +5 , this.attentionCursor.position.z +4, true);
+
+    //this.mc.CameraControls.setTarget(  this.lookatPath[Math.round(this.cubePosition * this.lookatPath.length)], true);
   }
 
   async Update() {
     if (this.scrollmodenavigation) {
       // this.trackCamera();
       await this.followCursor(); // Call the new function
+    } else if (this.fpsnavigation) {
+      let targetoffset = this.fpsposoffset.clone();
+      
+      targetoffset.applyQuaternion(this.mc.mainEntity.Quaternion).add(this.mc.mainEntity.Position)
+      //targetoffset.applyQuaternion(this.mc.mainEntity.Quaternion);
+      this.mc.zoomTo(
+        targetoffset,
+       9,
+        this.mc.mainEntity.Quaternion . multiply(this.fpsquatoffset)
+      );
+    } else if (this.birdviewnavigation) {
+
+        
+        this.mc.zoomTo(this.mc.mainEntity.Position.clone().add(this.birdEyeviewOffset));
+      
+      //this.mc.zoomTo(this.attentionCursor.position, 5,   this.attentionCursor.quaternion);
     }
+  }
+
+  async CreateDynamicUI(
+    name: string,
+    scriptlocation: string,
+    position: THREE.Vector3,
+    quatertnion: THREE.Quaternion,
+     
+  ): Promise<Entity> {
+    const dynamicuicomponent = new DynamicuiWorkerComponent(scriptlocation);
+    dynamicuicomponent.sticky = true;
+      let introui = new Entity();
+     
+      await introui.AddComponent(dynamicuicomponent);
+      introui.Position = position;
+      introui.Quaternion = quatertnion;
+      let res = await this.mc.entitymanager.AddEntity(introui,  name)
+      
+      if (res == -1) {
+        console.log(this.mc.entitymanager.Entities.filter(e => e._name === name)[0]);
+        return this.mc.entitymanager.Entities.filter(e => e._name === name)[0];
+        
+      }
+    
+
+    
+    return introui;
   }
 }
 export { UIManager };

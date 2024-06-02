@@ -66,8 +66,7 @@ class KeyboardInput extends Component {
     const navigator = window.navigator;
     const language = navigator.language || navigator.userLanguage;
     const platform = navigator.platform;
-    console.log(language + " " + platform + " " + navigator.userAgent);
-    this.keyMap = {
+     this.keyMap = {
       "en-US": {
         z: "forward",
         s: "backward",
@@ -103,7 +102,6 @@ class KeyboardInput extends Component {
 
   handleKeyDown(event: KeyboardEvent) {
     const key = event.key.toLowerCase();
-    console.log(key + "from " + this._entity + " " + this._entity._name);
     const action = this.keyMap[key];
     if (action) {
       this._keys[action] = true;

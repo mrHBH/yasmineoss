@@ -1,8 +1,9 @@
-guidance
+# guidance
+pydantic
+langchain
 python-dotenv
 asyncio
 pylint
-fastapi-cors
-
-fastapi-socketio
+fastapi-cors 
 uvicorn[standard]
+pyautogen

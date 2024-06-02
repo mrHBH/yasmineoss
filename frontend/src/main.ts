@@ -16,45 +16,10 @@ import { StaticCLI } from "./SimpleCLI";
 // InfiniteGridHelper class definition ends here
 import { tween } from "shifty";
 import { HelicopterComponent } from "./utils/Components/HelicopterComponent";
+import { NetworkComponent } from "./utils/Components/NetworkComponent";
+import { DynamicuiComponent } from "./utils/Components/DynamicuiWorkerComponent";
 
 //define a structire that holds the address of the backends. it is a collection of ports and addresses
-let backends;
-let protocol = window.location.protocol;
-if (window.location.hostname === "localhost") {
-  backends = {
-    rustbackend: "http://localhost:8420",
-    pythonbackend: "http://localhost:8000",
-    pythonbackendws: "ws://localhost:8000/ws/rtd/",
-    cppbackend: "http://localhost:8080",
-    cppbackendws: "ws://localhost:8080/ ",
-    tsbackend: "http://localhost:8089",
-    tsbackendws: "ws://localhost:8089",
-  };
-} else {
-  let hostname = window.location.hostname;
-  //check if secure or not
-  if (window.location.protocol === "http:") {
-    backends = {
-      rustbackend: "http://" + hostname + ":8420",
-      pythonbackend: "http://" + hostname + ":8000",
-      pythonbackendws: "ws://" + hostname + ":8000/ws/rtd/",
-      cppbackend: "http://" + hostname + ":8080",
-      cppbackendws: "ws://" + hostname + ":8080/ ",
-      tsbackend: "http://" + hostname + ":8089",
-      tsbackendws: "ws://" + hostname + ":8089",
-    };
-  } else {
-    backends = {
-      rustbackend: "https://" + hostname + ":8420",
-      pythonbackend: "https://" + hostname + ":8000",
-      pythonbackendws: "wss://" + hostname + ":8000/ws/rtd/",
-      cppbackend: "https://" + hostname + ":8080",
-      cppbackendws: "wss://" + hostname + ":8080/ ",
-      tsbackend: "https://" + hostname + ":8089",
-      tsbackendws: "wss://" + hostname + ":8089",
-    };
-  }
-}
 
 //   //create to ts backend , over websockets and send periodic messages to the backend
 //   const ws = new WebSocket(backends.tsbackendws);
@@ -96,18 +61,7 @@ class Main {
     this.entityManager = new EntityManager();
     this.maincController = new MainController(this.entityManager);
     // this.maincController.physicsmanager.debug = true;
-    // const ws2 = new WebSocket(backends.pythonbackendws);
-    //   ws2.onopen = function open() {
-    //     // setInterval(() => {
-    //     // ws2.send('something for python');
-    //     // } , 1000);
-    //     ws2.send('hello from the frontend');
-    //     let jsoncmd = JSON.stringify({cmd: "gen" , topic : "random fact about programming"});
-    //     ws2.send(jsoncmd);
-    //   };
-    //   ws2.onmessage = function incoming(event) {
-    //     console.log('received from python backend:', event.data);
-    //   }
+   
 
     // this.inferencewebsocket = new WebSocket(backends.pythonbackendws);
     // this.inferencewebsocket.onopen = function open() {
@@ -165,23 +119,86 @@ class Main {
     const bobcontroller = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
       animationspathslist: animations,
+        behaviourscriptname: "botbasicbehavior.js",
     });
 
     await bob.AddComponent(bobcontroller);
     await bob.AddComponent(new AIInput());
+    // await bob.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(bob, "Bob");
     this.maincController.MainEntity = bob;
 
-    //check if  the attention cursor
-    if (
-      this.maincController.UIManager.cubePosition > 0.5 &&
-      this.maincController.UIManager.cubePosition < 0.8
-    ) {
-      bob.Broadcast({
-        topic: "showui",
-        data: {},
-      });
-    }
+    const bob2 = new Entity();
+    // const bobcontroller2 = new CharacterComponent({
+    //   modelpath: "models/gltf/ybot2.glb",
+    //   animationspathslist: animations,
+    //     behaviourscriptname: "botbasicbehavior.js",
+    // });
+
+    // await bob.AddComponent(bobcontroller);
+    // await bob.AddComponent(new AIInput());
+    // await bob.AddComponent(new KeyboardInput());
+    //await this.entityManager.AddEntity(bob2, "Bob2");
+    //this.maincController.MainEntity = bob2;
+
+
+ 
+    // const dynamicbaseui = new Entity();
+    // const dynamicbaseuicontroller = new DynamicuiComponent("../pages/homepage.js");
+    // dynamicbaseui.Position = new THREE.Vector3(0, 0, 0);
+    // //rotate to be flat on the ground
+    // // dynamicbaseui.Quaternion = new THREE.Quaternion( 0,0 , 0, 1);
+    // dynamicbaseui.Quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    // await dynamicbaseui.AddComponent(dynamicbaseuicontroller);
+    // await this.entityManager.AddEntity(dynamicbaseui, "DynamicBaseUI");
+
+ 
+    let sydney = new Entity();
+    sydney.Position= new THREE.Vector3(0, 1,8);
+    //rotate sydney 90 degrees
+    sydney.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
+    const sydneycontroller = new CharacterComponent({
+      modelpath: "models/gltf/Xbot.glb",
+      animationspathslist: animations,
+      behaviourscriptname: "sydney.js",
+    });
+    const keyboardinput = new KeyboardInput();
+
+    await sydney.AddComponent(sydneycontroller);
+    await sydney.AddComponent(keyboardinput);
+
+    await this.entityManager.AddEntity(sydney, "Sydney");
+
+    let sydney2 = new Entity();
+    sydney2.Position = new THREE.Vector3(0, 1, 8);
+    //rotate sydney 90 degrees
+    sydney2.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
+    const sydneycontroller2 = new CharacterComponent({
+      modelpath: "models/gltf/Xbot.glb",
+      animationspathslist: animations,
+      behaviourscriptname: "sydney.js",
+    });
+    const keyboardinput2 = new KeyboardInput();
+
+    // await sydney2.AddComponent(sydneycontroller2);
+    // await sydney2.AddComponent(keyboardinput2);
+
+    // await this.entityManager.AddEntity(sydney2, "Sydney2");
+
+    this.maincController.MainEntity = sydney;
+    //this.maincController.UIManager.toggleBirdEyemode(new THREE.Vector3(0, 1.5, 0));
+    this.maincController.UIManager.toggleScrollmode();
+    //  setTimeout(() => {
+    //     this.maincController.UIManager.toggleBirdEyemode()
+    //       sydney.Broadcast ({ topic: "face", data: {radius: 10}});
+
+    //   }, 1000);
+
+
+
+   
+    //this.maincController.UIManager.toggleBirdEyemode();
+
 
     // const car = new Entity();
     // const carcontroller = new CarComponent({
@@ -189,49 +206,24 @@ class Main {
     // });
     // car.Position = new THREE.Vector3(0, 1, 0);
     // await car.AddComponent(carcontroller);
-    // const keyboardinput = new KeyboardInput();
+    // // const keyboardinput = new KeyboardInput();
     // await car.AddComponent(keyboardinput);
 
     // await this.entityManager.AddEntity(car, "Car");
-    // carcontroller.Reset()
 
+     
     // const heli = new Entity();
 
     // const helicontroller = new HelicopterComponent ({});
     // heli.Position = new THREE.Vector3(10 , 2.5,10);
     // heli.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
     // await heli.AddComponent(helicontroller);
-    // const keyboardinput = new KeyboardInput();
     // await heli.AddComponent(keyboardinput);
     // await this.entityManager.AddEntity(heli, "Heli");
 
-    // const sydney = new Entity();
-    // sydney.Position= new THREE.Vector3(0, 6, 0);
-    // //rotate sydney 90 degrees
-    // sydney.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
-    // const sydneycontroller = new CharacterComponent({
-    //   modelpath: "models/gltf/Xbot.glb",
-    //   animationspathslist: animations,
-    // });
-
     // setTimeout(() => {
 
-    //   const h = async () => {
-    //     // await car.AddComponent(carcontroller);
-    //     // await this.entityManager.AddEntity(car, "Car");
-
-    //     const keyboardinput = new KeyboardInput();
-
-    //     await sydney.AddComponent(sydneycontroller);
-    //     await sydney.AddComponent(keyboardinput);
-
-    //     await this.entityManager.AddEntity(sydney, "Sydney");
-    //     // setTimeout(() => {
-    //     //     sydney.RemoveComponent("KeyboardInput").then(() => {
-    //     //       console.log("removed keyboard input");
-    //     //     } );
-    //     // } , 5000);
-    //   };
+     
     //   //create 60 more random entities , and animate them in a random fashion
     //   // for (let i = 0; i < 6; i++) {
     //   //   let entity = new Entity();
@@ -313,24 +305,35 @@ class Main {
     //   h();
     // }, 8000);
 
-    // //create 60 more random entities , and animate them in a random fashion
+    //create 60 more random entities , and animate them in a random fashion
     // for (let i = 0; i < 60; i++) {
     //   let entity = new Entity();
     //   let randoemclass =
     //     Math.random() < 0.5 ? "models/gltf/ybot2.glb" : "models/gltf/Xbot.glb";
+
+
+
     //   let randomposition = new THREE.Vector3(
     //     Math.random() * 200,
     //     0,
     //     Math.random() * 500
     //   );
+ 
     //   let randomcontroller = new CharacterComponent({
     //     modelpath: randoemclass,
     //     animationspathslist: animations,
+    //     //behaviourscriptname: "botbasicbehavior.js",
+
     //   });
-    //   entity.position.set(randomposition.x, randomposition.y, randomposition.z);
-    //   entity.AddComponent(randomcontroller).then(() => {
-    //   this.entityManager.AddEntity(entity, "RandomEntity" + i);
-    //   })
+    //   const h= async () => {
+    //     await entity.AddComponent(randomcontroller);
+    //     await this.entityManager.AddEntity(entity, "RandomEntity" + i);
+    //    // this.entityManager.AddEntity(entity, "RandomEntity" + i);
+
+    //   }
+    //   h();
+   
+      
     //   let deathtimeout = Math.random() * 32000 + 2000;
     //   setTimeout(() => {
     //    // entity.kill();

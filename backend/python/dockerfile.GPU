@@ -15,7 +15,7 @@ RUN apt-get  --allow-releaseinfo-change  update && apt-get install git -y --no-i
 ENV CMAKE_ARGS="-DLLAMA_OPENBLAS=on -DLLAMA_CUBLAS=on"
 ENV FORCE_CMAKE="1"
 # Install llama-cpp-python with the specified CMake options
-RUN pip   install llama-cpp-python==0.2.38
+RUN pip   install llama-cpp-python
 # Install runtime dependencies if necessary (not applicable if all done in build stage)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt --upgrade  

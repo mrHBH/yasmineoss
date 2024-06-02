@@ -104,6 +104,7 @@ class twoDUIComponent extends Component {
       render: (state: any) => {
         this._htmlElement.style.height = state.y + "px";
         this._htmlElement.style.width = state.x + "px";
+        
       },
     });
 
@@ -115,7 +116,7 @@ class twoDUIComponent extends Component {
     // );
     tween({
       from: { x: this._webgpuplane.scale.x, y: this._webgpuplane.scale.y },
-      to: { x: (1 * this._size.x) / 100, y: (1 * this._size.y) / 100 },
+      to: { x: (1.5 * this._size.x) / 100, y: (1.5 * this._size.y) / 100 },
       duration: 1500,
       easing: "easeOutQuad",
       render: (state: any) => {

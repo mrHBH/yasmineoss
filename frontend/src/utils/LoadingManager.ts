@@ -27,6 +27,8 @@ class LoadingManager {
         }
 
         //return a clone of the model using SkeletonUtils
+        let gtlf = this.assets.get(url);
+        console.log("Loaded GLTF !!:", gtlf);
         return SkeletonUtils.clone(this.assets.get(url).scene);
 
     }

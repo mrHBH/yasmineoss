@@ -13,6 +13,7 @@ class Entity {
     } = {};
     //state can be used to store the state of the entity : Selected, Alive , Destroyed 
     _alive: boolean;
+    objects: {}
     private _state: 'BUSY' | 'IDLE' = 'IDLE';
     private _updatePromise: Promise<void> | null = null; // Store the current update promise
 
@@ -78,6 +79,11 @@ class Entity {
     }
 
     async AddComponent(component: Component) {
+
+        //check if componentname is not undefined
+        if (!component._componentname) {
+            component._componentname = component.constructor.name;
+        }
         await component.InitComponent(this);
         this._components.push(component);
     }
@@ -98,8 +104,8 @@ class Entity {
         return
     }
 
-    async getComponent(componentClassName: string) {
-        return this._components.find((component) => component.constructor.name === componentClassName);
+    getComponent(componentClassName: string) {
+        return this._components.find((component) => component._componentname=== componentClassName);
     }
 
 

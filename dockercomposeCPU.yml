@@ -9,6 +9,7 @@ services:
     volumes:
       - ./backend/python/models/:/app/models
       - ./backend/python/src/:/app/src
+      - ./tempdir/:/app/tempdir
     ports:
       - '8000:8000'
     environment:
@@ -30,8 +31,20 @@ services:
     networks:
       - yasminenett
  
-
+  ollamabackend:
+    image: ollama/ollama
+    container_name: ollamabackend
+    volumes:
+      - ./ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"   
+       
+    networks:
+      - yasminenett
  
+ 
+    restart: unless-stopped
+  
   # cppbackend:
   #   container_name: cppbackend
   #   build:

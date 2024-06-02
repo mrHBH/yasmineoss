@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "agentsmanager"
+version = "0.1.0"
+description = ""
+authors = ["Hamza <hamza@ben-hassen.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+pyautogen = "^0.2.26"
+uvicorn = {extras = ["standard"], version = "^0.29.0"}
+fastapi-cors = "^0.0.6"
+pylint = "^3.1.0"
+asyncio = "^3.4.3"
+pydantic = "^2.7.1"
+python-dotenv = "^1.0.1"
+nest-asyncio = "^1.6.0"
+ipython = "^8.24.0"
+langchain-groq = "^0.1.3"
+langgraph = "^0.0.55"
+langchain = "^0.2.1"
+langchain-community = "^0.2.1"
+aiosqlite = "^0.20.0"
+  
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

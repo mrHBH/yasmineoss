@@ -6,3 +6,5 @@ frontend/bun.lockb
 frontend/bun.lockb
 frontend/bun.lockb
 **/ollama_data
+models/Meta-Llama-3-8B-Instruct.Q4_0.gguf
+models/mistral-7b-instruct-v0.2.Q8_0.gguf

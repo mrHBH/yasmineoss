@@ -3,63 +3,64 @@ import * as THREE from "three";
 import { Entity } from "../Entity";
 import { LoadingManager } from "../LoadingManager";
 import { CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
-import { MeshBVHHelper } from "three-mesh-bvh";
-import { createMachine, interpret , assign } from "xstate";
+import { createMachine, interpret, t } from "xstate";
 import * as CANNON from "cannon-es";
-import { cursorTo } from "readline";
-import { cp } from "fs";
-import { MainController } from "../MainController";
-import { ITask } from "../TaskManager";
-import { keys } from "xstate/lib/utils";
- 
-
+import { StaticCLI } from "../../SimpleCLI";
+import * as jsonpatch from 'fast-json-patch/index.mjs';
+import { applyOperation } from 'fast-json-patch/index.mjs';
 class CharacterComponent extends Component {
   private _model: THREE.Object3D;
   private _modelpath: string;
 
   private _animationspathslist: { url: string; shiftTracks: boolean }[];
   private _animation: THREE.AnimationClip;
-   private _mixer: THREE.AnimationMixer;
-   private _webgpugroup: THREE.Group;
+  private _mixer: THREE.AnimationMixer;
+  private _webgpugroup: THREE.Group;
   private _css2dgroup: THREE.Group;
   private _css3dgroup: THREE.Group;
   private _titlebar: HTMLElement;
-     animations_: { string: THREE.AnimationClip };
-   body: CANNON.Body;
-   private _characterActor: any;
+  animations_: { string: THREE.AnimationClip };
+  body: CANNON.Body;
   AnimationFSMService_: any;
   AnimationFSM_: any;
   canJump: boolean;
   isColliding_: boolean;
-   acceleration_: any;
+  acceleration_: any;
   decceleration_: THREE.Vector3;
   velocity_: THREE.Vector3;
   BehaviourFSM_: any;
   BehaviourFSM_Service_: any;
   AIinputkeys_: any;
   taskintervals: any;
-   Input: any;
-  htmlcontainer: HTMLDivElement;
-  state : string;
-  task:  string;
+  Input: any;
+  htmldialogueelement: HTMLDivElement;
+  state: string;
+  task: string;
   worker: Worker;
+  uiElement: any;
+  currentStep: number;
+  websocket: WebSocket;
+   workspace : DynamicsCompressorNode
+  document : { htmltext : string}
+  jsonpatch: any;
+ 
 
-  constructor({ modelpath, animationspathslist }) {
+  constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
     super();
-    this._componentname = "CharacterComponent";
     this._modelpath = modelpath;
     this.task = "N";
     this._animationspathslist = animationspathslist;
     this.canJump = true;
     this.isColliding_ = false;
+    this.document = { htmltext : ""};
+    this.jsonpatch = jsonpatch;
 
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
-    this.CreateInputFSM();
-
+    if (behaviourscriptname !== "")
+      this.LoadWorker(behaviourscriptname);
   }
 
-  
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
     this._model = await LoadingManager.loadGLTF(this._modelpath);
@@ -78,7 +79,7 @@ class CharacterComponent extends Component {
     const keys = Object.keys(this.animations_);
     const randomIndex = Math.floor(Math.random() * keys.length);
     const randomKey = keys[randomIndex];
-    console.log(this.animations_);
+    // //console.log(this.animations_);
     this._animation = this.animations_["Ideling"];
 
     this._model.userData.entity = this._entity;
@@ -146,81 +147,7 @@ class CharacterComponent extends Component {
     this.taskintervals = [];
     this.CreateFSM_();
 
-     
-   // this.walktopos( new THREE.Vector3( Math.random() * 150, 0, Math.random() * 190));
- 
-  }
-
-  transitionToAnimation(
-    _,
-    params: { animation1: string; animation2: string; playonce: boolean }
-  ) {
-    console.log(`Initial rating: ${params.animation1} to ${params.animation2}`);
-    console.log(this.animations_);
-    //console.log("start executing + " + context.targetanimation);
-    const ac1 = this.animations_[params.animation2];
-    const ac2 = this.animations_[params.animation1];
-
-    console.log(ac1);
-    console.log(ac2);
-
-    let curAction = this._mixer.clipAction(ac1);
-    let prevAction = this._mixer.clipAction(ac2);
-
-    let playonece = params.playonce;
-
-    curAction.time = 0.0;
-    curAction.enabled = true;
-    curAction.setEffectiveTimeScale(1.0);
-    curAction.setEffectiveWeight(1.0);
-    curAction.crossFadeFrom(prevAction, 0.65, true);
-    if (!playonece) {
-      curAction.reset();
-      curAction.clampWhenFinished = true;
-      curAction.setLoop(THREE.LoopOnce, 1);
-      curAction.play();
-
-      // setTimeout(() => {
-      //   this._characterActor.send({ type: "done" });
-
-      // }, curAction.getClip().duration * 1000);
-    } else {
-      //animation stops after one loop
-      curAction.reset();
-      curAction.clampWhenFinished = true;
-      curAction.play();
-    }
-  }
-
-  transition(context, event, params) {
-    console.log(`Transitioning from ${context._state} to ${event.type}`);
-    console.log(params);
-    const {
-      crossFadeDuration = 0.25,
-      timeScale = 1.0,
-      weight = 1.0,
-      onFinish,
-      loop = THREE.LoopRepeat,
-    } = params;
-    const curAction = this.animations_[this.AnimationFSMService_.state.value];
-    const prevAction =
-      this.animations_[this.AnimationFSMService_._state.history.value];
-
-    curAction.reset();
-    curAction.setLoop(loop, Infinity);
-    curAction.clampWhenFinished = loop === THREE.LoopOnce;
-    curAction.time = 0.0;
-    curAction.enabled = true;
-    curAction.setEffectiveTimeScale(timeScale);
-    curAction.setEffectiveWeight(weight);
-    curAction.crossFadeFrom(prevAction, crossFadeDuration, true);
-    curAction.play();
-
-    if (onFinish) {
-      setTimeout(() => {
-        onFinish();
-      }, curAction.getClip().duration * 1000);
-    }
+    // this.walktopos( new THREE.Vector3( Math.random() * 150, 0, Math.random() * 190));
   }
 
   CreateFSM_() {
@@ -294,7 +221,7 @@ class CharacterComponent extends Component {
             // 		target: "Ideling",
             // 		// actions: function (context, event) {
             // 		// 	context.targetanimation = "Sleeping";
-            // 		// 	console.log("BOREDOM_DELAY");
+            // 		// 	//console.log("BOREDOM_DELAY");
             // 		// },
 
             // 	},
@@ -377,7 +304,7 @@ class CharacterComponent extends Component {
                   context.targetanimation =
                     Math.random() > 0.5 ? "DyingForward" : "DyingForward2";
                   context.targetRestoreAnimation = "UndyingForward";
-                  //	console.log("BOREDOM_DELAY");
+                  //	//console.log("BOREDOM_DELAY");
                 },
               },
             },
@@ -579,9 +506,9 @@ class CharacterComponent extends Component {
             }, curAction.getClip().duration * 1000 - 250);
           },
           StartWalking: (context, event) => {
-            console.log(this.animations_);
-            console.log(this.AnimationFSMService_.state.value);
-            console.log(this.AnimationFSMService_._state.history.value);
+            // // //console.log(this.animations_);
+            // //console.log(this.AnimationFSMService_.state.value);
+            // //console.log(this.AnimationFSMService_._state.history.value);
             const ac1 = this.animations_[this.AnimationFSMService_.state.value];
 
             const ac2 =
@@ -637,10 +564,10 @@ class CharacterComponent extends Component {
             curAction.play();
           },
           StartBackwardWalking: (context, event) => {
-            console.log("backward walking");
-            console.log(this.animations_);
-            console.log(this.AnimationFSMService_.state.value);
-            console.log(this.AnimationFSMService_._state.history.value);
+            //console.log("backward walking");
+            //console.log(this.animations_);
+            //console.log(this.AnimationFSMService_.state.value);
+            //console.log(this.AnimationFSMService_._state.history.value);
             const ac1 = this.animations_[this.AnimationFSMService_.state.value];
 
             const ac2 =
@@ -762,7 +689,7 @@ class CharacterComponent extends Component {
             curAction.play();
           },
           StartExecuting: (context, event) => {
-            //console.log("start executing + " + context.targetanimation);
+            ////console.log("start executing + " + context.targetanimation);
 
             const ac1 = this.animations_[context.targetanimation];
 
@@ -784,7 +711,7 @@ class CharacterComponent extends Component {
             curAction.crossFadeFrom(prevAction, 0.65, true);
 
             context.lastplayedanimation = context.targetanimation;
-            //		console.log(context.lastplayedanimation);
+            //		//console.log(context.lastplayedanimation);
             if (!playonece) {
               curAction.reset();
               curAction.clampWhenFinished = true;
@@ -869,9 +796,9 @@ class CharacterComponent extends Component {
 
     this.AnimationFSMService_ = interpret(this.AnimationFSM_).start();
     this.AnimationFSMService_.onTransition((state) => {
-       this.state = state.value;
+      this.state = state.value;
     });
-  } 
+  }
   UpdateFSM(input: any) {
     if (!input._keys) {
       return;
@@ -897,9 +824,8 @@ class CharacterComponent extends Component {
     ) {
       this.AnimationFSMService_.send("JUMP");
       this.canJump = false;
-       setTimeout(() => {
+      setTimeout(() => {
         this.body.velocity.y += 5;
-    
       }, 150);
     }
 
@@ -997,103 +923,83 @@ class CharacterComponent extends Component {
     }
   }
 
-  CreateInputFSM() {
-  
-      
-    this.worker = new Worker("./workers/dynamicloader.js?" + Date.now());
+  StepToPosition(locationposition: THREE.Vector3) {
+    //steps to position, if position is reached returns true
 
-    this.worker.onmessage = (e) => {
-      //	console.log("Message received from worker", e.data);
-      if (e.data.type === "boot") {
-        this.worker.postMessage({
-          type: "init",
-          filename:    "botbasicbehavior.js",
-          watch : true
-        });
-      }
- 
-      
-      if (e.data.type === "input") {
-        console.log("AI input " )
-        console.log(e.data.input);
-        this.Input =  {_keys: e.data.input};
-        this.UpdateFSM(this.Input);
-      }
+    const controlObject = new THREE.Object3D();
+    controlObject.position.copy(this._entity.Position);
+    controlObject.quaternion.copy(this._entity.Quaternion);
+    controlObject.lookAt(locationposition);
+    const distance = controlObject.position.distanceTo(locationposition);
+    //rotation
+    const targetDirection = new THREE.Vector3()
+      .subVectors(locationposition, this._entity.Position)
+      .normalize();
+    const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
+      this._entity.Quaternion
+    );
+    const crossProduct = new THREE.Vector3().crossVectors(
+      currentDirection,
+      targetDirection
+    );
+    const deadZone = 0.05; // Change this value according to required dead zone size.
 
-      //jssetup
-      
-        if (e.data.type ==="jssetup"){
-          try {
-          eval(e.data.js).bind(this)();
+    //  console.log(distance);
+    if (distance > 1) {
+      //     console.log("walking");
+      try {
+        if (this.state == "Walking" || this.state == "Running") {
+          //shift
+          if (distance > 8) {
+            this.Input._keys.shift = true;
+          } else {
+            this.Input._keys.shift = false;
           }
-          catch (error) {
-            console.log(error);
-          }
+        } else {
+          this.Input._keys.forward = true;
         }
-      
-     
-    };
- 
-  }
-
-
- 
-
-
-  walktopos(locationposition : THREE.Vector3) {
-
-     
-      if (this.taskintervals){ 
-
-        for (let i = 0; i < this.taskintervals.length; i++) {
-          clearInterval(this.taskintervals[i]);
-        }
+      } catch (error) {
+        console.log(error);
+        return false;
       }
- 
-   let interval= setInterval(() => { 
-      const controlObject = new THREE.Object3D();
-				controlObject.position.copy(this._entity.Position );
-				controlObject.quaternion.copy( this._entity.Quaternion);
-				controlObject.lookAt( locationposition);
-				const distance = controlObject.position.distanceTo( locationposition);
-                //rotation 
-                const targetDirection = new THREE.Vector3()
-                .subVectors(
-                  locationposition,
-                  this._entity.Position
-                )
-                .normalize();
-              const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
-                this._entity.Quaternion
-              );
-              const crossProduct = new THREE.Vector3().crossVectors(
-                currentDirection,
-                targetDirection
-              );
-              const deadZone = 0.05; // Change this value according to required dead zone size.
-        
-               
-        //  console.log(distance);
- 				if (distance > 2) {
-          console.log("walking");
-					try {
-						if (
-							this.AnimationFSMService_.state.value ==
-								"Walking" ||
-							this.AnimationFSMService_.state.value == "Running"
-						) {
-							//shift
-              if (distance >8) {
-                this.Input._keys.shift = true;
-              }
-						} else {
-							this.Input._keys.shift =false;
-						}
-					} catch (error) {
-						console.log(error);
-					}
 
-  
+      if (crossProduct.y < -deadZone) {
+        // Needs to turn right
+        this.Input._keys.right = true;
+        this.Input._keys.left = false;
+      } else if (crossProduct.y > deadZone) {
+        // Needs to turn left
+        this.Input._keys.right = false;
+        this.Input._keys.left = true;
+      } else {
+        // Within the dead zone, maintain current direction
+        //we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
+        const deviation = controlObject.quaternion.angleTo(
+          this._entity.Quaternion
+        );
+        if (Math.abs(deviation) > 1) {
+          this.Input._keys.left = true;
+          this.Input._keys.right = false;
+        } else {
+          this.Input._keys.left = false;
+          this.Input._keys.right = false;
+        }
+
+        this.Input._keys.forward = true;
+
+        const targetDirection = new THREE.Vector3()
+          .subVectors(locationposition, controlObject.position)
+          .normalize();
+        const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
+          this._entity.Quaternion
+        );
+        const crossProduct = new THREE.Vector3().crossVectors(
+          currentDirection,
+          targetDirection
+        );
+        const deadZone = 0.05; // Change this value according to required dead zone size.
+
+        try {
           if (crossProduct.y < -deadZone) {
             // Needs to turn right
             this.Input._keys.right = true;
@@ -1115,14 +1021,167 @@ class CharacterComponent extends Component {
               this.Input._keys.left = false;
               this.Input._keys.right = false;
             }
-         
-            this.Input._keys.forward = true;
-          
+            return false;
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      }
+
+      return false;
+    } else {
+      try {
+        this.Input._keys.shift = false;
+        this.Input._keys.forward = false;
+        this.Input._keys.left = false;
+        this.Input._keys.right = false;
+        //remove the interval from the array
+
+        return true;
+      } catch (error) {
+        console.log(error);
+        return false;
+      }
+    }
+    //console.log(distance);
+  }
+
+  LoadWorker(scriptname: string) {
+    //send stop command to worker if it is running
+    if (this.worker) {
+      this.worker.postMessage({
+        type: "stop",
+      });
+    }
+
+    this.worker = new Worker("./workers/dynamicloader.js?" + Date.now());
+
+    this.worker.onmessage = (e) => {
+      //	//console.log("Message received from worker", e.data);
+
+      if (e.data.type === "setupdialogue") {
+        console.log("setupdialogue");
+        try {
+          eval(e.data.js).bind(this)();
+        }
+        catch(error){
+          console.error(error);
+        }      
+
+      
+      }
+      if (e.data.type === "boot") {
+        this.worker.postMessage({
+          type: "init",
+          filename: scriptname ? scriptname : "botbasicbehavior.js",
+          watch: true,
+        });
+      }
+
+      if (e.data.type === "input") {
+        this.Input = { _keys: e.data.input };
+        this.UpdateFSM(this.Input);
+      }
+
+      //jssetup
+
+      if (e.data.type === "jssetup") {
+        try {
+          let res = eval(e.data.js).bind(this)();
+          console.log(res);
+          this.worker.postMessage({
+            type: "feedback",
+            data: res,
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    };
+  }
+
+
+ 
+  StopScript() {
+    if (this.worker) {
+      this.worker.postMessage({
+        type: "stop",
+      });
+    }
+  }
+ 
+  walktopos(locationposition: THREE.Vector3) {
+    if (this.taskintervals) {
+      for (let i = 0; i < this.taskintervals.length; i++) {
+        clearInterval(this.taskintervals[i]);
+      }
+    }
+
+    let interval = setInterval(() => {
+
+       const controlObject = new THREE.Object3D();
+      controlObject.position.copy(this._entity.Position);
+      controlObject.quaternion.copy(this._entity.Quaternion);
+      controlObject.lookAt(locationposition);
+      const distance = controlObject.position.distanceTo(locationposition);
+      //rotation
+      const targetDirection = new THREE.Vector3()
+        .subVectors(locationposition, this._entity.Position)
+        .normalize();
+      const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
+        this._entity.Quaternion
+      );
+      const crossProduct = new THREE.Vector3().crossVectors(
+        currentDirection,
+        targetDirection
+      );
+      const deadZone = 0.05; // Change this value according to required dead zone size.
+      console.log(distance)
+      //  //console.log(distance);
+      if (distance > 1.7) {
+        //console.log("walking");
+        try {
+          if (
+            this.AnimationFSMService_.state.value == "Walking" ||
+            this.AnimationFSMService_.state.value == "Running"
+          ) {
+            //shift
+            if (distance > 8) {
+              this.Input._keys.shift = true;
+            }
+          } else {
+            this.Input._keys.shift = false;
+          }
+        } catch (error) {
+          console.log(error);
+        }
+
+        if (crossProduct.y < -deadZone) {
+          // Needs to turn right
+          this.Input._keys.right = true;
+          this.Input._keys.left = false;
+        } else if (crossProduct.y > deadZone) {
+          // Needs to turn left
+          this.Input._keys.right = false;
+          this.Input._keys.left = true;
+        } else {
+          // Within the dead zone, maintain current direction
+          //we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
+          const deviation = controlObject.quaternion.angleTo(
+            this._entity.Quaternion
+          );
+          if (Math.abs(deviation) > 1) {
+            this.Input._keys.left = true;
+            this.Input._keys.right = false;
+          } else {
+            this.Input._keys.left = false;
+            this.Input._keys.right = false;
+          }
+
+          this.Input._keys.forward = true;
+
           const targetDirection = new THREE.Vector3()
-            .subVectors(
-              locationposition,
-              controlObject.position 
-            )
+            .subVectors(locationposition, controlObject.position)
             .normalize();
           const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
             this._entity.Quaternion
@@ -1132,7 +1191,7 @@ class CharacterComponent extends Component {
             targetDirection
           );
           const deadZone = 0.05; // Change this value according to required dead zone size.
-  
+
           try {
             if (crossProduct.y < -deadZone) {
               // Needs to turn right
@@ -1158,180 +1217,277 @@ class CharacterComponent extends Component {
             }
             this.Input._keys.forward = true;
           } catch (error) {
-            console.log(error);
-          }}
-				} else {
-					try {
-            this.Input._keys.shift =false;
-            this.Input._keys.forward = false;
-            this.Input._keys.left = false;
-            this.Input._keys.right = false;
-            clearInterval(interval);
-            return;
-					} catch (error) {
-						//console.log(error);
-					}
-				}
+            //console.log(error);
+          }
+        }
+      } else {
+        try {
+          this.Input._keys.shift = false;
+          this.Input._keys.forward = false;
+          this.Input._keys.left = false;
+          this.Input._keys.right = false;
+          clearInterval(interval);
+          return;
+        } catch (error) {
+          ////console.log(error);
+        }
+      }
+    }, 5);
+
+    this.taskintervals.push(interval);
 
    
+  }
+
+  async walkToPos(locationPosition, timeout = 10000) {
+    return new Promise((resolve, reject) => {
+      // Clear any existing intervals
+      if (this.taskintervals) {
+        for (let i = 0; i < this.taskintervals.length; i++) {
+          clearInterval(this.taskintervals[i]);
+        }
+      }
       
-      } , 50);
-
+      // Setup the interval to check position
+      const interval = setInterval(() => {
+        const controlObject = new THREE.Object3D();
+        controlObject.position.copy(this._entity.Position);
+        controlObject.quaternion.copy(this._entity.Quaternion);
+        controlObject.lookAt(locationPosition);
+        const distance = controlObject.position.distanceTo(locationPosition);
+  
+        const targetDirection = new THREE.Vector3()
+          .subVectors(locationPosition, this._entity.Position)
+          .normalize();
+        const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(this._entity.Quaternion);
+        const crossProduct = new THREE.Vector3().crossVectors(currentDirection, targetDirection);
+        const deadZone = 0.05;
+  
+        if (distance > 0.1) {
+          try {
+            const isWalkingOrRunning = this.AnimationFSMService_.state.value === "Walking" || this.AnimationFSMService_.state.value === "Running";
+            this.Input._keys.shift = isWalkingOrRunning && distance > 8;
+  
+            if (crossProduct.y < -deadZone) {
+              this.Input._keys.right = true;
+              this.Input._keys.left = false;
+            } else if (crossProduct.y > deadZone) {
+              this.Input._keys.right = false;
+              this.Input._keys.left = true;
+            } else {
+              const deviation = controlObject.quaternion.angleTo(this._entity.Quaternion);
+              if (Math.abs(deviation) > 1) {
+                this.Input._keys.left = true;
+                this.Input._keys.right = false;
+              } else {
+                this.Input._keys.left = false;
+                this.Input._keys.right = false;
+              }
+            }
+            this.Input._keys.forward = true;
+          } catch (error) {
+            console.error("Error during walking logic:", error);
+          }
+        } else {
+          // Target reached, stop and resolve
+          clearInterval(interval);
+          this.Input._keys.shift = false;
+          this.Input._keys.forward = false;
+          this.Input._keys.left = false;
+          this.Input._keys.right = false;
+          resolve(true);
+        }
+      }, 25);
+  
       this.taskintervals.push(interval);
-
-
-					 
-			 
-    // this.BehaviourFSM_ = createMachine(
-    //   {
-    //     context: {
-    //       actcb: () => {},
-    //     },
-    //     id: "behaviour",
-    //     initial: "Ideling",
-    //     states: {
-    //       Ideling: {
-    //         on: {
-    //           ACT: {
-    //             target: "Acting",
-    //           },
-    //         },
-    //       },
-    //       Acting: {
-    //         entry: "StartActing",
-
-    //         on: {
-    //           DONE: {
-    //             target: "Ideling",
-    //           },
-    //           STOP: {
-    //             target: "Ideling",
-    //           },
-    //           AGAIN: {
-    //             target: "Acting",
-    //           },
-    //         },
-    //       },
-    //     },
-    //   },
-    //   {
-    //     actions: {
-    //       StartActing: (context, event) => {
-    //          let res = context.actcb() as  any;
-             
-    //           if(res?.done){
-    //             this.BehaviourFSM_Service_.send("DONE");
-    //           }
-    //           else{
-    //             //this.BehaviourFSM_Service_.send("AGAIN");
-    //           }
-            
-    //       },
-    //     },
-    //   }
-    // );
-
-    // this.BehaviourFSM_Service_ = interpret(this.BehaviourFSM_).start();
-    // this.BehaviourFSM_Service_.onTransition((state) => {
-    //   console.log(`state: ${state.value}`);
-    // });
-    // this.BehaviourFSM_Service_.send("ACT");
-
-    
-    
-
+  
+      // Setup the timeout
+      setTimeout(() => {
+        clearInterval(interval);
+        this.Input._keys.shift = false;
+        this.Input._keys.forward = false;
+        this.Input._keys.left = false;
+        this.Input._keys.right = false;
+        reject(new Error('Timeout reached before reaching the target position'));
+      }, timeout);
+    });
   }
-  showui() {
-       //create a ui card and add it to the css2dgroup
-       // 
-       if (this.htmlcontainer == null) {
-       this.htmlcontainer = document.createElement("div");
-       let html = /*html*/ `<div class="uk-card uk
-        -card-default uk-card-body"> <h3 class="uk-card-title">Title</h3> <p>Content</p> </div>`;
-        let div = document.createElement("div");
-        div.innerHTML = html;
-        div.style.transition = "opacity 0.5s";
-        const label = new CSS2DObject(div);
-
-        label.position.set(0, 2, 0);
-        this._css2dgroup.add(label);
-       }
-       else{
-         this.htmlcontainer.style.opacity = "1";
-         this.htmlcontainer.style.display = "block";
-         
-       }
-
-
-   }
-
-   hideui() {
-    if (this.htmlcontainer) {
-      this.htmlcontainer.style.opacity = "0";
-      this.htmlcontainer.style.display = "none";
-    }
-  }
-
-
-  createnameTag() {
-   
-    const nameTag = document.createElement('div');
-    nameTag.className = 'name-tag';
- 
-    const namet = document.createElement('div');
-    namet.className = 'name';
-    namet.style.fontSize = '16px';
-    namet.style.fontWeight = 'bold';
-    namet.style.color = '#333';
-    namet.textContent =  this._entity.name;
+  createNameTag() {
+    const nameTag = document.createElement("div");
+    nameTag.className = "name-tag";
+  
+    const namet = document.createElement("div");
+    namet.className = "name";
+    namet.style.fontSize = "16px";
+    namet.style.fontWeight = "bold";
+    namet.style.color = "#333";
+    namet.textContent = this._entity.name;
     namet.id = "name";
-    //clickable on hover 
     namet.style.cursor = "pointer";
-
-    
-    const status = document.createElement('div');
-    status.className = 'status';
-    status.style.fontSize = '12px';
-    status.style.fontWeight = 'regular';
-    status.style.color = '#666';
-    status.style.marginTop = '-2px';
-    status.textContent = 'Online';
-    
-    nameTag.appendChild(namet);
-    nameTag.appendChild(status);
-
-    //when name is clicked , toggle the visibility of the ui card
-   
+  
+    const status = document.createElement("div");
+    status.className = "status";
+    status.style.fontSize = "12px";
+    status.style.fontWeight = "regular";
+    status.style.color = "#666";
+    status.style.marginTop = "-2px";
+    status.textContent = "Online";
+  
     this._titlebar = document.createElement("div");
-    this._titlebar.appendChild( nameTag);
+    this._titlebar.style.display = "flex";
+    this._titlebar.style.flexDirection = "column";
+    this._titlebar.style.alignItems = "flex-start";
+    this._titlebar.appendChild(nameTag);
     this._titlebar.style.transition = "opacity 0.5s";
+  
+    const cliContainer = document.createElement("div");
+    cliContainer.id = "clicontainer";
+    cliContainer.style.display = "none";
+    cliContainer.style.position = "absolute";
+    cliContainer.style.bottom = "100%";
+    cliContainer.style.left = " 0%";
+     //cliContainer.style.transform = "translateX(-50%)";
+    cliContainer.style.minWidth = "20vw";
+    cliContainer.style.maxWidth = "60vw";
+    cliContainer.style.maxHeight = "40vh";
+    cliContainer.style.overflowY = "auto";
+    cliContainer.style.scrollbarWidth = "none";
+   // cliContainer.style.transition = "opacity 0.3s ease-in-out";
+  
+    const loadButton = document.createElement("button");
+    loadButton.id = "load";
+    loadButton.className = "uk-button uk-button-default";
+    loadButton.style.fontSize = "smaller";
+    loadButton.textContent = "Load";
+    cliContainer.appendChild(loadButton);
+  
+    const inlineContainer = document.createElement("div");
+    inlineContainer.className = "uk-inline";
+    inlineContainer.style.display = "flex";
+    inlineContainer.style.alignItems = "left";
+  
+    const dropIcon = document.createElement("span");
+    dropIcon.id = "dropIcon";
+    dropIcon.className = "uk-icon";
+    dropIcon.setAttribute("uk-icon", "icon: chevron-down; ratio: 0.8");
+    dropIcon.style.marginRight = "5px";
+    inlineContainer.appendChild(dropIcon);
+
+    const resetIcon = document.createElement("span");
+    resetIcon.id = "resetIcon";
+    resetIcon.className = "uk-icon";
+    resetIcon.setAttribute("uk-icon", "icon: refresh; ratio: 0.8");
+    resetIcon.style.marginRight = "5px";
+    inlineContainer.appendChild(resetIcon);
+    const nameElement = document.createElement("div");
+    nameElement.id = "name";
+    nameElement.style.cursor = "pointer";
+    nameElement.style.fontSize = "smaller";
+    nameElement.textContent = this._entity.name;
+    inlineContainer.appendChild(nameElement);
+    this._titlebar.appendChild(cliContainer);
+    this._titlebar.appendChild(inlineContainer);
+  
+    this.uiElement = cliContainer;
+  
+    if (loadButton) {
+      loadButton.addEventListener("click", () => {
+        this.Reset();
+      });  }
+  
     const label = new CSS2DObject(this._titlebar);
     label.position.set(0, 2, 0);
     this._css2dgroup.add(label);
-
-    let name = this._titlebar.querySelector("#name");
-    if ( name){
-     name.addEventListener("click", () => {
-
-      // console.log("clicked");
-      // if  (! this.htmlcontainer  || this.htmlcontainer.style.display == "none") {
-      //   this.showui();
-      // }
-      // else {
-      // this.hideui();
-      // }
-
-      this.Reset();
-    });
-
-  }
-
   
+    if (nameElement && dropIcon && resetIcon) {
+      nameElement.addEventListener("click", () => {
+        this.face();
+        this.toggleDropdown();
+      });
+
+      resetIcon.addEventListener("click", () => {
+        this.Reset();
+      });
+  
+      dropIcon.addEventListener("click", ()  => {
+        this.toggleDropdown();
+      });
+    }
+  
+    // this.uiElement.addEventListener("wheel", (event) => {
+    //   event.preventDefault();
+    //   this.uiElement.scrollTop += event.deltaY;
+    // });
   }
+  
+  toggleDropdown() {
+    let dropIcon = this._titlebar.querySelector("#dropIcon");
+    if (this.uiElement.style.display === "none") {
+      this.uiElement.style.display = "block";
+      this.uiElement.style.opacity = "0";
+      setTimeout(() => {
+        this.uiElement.style.opacity = "1";
+      }, 0);
+      dropIcon.setAttribute("uk-icon", "icon: chevron-up; ratio: 0.8");
+    } else {
+      this.uiElement.style.opacity = "0";
+      setTimeout(() => {
+        this.uiElement.style.display = "none";
+      }, 300);
+      dropIcon.setAttribute("uk-icon", "icon: chevron-down; ratio: 0.8");
+    }
+  } 
+  async loadDialogueStep() {
+    const dialogueSteps = [
+      {
+        html: `
+          <div class="uk-card uk-card-secondary uk-card-body">
+            <h3 class="uk-card-title">Step 1</h3>
+            <p class="content">This is the first step of the dialogue.</p>
+            <button class="uk-button uk-button-primary">Load Behavior</button>
+            
+          </div>
+        `,
+        title: "Hello, my name is " + this._entity.name,
+        content: "I am here to assist you. Please click this window to continue.",
+      },
+      {
+        html: `
+        <div class="uk-card uk-card-secondary uk-card-body">
+          <h3 class="uk-card-title">Step 1</h3>
+          <p class="content">This is the first step of the dialogue.</p>
+        </div>
+      `,
+        title: "Great, let's move on!",
+        content: "Click to proceed to the next step.",
+      },
+      {
+        html: `
+          <div class="uk-card uk-card-secondary uk-card-body">
+            <h3 class="uk-card-title">Step 3</h3>
+            <p class="content">This is the final step of the dialogue.</p>
+          </div>
+        `,
+        title: "Thank you for your attention!",
+        content: "This concludes our dialogue.",
+      },
+    ];
+  
+    if (this.currentStep >= 0 && this.currentStep < dialogueSteps.length) {
+      const step = dialogueSteps[this.currentStep];
+      this.uiElement.innerHTML = step.html;
+  
+      await StaticCLI.typeInside(this.uiElement, "uk-card-title", step.title, 25, false);
+      await StaticCLI.typeInside(this.uiElement, "content", step.content, 25, false);
+    }
+  }
+ 
+ 
+ 
   Reset() {
     this.worker?.postMessage({
       type: "reload",
-      filename: "car.js",
+      filename: "botbasicbehavior.js",
     });
 
     //clear all intervals
@@ -1340,7 +1496,7 @@ class CharacterComponent extends Component {
         clearInterval(this.taskintervals[i]);
       }
     }
-    //reset inputs 
+    //reset inputs
     this.Input._keys = {
       forward: false,
       backward: false,
@@ -1350,52 +1506,49 @@ class CharacterComponent extends Component {
       shift: false,
     };
 
-    this.task= "notask";
-
-
+    this.task = "notask";
   }
   async InitEntity(): Promise<void> {
+    //   <div class="uk-width-expand">
+    //   <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
+    //   <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
+    //     <li><a href="#">Electrical Engineer</a></li>
 
-  //   <div class="uk-width-expand">
-  //   <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
-  //   <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
-  //     <li><a href="#">Electrical Engineer</a></li>
+    //   </ul>
 
-  //   </ul>
+    //   <button class="uk-button" id="contactbutton">Contact </button>
+    // </div>
+    this.createNameTag();
+    //this.toggleUI()
+    //console.log("InitEntity CharacterComponent");
 
-  //   <button class="uk-button" id="contactbutton">Contact </button>
-  // </div>
-  this.createnameTag();
-    console.log("InitEntity CharacterComponent");
-   
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
     this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
     this._entity._entityManager._mc.physicsmanager.world.addBody(this.body);
 
-   
-     //register handler for     this._entity.Broadcast({ topic: "inputinitialized", data: {input : this} });
-     this._entity._RegisterHandler(
-      "walk",
-      (data: { position: any }) => {
-          this.walktopos(data.position);
-          
-      }
-    );
+    //register handler for     this._entity.Broadcast({ topic: "inputinitialized", data: {input : this} }); async (data: any) => {
+    this._entity._RegisterHandler("walk", async (data: any) => {
+     await this.walkToPos(data.position);
+    });
 
     //register handler for     this._entity.Broadcast({ topic: "inputinitialized", data: {input : this} });
     this._entity._RegisterHandler(
       "inputinitialized",
       (data: { input: any }) => {
         this.Input = data.input;
-        if ( this.Input) { 
-          console.log("input initialized");
+        if (this.Input) {
+          //console.log("input initialized");
         }
       }
     );
 
     this._entity._RegisterHandler("inputdestroyed", (data: any) => {
       this.Input = null;
-      console.log("input destroyed");
+      //console.log("input destroyed");
+    });
+
+    this._entity._RegisterHandler("loadscript", (data: any) => {
+      this.LoadWorker(data.scriptname);
     });
 
     this._entity._RegisterHandler("position", (data: any) => {
@@ -1419,30 +1572,37 @@ class CharacterComponent extends Component {
     this._entity._RegisterHandler("zoom", async () => {
       await this.zoom();
     });
-    this._entity._RegisterHandler("panaround", async () => {
-      await this.panaround();
+    this._entity._RegisterHandler("face", async () => {
+      await this.face();
     });
   }
 
-  async zoom(radius = 5) {
-    let p = this._entity.position.clone(); // Make sure to clone so you don't accidentally modify the original position
-    let quat = this._entity.quaternion.clone();
-    quat.x += -0.9 + Math.random() * 0.6;
-    quat.y += -2.9 + Math.random() * 9.6;
-    quat.z += -0.9 + Math.random() * 3.6;
+  async zoom(radius = 8) {
+    let p = this._entity.Position.clone(); // Make sure to clone so you don't accidentally modify the original position
+    p.y += 1.5;
+    // let quat = this._entity.Quaternion.clone();
+    // quat.x += -0.9 + Math.random() * 0.6;
+    // quat.y += -2.9 + Math.random() * 9.6;
+    // quat.z += -0.9 + Math.random() * 3.6;
 
-    this._entity._entityManager._mc.zoomTo(p, radius, quat);
+    this._entity._entityManager._mc.zoomTo(p, radius);
   }
 
-  async panaround() {
-    this._entity._entityManager._mc.panAround();
+  async face() {
+    let p = this._entity.Position.clone(); // Make sure to clone so you don't accidentally modify the original position
+    p.y += 1.5;
+    let quat = this._entity.Quaternion.clone();
+    //rotate quat around y 180 degrees
+    quat.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
+    await this._entity._entityManager._mc.zoomTo(p, 4, quat);
   }
 
   async Update(deltaTime: number): Promise<void> {
-
-    //update state name in the title bar
-    this._titlebar.querySelector(".status").textContent = this.state + " " +  this.task
     
+    //update state name in the title bar
+    // this._titlebar.querySelector(".status").textContent =
+    //   this.state + " " + this.task;
+
     this._mixer.update(deltaTime);
 
     const controlObject = this._webgpugroup;
@@ -1473,7 +1633,7 @@ class CharacterComponent extends Component {
     acc.multiplyScalar(
       this.getAcceleration(this.AnimationFSMService_.state.value)
     );
-    if (this.Input ) {
+    if (this.Input) {
       this.UpdateFSM(this.Input);
 
       if (this.Input._keys.left) {
@@ -1503,8 +1663,8 @@ class CharacterComponent extends Component {
       if (this.Input._keys.backward) {
         velocity.z -= acc.z * deltaTime;
       }
-      if (this.state != "Executing"    && this.state != "EndExecuting" )
-      controlObject.quaternion.copy(_R);
+      if (this.state != "Executing" && this.state != "EndExecuting")
+        controlObject.quaternion.copy(_R);
 
       const oldPosition = new THREE.Vector3();
       oldPosition.copy(controlObject.position);
@@ -1539,13 +1699,13 @@ class CharacterComponent extends Component {
 
         if (contactNormal.dot(upAxis) > 0.7) {
           if (!this.canJump) {
-            //	console.log("can jump");
+            //	//console.log("can jump");
           }
 
           this.canJump = true;
         }
         // if (contactNormal.dot(frontAxis) > 0.5) {
-        // 	console.log(contact);
+        // 	//console.log(contact);
 
         // 	this.isColliding_ = true;
 
@@ -1553,7 +1713,7 @@ class CharacterComponent extends Component {
         // 	//controlObject.position.addScaledVector(forward, -3);
         // 	// forward.multiplyScalar(-3);
         // 		//this.body.position.z -= 0.1;
-        // 	//console.log("colliding with a wall");
+        // 	////console.log("colliding with a wall");
         // }
         // else{
         // 	this.isColliding_ = false;
@@ -1569,13 +1729,13 @@ class CharacterComponent extends Component {
 
       if (!this.canJump && this.AnimationFSMService_.state.value != "Falling") {
         this.AnimationFSMService_.send("FALL");
-        //console.log("falling");
+        ////console.log("falling");
       } else if (
         this.canJump &&
         this.AnimationFSMService_.state.value == "Falling"
       ) {
         this.AnimationFSMService_.send("LAND");
-        //	console.log(" landed");
+        //	//console.log(" landed");
       }
 
       const pos = controlObject.position.clone();
@@ -1601,15 +1761,31 @@ class CharacterComponent extends Component {
       this._entity.Position = controlObject.position;
 
       this._entity.Quaternion = controlObject.quaternion;
-    } 
-
-     
+    }
 
     //calculate the distance between the entity and the camera
     const distance = this._entity.Position.distanceTo(
       this._entity._entityManager._mc.camera.position
     );
+
+    if (this.worker) {
+      this.worker.postMessage({
+        type: "update",
+        position: this._entity.Position,
+        quaternion: [
+          this._entity.Quaternion.x,
+          this._entity.Quaternion.y,
+          this._entity.Quaternion.z,
+          this._entity.Quaternion.w,
+        ],
+        target:
+          this._entity._entityManager._mc.UIManager.attentionCursor.position,
+        state: this.state,
+        dt: deltaTime,
+      });
+    }
     //hide the opacity of this._titlebar if the distance is greater than 10
+    if (this._titlebar){
 
     if (distance > 15) {
       this._titlebar.style.opacity = "0";
@@ -1618,7 +1794,7 @@ class CharacterComponent extends Component {
       this._titlebar.style.opacity = "1";
       this._titlebar.style.pointerEvents = "auto";
     }
-  }
+  }}
 
   async Destroy() {
     for (let i = this._webgpugroup.children.length - 1; i >= 0; i--) {
@@ -1658,7 +1834,7 @@ class CharacterComponent extends Component {
       case "SlowWalking":
         return 1.35;
       case "Landing":
-        return 0 ;
+        return 0;
         setTimeout(() => {
           return 0;
         }, 75);
@@ -1679,126 +1855,123 @@ class CharacterComponent extends Component {
   }
 
   // async Walk(point : THREE.Vector3 , chain = true) {
-	// 	//check if parent has an input component
-       
- 
-	// 	const walkTask2: ITask = {
-	// 		name: "Walk Task",
-	// 		topic: "Walking",
-	// 		updateFrequency: 5, // Update every 100 milliseconds
+  // 	//check if parent has an input component
 
-	// 		completionCriterion: function () {
-	// 			const controlObject = new THREE.Object3D();
-	// 			controlObject.position.copy(this._entity.position);
-	// 			controlObject.quaternion.copy( this._entity.quaternion);
-	// 			controlObject.lookAt( point);
-	// 			const distance = controlObject.position.distanceTo(
-	// 				this.context.location
-	// 			);
-		 
-	// 			if (distance < 1) {
- 
-	// 				return true;
-	// 			}
-	// 		}, // Complete when the current number is 17
-	// 		stopCondition: function () {
-	// 			return false;
-	// 		}, // Never stop unless completed
-	// 		update: function () {
-	// 			//red
-	// 			const mat = new THREE.MeshStandardMaterial({
-	// 				color: 0xff0000,
-	// 				side: THREE.DoubleSide,
-	// 			});
+  // 	const walkTask2: ITask = {
+  // 		name: "Walk Task",
+  // 		topic: "Walking",
+  // 		updateFrequency: 5, // Update every 100 milliseconds
 
-	// 			const controlObject = new THREE.Object3D();
-	// 			controlObject.position.copy(this.context.parent.group_.position);
-	// 			controlObject.quaternion.copy(this.context.parent.group_.quaternion);
-	// 			controlObject.lookAt(this.context.location);
- 
-	// 			const targetDirection = new THREE.Vector3()
-	// 				.subVectors(
-	// 					this.context.location,
-	// 					this.context.parent.group_.position
-	// 				)
-	// 				.normalize();
-	// 			const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
-	// 				this.context.parent.group_.quaternion
-	// 			);
-	// 			const crossProduct = new THREE.Vector3().crossVectors(
-	// 				currentDirection,
-	// 				targetDirection
-	// 			);
-	// 			const deadZone = 0.05; // Change this value according to required dead zone size.
+  // 		completionCriterion: function () {
+  // 			const controlObject = new THREE.Object3D();
+  // 			controlObject.position.copy(this._entity.position);
+  // 			controlObject.quaternion.copy( this._entity.quaternion);
+  // 			controlObject.lookAt( point);
+  // 			const distance = controlObject.position.distanceTo(
+  // 				this.context.location
+  // 			);
+
+  // 			if (distance < 1) {
+
+  // 				return true;
+  // 			}
+  // 		}, // Complete when the current number is 17
+  // 		stopCondition: function () {
+  // 			return false;
+  // 		}, // Never stop unless completed
+  // 		update: function () {
+  // 			//red
+  // 			const mat = new THREE.MeshStandardMaterial({
+  // 				color: 0xff0000,
+  // 				side: THREE.DoubleSide,
+  // 			});
+
+  // 			const controlObject = new THREE.Object3D();
+  // 			controlObject.position.copy(this.context.parent.group_.position);
+  // 			controlObject.quaternion.copy(this.context.parent.group_.quaternion);
+  // 			controlObject.lookAt(this.context.location);
+
+  // 			const targetDirection = new THREE.Vector3()
+  // 				.subVectors(
+  // 					this.context.location,
+  // 					this.context.parent.group_.position
+  // 				)
+  // 				.normalize();
+  // 			const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
+  // 				this.context.parent.group_.quaternion
+  // 			);
+  // 			const crossProduct = new THREE.Vector3().crossVectors(
+  // 				currentDirection,
+  // 				targetDirection
+  // 			);
+  // 			const deadZone = 0.05; // Change this value according to required dead zone size.
   //       this.Input._keys.right = true;
-	// 			// try {
-	// 			// 	if (crossProduct.y < -deadZone) {
-	// 			// 		// Needs to turn right
-	// 			// 		input._keys.right = true;
-	// 			// 		input._keys.left = false;
-	// 			// 	} else if (crossProduct.y > deadZone) {
-	// 			// 		// Needs to turn left
-	// 			// 		input._keys.right = false;
-	// 			// 		input._keys.left = true;
-	// 			// 	} else {
-	// 			// 		// Within the dead zone, maintain current direction
-	// 			// 		//we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
-	// 			// 		const deviation = controlObject.quaternion.angleTo(
-	// 			// 			this.context.parent.group_.quaternion
-	// 			// 		);
-	// 			// 		if (Math.abs(deviation) > 1) {
-	// 			// 			input._keys.left = true;
-	// 			// 			input._keys.right = false;
-	// 			// 		} else {
-	// 			// 			input._keys.left = false;
-	// 			// 			input._keys.right = false;
-	// 			// 		}
-	// 			// 	}
-	// 			// 	input._keys.forward = true;
-	// 			// } catch (error) {
-	// 			// 	console.log(error);
-	// 			// }
-		 
-	// 		},
-	// 		stop: function () {
-	// 			try {
-	// 				this.context.parent.input._keys.forward = false;
-	// 				this.context.parent.input._keys.left = false;
-	// 				this.context.parent.input._keys.right = false;
-	// 			} catch (error) {}
+  // 			// try {
+  // 			// 	if (crossProduct.y < -deadZone) {
+  // 			// 		// Needs to turn right
+  // 			// 		input._keys.right = true;
+  // 			// 		input._keys.left = false;
+  // 			// 	} else if (crossProduct.y > deadZone) {
+  // 			// 		// Needs to turn left
+  // 			// 		input._keys.right = false;
+  // 			// 		input._keys.left = true;
+  // 			// 	} else {
+  // 			// 		// Within the dead zone, maintain current direction
+  // 			// 		//we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
+  // 			// 		const deviation = controlObject.quaternion.angleTo(
+  // 			// 			this.context.parent.group_.quaternion
+  // 			// 		);
+  // 			// 		if (Math.abs(deviation) > 1) {
+  // 			// 			input._keys.left = true;
+  // 			// 			input._keys.right = false;
+  // 			// 		} else {
+  // 			// 			input._keys.left = false;
+  // 			// 			input._keys.right = false;
+  // 			// 		}
+  // 			// 	}
+  // 			// 	input._keys.forward = true;
+  // 			// } catch (error) {
+  // 			// 	//console.log(error);
+  // 			// }
 
-	// 			if (removelater) {
-	// 				this.context.parent.Parent.RemoveComponent("CharacterInput");
-	// 			}
+  // 		},
+  // 		stop: function () {
+  // 			try {
+  // 				this.context.parent.input._keys.forward = false;
+  // 				this.context.parent.input._keys.left = false;
+  // 				this.context.parent.input._keys.right = false;
+  // 			} catch (error) {}
 
-	// 			this.context.parent.AnimationFSMService_.send("STOP");
+  // 			if (removelater) {
+  // 				this.context.parent.Parent.RemoveComponent("CharacterInput");
+  // 			}
 
-	// 			console.log(`The random task is done.`);
-	// 			//remove the waypoint
-	// 			this.context.parent.params_.scene.remove(this.context.waypoint);
-	// 			//remove bezier and text
-	// 			this.context.parent.params_.scene.remove(this.context.bezier);
-	// 			this.context.parent.params_.scene.remove(this.context.myText);
-	// 		},
-	// 		lastUpdate: 0, // The last time the task was updated
-	// 		context: {
-	// 			location: point, // A property to store the target point to walk to
-	// 			parent: this,
-	// 			waypoint: waypoint,
-	// 			bezier: this.bezier,
-	// 			myText: myText,
-	// 			callback: this.tm.Queue,
-	// 		},
-	// 	};
-	// 	if (chain) this.tm.Clear();
-	// 	this.tm.enqueueTask(walkTask2);
-	// }
+  // 			this.context.parent.AnimationFSMService_.send("STOP");
+
+  // 			//console.log(`The random task is done.`);
+  // 			//remove the waypoint
+  // 			this.context.parent.params_.scene.remove(this.context.waypoint);
+  // 			//remove bezier and text
+  // 			this.context.parent.params_.scene.remove(this.context.bezier);
+  // 			this.context.parent.params_.scene.remove(this.context.myText);
+  // 		},
+  // 		lastUpdate: 0, // The last time the task was updated
+  // 		context: {
+  // 			location: point, // A property to store the target point to walk to
+  // 			parent: this,
+  // 			waypoint: waypoint,
+  // 			bezier: this.bezier,
+  // 			myText: myText,
+  // 			callback: this.tm.Queue,
+  // 		},
+  // 	};
+  // 	if (chain) this.tm.Clear();
+  // 	this.tm.enqueueTask(walkTask2);
+  // }
 
   async walkTo(point: THREE.Vector3) {
     //add component to entity
-
   }
-
 }
 
-export {  CharacterComponent  };
+export { CharacterComponent };

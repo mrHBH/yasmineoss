@@ -1,0 +1,44 @@
+# Use the official Python image as base
+FROM python:latest
+# Install system packages required by the application
+ARG DEBIAN_FRONTEND=noninteractive
+# RUN apt-get update
+# RUN apt-get --allow-releaseinfo-change  update && apt-get install git -y --no-install-recommends \
+#     build-essential \
+#     cmake \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+# Set the working directory 
+WORKDIR /app
+
+# Copy the requirements file into the container
+COPY requirements.txt . 
+# Install Python dependencies
+RUN pip install  -r requirements.txt 
+RUN pip install llama-cpp-python
+# RUN pip install --force-reinstall charset-normalizer==3.1.0
+# Set environment variables
+
+ENV TRANSFORMERS_CACHE="/app/cache" \
+    HF_HOME="/app/cache/hf/" \
+    SUNO_USE_SMALL_MODELS="True" \
+    SUNO_OFFLOAD_CPU="True" \
+    TORCH_HOME="/app/cache/torch/" \
+    HF_HUB_CACHE="/app/cache/hfhub/" \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8
+
+
+RUN pip   install llama-cpp-python==0.2.38
+# RUN pip install lmql
+EXPOSE 8000
+WORKDIR /app   
+CMD ["python", "src/main.py"]
+
+ 
+
+
+ 
+ 
+
+ 
