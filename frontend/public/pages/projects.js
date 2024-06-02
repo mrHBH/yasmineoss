@@ -16,7 +16,7 @@ let cb = function (e) {
   <div class="uk-container-expand uk-padding uk-margin uk-text-center">
        <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
         <article class="uk-comment" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
-        <h3  class="consola uk-card-title">Dynamic Page title</h3>
+        <h3  class="consola uk-card-title">Dynamic Page titlez</h3>
 
            <div>
 

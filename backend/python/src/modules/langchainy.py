@@ -64,7 +64,7 @@ websocketclient= None
 #llama3:8b-instruct-q8_0
 #aya:8b
 model = ChatOllama(
-    model="codestral" ,
+    model="phi3" ,
     base_url=bas_url,
     api_key="ollama",
     stream=True,
