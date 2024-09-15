@@ -100,19 +100,19 @@ let cb = function (e) {
     const generateBtn = this.uiElement.querySelector('#generate-page');
     generateBtn.onclick = () => {
       const bioluminescencePage = `
-        <div class="uk-card uk-card-default uk-card-body" style="width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box;">
+        <div class="uk-card uk-card-secondary uk-card-body" style="width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box;">
           <button id="back-to-claude" class="uk-button uk-button-primary uk-position-top-left uk-margin-small-top uk-margin-small-left">Back to Claude</button>
           <div class="uk-container uk-margin-large-top">
             <h1 class="uk-heading-medium">The Mesmerizing World of Bioluminescence</h1>
             
                <div>
-                <div class="uk-card uk-card-default uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+                <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
                   <h3 class="uk-card-title">What is Bioluminescence?</h3>
                   <p>Bioluminescence is the production and emission of light by living organisms. This fascinating phenomenon occurs in various species across different ecosystems, from the depths of the ocean to forests and fields.</p>
                 </div>
               </div>
               <div>
-                <div class="uk-card uk-card-default uk-card-body" uk-scrollspy="cls: uk-animation-slide-right; repeat: true">
+                <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-right; repeat: true">
                   <h3 class="uk-card-title">Examples in Nature</h3>
                   <ul class="uk-list uk-list-bullet">
                     <li>Fireflies</li>
@@ -125,14 +125,14 @@ let cb = function (e) {
             </div>
 
             <div class="uk-margin-large-top">
-              <div class="uk-card uk-card-default uk-card-body" uk-scrollspy="cls: uk-animation-fade; repeat: true">
+              <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-fade; repeat: true">
                 <h3 class="uk-card-title">The Science Behind the Glow</h3>
                 <p>Bioluminescence is a chemical reaction that produces light energy within an organism's body. This process involves a light-emitting molecule called luciferin and an enzyme called luciferase. When these components react with oxygen, it results in the production of light.</p>
               </div>
             </div>
 
             <div class="uk-margin-large-top">
-              <div class="uk-card uk-card-default uk-card-body" uk-scrollspy="cls: uk-animation-slide-bottom; repeat: true">
+              <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-bottom; repeat: true">
                 <h3 class="uk-card-title">Applications of Bioluminescence</h3>
                 <p>The study of bioluminescence has led to numerous scientific and technological advancements:</p>
                 <ul class="uk-list uk-list-bullet">
@@ -146,14 +146,14 @@ let cb = function (e) {
       
 
           <div class="uk-margin-large-top">
-            <div class="uk-card uk-card-default uk-card-body" uk-scrollspy="cls: uk-animation-fade; repeat: true">
+            <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-fade; repeat: true">
               <h3 class="uk-card-title">Experience the Magic of Bioluminescence</h3>
               <p>Explore the enchanting world of bioluminescence through an interactive 3D simulation. Witness the beauty of glowing organisms and learn about the science behind their luminous displays.</p>
             </div>
 
             <div class="uk-margin-large-top">
 
-              <div class="uk-card uk card-default uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+              <div class="uk-card uk card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
                 <h3 class="uk-card-title">Discover More</h3>
                 <p>For further information on bioluminescence and related topics, check out these resources:</p>
                 <ul class="uk-list uk

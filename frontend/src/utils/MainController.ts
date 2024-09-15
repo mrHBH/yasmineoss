@@ -79,10 +79,10 @@ class MainController {
 
  //  this.webgpuscene.fog = new THREE.Fog( 0x202020, 50, 100 );
 
-   this.webgpu = new THREE.WebGPURenderer({ antialias: true , logarithmicDepthBuffer: false , powerPreference: "high-performance" , }) as THREE.WebGPURenderer;
+   this.webgpu = new THREE.WebGPURenderer({ antialias: false , logarithmicDepthBuffer: false , powerPreference: "high-performance" , }) as THREE.WebGPURenderer;
    
-   this.webgpu.setPixelRatio(    window.devicePixelRatio);
-      this.webgpu.shadowMap.enabled = true;
+   this.webgpu.setPixelRatio(     window.devicePixelRatio);
+    //  this.webgpu.shadowMap.enabled = true;
     // this.webgpu.shadowMap.type = THREE.VSMShadowMap;
 
     // this.webgpu.init().then(() => {

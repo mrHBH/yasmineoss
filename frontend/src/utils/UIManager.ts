@@ -101,7 +101,7 @@ class UIManager {
       await introui.AddComponent(uicomponent);
       uicomponent.Size = size;
       let res = await this.mc.entitymanager.AddEntity(introui, name);
-      await  uicomponent.AnimateType(html, 1);
+     uicomponent.AnimateType(html, 1);
 
       if (res == -1) {
         return;
