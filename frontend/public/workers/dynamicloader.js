@@ -54,7 +54,7 @@ function init(data){
     if (!watch  && filename) {
         worker = new Worker(filename );
         worker.onmessage = onmessage;
-        worker.postMessage({ type: 'boot', key: "data", value: "data.value" });
+        worker.postMessage({ type: 'boot', key: "data", filename: filename });
         return;
     }
     else {

@@ -52,10 +52,13 @@ class EntityManager {
         // Schedule each entity's update as a microtask, allowing the main thread to remain responsive
         this._entities.forEach(entity => {
             if (entity.alive) {
-                queueMicrotask(() => {
-                    entity.Update(deltaTime).catch(err => {
-                        console.error("Error during entity update:", err);
-                    });
+                // queueMicrotask(() => {
+                //     entity.Update(deltaTime).catch(err => {
+                //         console.error("Error during entity update:", err);
+                //     });
+                // });
+                entity.Update(deltaTime).catch(err => {
+                    console.error("Error during entity update:", err);
                 });
             }
 

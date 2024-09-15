@@ -70,14 +70,7 @@ class StaticCLI {
     delay: number = 100,
     override: boolean = false
   ): Promise<void> {
-    const key = container.id;
-
-    // Clear any existing timeout for this container
-    if (this.timeouts[key]) {
-      clearTimeout(this.timeouts[key]);
-      delete this.timeouts[key];
-    }
-
+ 
     // Clear the container if override is true
     if (override) {
       container.innerHTML = '';
@@ -169,9 +162,9 @@ class StaticCLI {
 
  
   
-    // Optionally, insert a cursor (if needed)
-    const cursor = this.ensureCursor(container);
-    container.appendChild(cursor);
+    // // Optionally, insert a cursor (if needed)
+    // const cursor = this.ensureCursor(container);
+    // container.appendChild(cursor);
  
   }
   
@@ -249,7 +242,7 @@ class StaticCLI {
     return cursor;
   }
 
-  private static ensurePrompt(container: HTMLElement): HTMLElement {
+    static ensurePrompt(container: HTMLElement): HTMLElement {
     let prompt = container.querySelector('span[data-cli-prompt]') as HTMLElement;
     if (!prompt) {
       prompt = this.createPrompt(container);

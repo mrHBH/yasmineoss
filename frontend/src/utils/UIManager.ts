@@ -3,11 +3,11 @@ import { MainController } from "./MainController";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { twoDUIComponent } from "../utils/Components/2dUIComponent";
 import { threeDUIComponent } from "../utils/Components/3dUIComponent";
-import { Entity } from "./Entity";
-import * as pdfjsLib from "pdfjs-dist";
-import { CarComponent } from "./Components/CarComponent.js";
-import { KeyboardInput } from "./Components/KeyboardInput.js";
-import { DynamicuiWorkerComponent } from "./Components/DynamicuiWorkerComponent.js";
+ import { Entity } from "./Entity";
+  import * as pdfjsLib from "pdfjs-dist";
+ import { CarComponent } from "./Components/CarComponent.js";
+// // import { KeyboardInput } from "./Components/KeyboardInput.js";
+  import { DynamicuiWorkerComponent } from "./Components/DynamicuiWorkerComponent.js";
 
 // //const {MediaPresenter, AudioStreamer , VideoStreamer } = require('sfmediastream');
 
@@ -17,7 +17,7 @@ class UIManager {
    lookatPath: THREE.Vector3[] = [];
   attentionCursor: THREE.Mesh | any;
   cubePosition: number = 0;
-  private scrollmodenavigation: boolean = false;
+   scrollmodenavigation: boolean = false;
   private touchStartY: number = 0;
   private birdEyeviewOffset = new THREE.Vector3(0, 0, 0);
   private fpsposoffset = new THREE.Vector3(0, 0, 0);
@@ -38,6 +38,7 @@ class UIManager {
   offsetpos: THREE.Vector3;
   offsetrot: THREE.Quaternion;
   fpsquatoffset: THREE.Quaternion;
+  inputBox: any;
   constructor(parent: MainController) {
     this.mc = parent;
     this.controlpointsmeshes = [];
@@ -46,12 +47,12 @@ class UIManager {
     this.createUIButtons();
     this.addScrollbar();
     this.moveCubeAlongPath(0);
-    this.createInitialUI();
+  //   this.createInitialUI();
   }
 
   private async createInitialUI(): Promise<void> {
     const dynamicuicomponent = new DynamicuiWorkerComponent("../pages/homepage.js");
-
+    dynamicuicomponent.sticky = true;
     const h = async () => {
       let introui = new Entity();
       introui.Position.set(
@@ -89,19 +90,33 @@ class UIManager {
 
     this.mc.webgpuscene.add(this.attentionCursor);
   }
-  adduiElement(name: string, html: string, position: THREE.Vector3): void {
+  adduiElement(name: string, html: string, position: THREE.Vector3 , size: THREE.Vector2 = new THREE.Vector2(500,600)): void {
     const uicomponent = new twoDUIComponent(html);
+    uicomponent.sticky = true;
+    uicomponent.maximized = true;
+    uicomponent.typed = true;
     const h = async () => {
       let introui = new Entity();
       introui.Position.set(position.x, position.y, position.z);
       await introui.AddComponent(uicomponent);
+      uicomponent.Size = size;
       let res = await this.mc.entitymanager.AddEntity(introui, name);
+      await  uicomponent.AnimateType(html, 1);
+
       if (res == -1) {
         return;
       }
     };
 
     h();
+  }
+  removeuiElement(name: string): void {
+    this.mc.entitymanager.Entities.forEach((entity) => {
+      if (entity._name === name) {
+
+        this.mc.entitymanager.RemoveEntity(entity);
+      }
+    });
   }
   private touchStartHandler(event: TouchEvent): void {
     if (event.touches.length === 1) {
@@ -122,8 +137,8 @@ class UIManager {
   }
   private createSplinePath(): void {
     const controlPoints = [
-      new THREE.Vector3(0, 15, 0),
-      new THREE.Vector3(0, 10, 0 ),
+      new THREE.Vector3(0, 10, 14),
+      new THREE.Vector3(0, 15, 14 ),
 
       //  new THREE.Vector3(0, 5, 0),
       // new THREE.Vector3(-5, 2, 10),
@@ -242,6 +257,14 @@ class UIManager {
       transition: "background-color 0.3s ease-in-out", // Add hover effect
     });
 
+    this.scrollbarContainer.style.display = "none";
+    //animate opacity when swtiching between display block and none
+    this.scrollbarContainer.style.transition = "opacity 0.5s";
+    this.scrollbarContainer.style.opacity = "0.5";
+
+
+
+
     // Add hover effect
     this.scrollbarContainer.addEventListener("mouseover", () => {
       this.scrollbarContainer.style.backgroundColor = "rgba(0, 0, 0, 0.4)";
@@ -313,6 +336,8 @@ class UIManager {
     updateScrollbarPosition();
     document.body.appendChild(this.scrollbarContainer);
   }
+
+
     updateScrollbarPosition(): void {
     this.scrollbarContainer.scrollTop =
       this.cubePosition *
@@ -405,7 +430,7 @@ class UIManager {
 
     document.getElementById("cameramode")?.addEventListener("click", () => {
       //toggle the first person view
-      this.toggleFPSmode( new THREE.Vector3(0,2,-5), new THREE.Quaternion());
+      this.toggleFPSmode( new THREE.Vector3(0,2,-3), new THREE.Quaternion());
     });
 
     document.getElementById("birdeyemode")?.addEventListener("click", () => {
@@ -417,6 +442,8 @@ class UIManager {
   }
 
   toggleScrollmode() {
+
+    
     if (this.fpsnavigation) {
       this.disableFPSNavigation();
     }
@@ -427,6 +454,7 @@ class UIManager {
       this.enableScrollModeNavigation();
     } else {
       this.disableScrollModeNavigation();
+
     }
   }
 
@@ -478,8 +506,12 @@ class UIManager {
       .getElementById("togglemousecontrolsbutton")
       ?.classList.add("uk-text-danger");
     this.scrollmodenavigation = true;
+
+    //show the navigation scrollbar
+    this.scrollbarContainer.style.display = "none";
   }
   private disableScrollModeNavigation(): void {
+    this.scrollbarContainer.style.display = "none";
     this.mc.CameraControls.enabled = true;
 
     this.mc.CameraControls.enableZoom = true;
@@ -555,7 +587,7 @@ class UIManager {
   }
 
     updateSplineObject(): void {
-    const points = this.splinePath.getPoints(10);
+    const points = this.splinePath.getSpacedPoints(5);
     this.splineObject.geometry.setFromPoints(points);
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
@@ -640,9 +672,120 @@ class UIManager {
       normalvec
     );
    
-     //this.mc.CameraControls.setPosition( this.attentionCursor.position.x , this.attentionCursor.position.y +5 , this.attentionCursor.position.z +4, true);
+  // this.mc.CameraControls.setPosition( this.attentionCursor.position.x , this.attentionCursor.position.y , this.attentionCursor.position.z , true);
 
-    //this.mc.CameraControls.setTarget(  this.lookatPath[Math.round(this.cubePosition * this.lookatPath.length)], true);
+    this.mc.CameraControls.setTarget(  this.attentionCursor.position.x , this.attentionCursor.position.y , this.attentionCursor.position.z , true );
+  }
+
+  keydownhandler = (event: KeyboardEvent) => {
+    if (this.inputBox) {
+      event.stopPropagation(); // Prevent event propagation
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C' || event.key === 'v' || event.key === 'V')) {
+        return; // Allow the default behavior for Ctrl+C and Ctrl+V
+      }
+  
+
+      if (event.key === "Enter") {
+        this.handleInput(this.inputBox.value);
+        this.inputBox.value = "";
+        let span = this.inputBox.previousSibling;
+        //set the span innerHTML to the input value
+        span.innerText = this.inputBox.value;
+         
+
+      } else if (event.key === "Backspace") {
+        // Handle backspace separately if needed
+        let currentValue = this.inputBox.value;
+        this.inputBox.value = currentValue.slice(0, -1);
+        let span = this.inputBox.previousSibling;
+        //set the span innerHTML to the input value
+        span.innerText = this.inputBox.value;
+         
+
+      }
+ 
+      
+      else {
+        console.log(event.key);
+  
+        // Ignore control keys like shift, alt, ctrl, but not a backspace or space
+        if ((event.key.length === 1 )    ) {
+          // Append the key to the input box
+          this.inputBox.value += event.key;
+
+          //get span element before the cursor
+          let span = this.inputBox.previousSibling;
+          //set the span innerHTML to the input value
+          span.innerText = this.inputBox.value;
+           
+        }
+  
+        if (event.key === "Escape") {
+          this.inputBox.blur();
+        }
+      }
+  
+      event.preventDefault();
+    }
+  }
+  
+  private setupInput(htmlelement: HTMLElement , callback: ( value: string ) => void) {
+    // Find cursor in provided HTML elements
+    let cursor = htmlelement.querySelector("span[data-cli-cursor]") as HTMLElement;
+    if (cursor) {
+      // When the cursor is clicked, it toggles its color to red and back to white
+      cursor.addEventListener("click", () => {
+        if (cursor.style.color === "red") {
+          // Dispose of the input box
+          if (this.inputBox) {
+            this.inputBox.blur();
+
+          }
+        } else {
+          cursor.style.color = "red";
+          // Create an invisible input textbox
+          this.inputBox = document.createElement("input");
+          this.inputBox.style.position = "absolute";
+          this.inputBox.style.opacity = "0";
+          cursor.parentNode?.insertBefore(this.inputBox, cursor);
+
+          this.handleInput = callback.bind(this);
+
+          //insert a span element before the cursor
+          let span = document.createElement("span");
+
+          span.innerHTML = "";
+          //insert the span before the input box
+          cursor.parentNode?.insertBefore(span, this.inputBox);
+          this.inputBox.focus();
+          // When the input box loses focus, it should be white again and disposed of
+          this.inputBox.addEventListener("blur", () => {
+            cursor.style.color = "white";
+            if (this.inputBox) {
+              let span = this.inputBox.previousSibling;
+              //set the span innerHTML to the input value
+              span.innerText = ""
+              this.inputBox.remove();
+              //remove the span element
+              this.inputBox = null;
+            }
+            document.removeEventListener("keydown", this.keydownhandler);
+          });
+  
+          // Add a keydown event so each keystroke is added before the cursor,
+          // with delete key removing the last character, and enter key submitting the input value
+          this.inputBox.addEventListener("keydown", this.keydownhandler);
+        }
+      });
+    }
+    else {
+      console.error("Cursor not found in provided HTML element");
+    }
+  }
+  
+  private handleInput(value: string) {
+    console.log("Input value submitted:", value);
+    // Additional logic for handling the input value can be added here
   }
 
   async Update() {
@@ -661,7 +804,7 @@ class UIManager {
       );
     } else if (this.birdviewnavigation) {
 
-        
+        if (this.mc.mainEntity)
         this.mc.zoomTo(this.mc.mainEntity.Position.clone().add(this.birdEyeviewOffset));
       
       //this.mc.zoomTo(this.attentionCursor.position, 5,   this.attentionCursor.quaternion);

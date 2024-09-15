@@ -2,7 +2,7 @@ import importlib
 import logging.handlers
 import asyncio
 from langchain_core.prompts import PromptTemplate
-from langchain_groq import ChatGroq
+from langchain_groq import ChatGroq, chat_models
 import asyncio
 from fastapi import WebSocket
 import json
@@ -63,8 +63,12 @@ websocketclient= None
 #phi3:3.8b
 #llama3:8b-instruct-q8_0
 #aya:8b
+#qwen2:1.5b
+#qwen2:7b   
+#codestral
+#qwen2:7b
 model = ChatOllama(
-    model="phi3" ,
+    model="codestral" ,
     base_url=bas_url,
     api_key="ollama",
     stream=True,
@@ -74,8 +78,8 @@ if USE_GROC == "True":
     model = ChatGroq(
         temperature=0,
         groq_api_key=os.environ.get("GROC_API_KEY", False),
-        model_name="gemma-7b-it",
-        stop=["\n\n"],
+        model_name="llama3-70b-8192",
+       
     )
 
 
@@ -83,8 +87,9 @@ class BasiclcGen:
     def __init__(self, websocket: WebSocket):
         self.websocket = websocket
         self.memory = ConversationBufferMemory(memory_key="chat_history")
-        self.workspace= workspace +"eees"
+        self.workspace= ""
         websocketclient = websocket
+        self.agent = None
 
    
     
@@ -99,9 +104,7 @@ class BasiclcGen:
                 jsonz = json.dumps(dictres)
                 await self.websocket.send_text(jsonz)
 
-                # stop task after 2 seconds
-                # await asyncio.sleep(2)
-                # task.cancel()
+            
         except:
             # Handle the websocket cleanup if necessary
 
@@ -169,34 +172,27 @@ class BasiclcGen:
                 if not os.path.exists(os.path.join(workspace, obj["name"])):
                     os.mkdir(os.path.join(workspace, obj["name"]))
                     await self.websocket.send_json(
-                        {"command": "res", "text": "workspace created"}
+                        {"command": "res", "text": "workspace created" , "workspace": obj["name"]}
                     )
 
                 else:
                     await self.websocket.send_json(
                         {"command": "res", "text": "workspace already exists"}
                     )
+                
+                self.workspace = os.path.join(workspace, obj["name"])
+                #return a list of files in the workspace
+                files= os.listdir(self.workspace)
+                await self.websocket.send_json(
+                        {"command": "res", "text": "files in workspace", "files": files}
+                    )
 
-                # create a file inside the workspace called welcomehtml.txt
-                with open(
-                    os.path.join(workspace, obj["name"], "welcomehtml.txt"), "w"
-                ) as f:
-                    f.write("Welcome to your new workspace")
-
-                    f.close()
-
-                res = await FileManagerAgent(model).stream(
-                    input="return the current directory", websocket=self.websocket
-                )
-                await self.websocket.send_json({"command": "html", "text": str(res)})
-
-                # a html content about the workspace , that it has been created , that it contains a file called welcomehtml.txt
-
+          
                 return "workspace created"
             except Exception as e:
                 await self.websocket.send_json({"command": "error", "text": str(e)})
                 return "error creating workspace  " + str(e)
-
+             
         if obj["cmd"] == "chat":
             
             prompti = obj["prompt"]
@@ -237,7 +233,50 @@ class BasiclcGen:
                 logging.info( "error executing task  " + str(e))
 
                 return "error executing task  " + str(e)
+        if obj["cmd"] == "agent":
+            try:
+                task = obj["task"]
+                #create a WebsiteGenerator agent 
+                
+                from modules.langchainy2 import  AgentNPC
 
+                agent = AgentNPC( llm_model=model, websocket=self.websocket)
+                #res = await FileManagerAgent(model).task(task , websocket=self.websocket)
+                res = await agent.run(task)
+                return res
+            except Exception as e:
+                await self.websocket.send_json({"command": "error", "text": str(e)})
+                logging.info( "error executing task  " + str(e))
+
+                return "error executing task  " + str(e)
+        if obj["cmd"] == "initagent":
+            workername= obj["workername"]
+            try:
+                #load the worker module
+                workerpath = os.path.join(os.getcwd(), "frontend/public/workers/" + workername  )
+                workercontext = ""
+       
+                with open( workerpath, "r") as f:
+                    workercontext = str(f.read())
+                
+                #if worker is loaded successfully , send a success message
+                if workercontext != "":
+                 
+                #create a WebsiteGenerator agent 
+                
+                    from modules.langchainy2 import  AgentNPC2
+                    self.agent = AgentNPC2( llm_model=model, websocket=self.websocket , context=workercontext)
+                    #res = await FileManagerAgent(model).task(task , websocket=self.websocket)
+                    res = await self.agent.run("your name is " + workername +". acknowledge that you are up and running")
+                    await self.websocket.send_json({"command": "initagent", "text": str(res)})
+            except Exception as e:
+                await self.websocket.send_json({"command": "error", "text": str(e)})
+                logging.info( "error executing task  " + str(e))
+
+                return "error executing task  " + str(e)
+                
+
+ 
  
 
 
@@ -264,14 +303,7 @@ async def generate_html (input: str = "default") -> str:
     "generates a html string of the requested content."
     return  workspace
  
-
- # Define the state for the graph
-class AgentState(TypedDict):
-    input: str
-    chat_history: List[str]
-    intermediate_steps: List[str]
-
-
+ 
 class FileManagerAgent:
     def __init__(self, model):
 

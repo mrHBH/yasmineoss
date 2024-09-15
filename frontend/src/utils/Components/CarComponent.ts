@@ -1,7 +1,7 @@
 import { Entity } from "../Entity.js";
 import { Component } from "../Component.js";
 import * as CANNON from "cannon-es";
-import * as THREE from "three";
+ import * as THREE from "three";
 import { LoadingManager } from "../LoadingManager";
 import { CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 
@@ -14,7 +14,8 @@ import {
 import Engine from "../Engine.js";
 import UIkit from "uikit";
 import Icons from "uikit/dist/js/uikit-icons";
-import { SkeletonUtils } from "three/examples/jsm/Addons.js";
+
+import * as SkeletonUtils from  "../SkeletonUtils.js";
 class CarComponent extends Component {
   body: CANNON.Body;
   vehicle: CANNON.RaycastVehicle;
@@ -47,8 +48,8 @@ class CarComponent extends Component {
   listener: any;
   CarMesh: THREE.Mesh<
     THREE.BoxGeometry,
-    THREE.MeshLambertMaterial,
-    THREE.Object3DEventMap
+    THREE.MeshLambertMaterial | THREE.MeshBasicMaterial
+      
   >;
   _mesh: any;
   wheelBodies: any[];
@@ -232,26 +233,40 @@ class CarComponent extends Component {
     //
     this.CarMesh = new THREE.Mesh(
       carGeo,
-      new THREE.MeshLambertMaterial({
-        color: "#949494",
-        flatShading: true,
+       new THREE.MeshPhysicalMaterial ({
+        color: 0x0000ff,
+        metalness: 0.9,
+        roughness: 0.5,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        reflectivity: 1.0,
         side: THREE.DoubleSide,
-        wireframe: true,
-        //		map: texture,
-      })
-    );
 
-    //	this.carChassis = await    LoadingManager.loadGLTF("models/gltf/dirty_car/scene.gltf")
-    this.carChassis = this.CarMesh;
-    console.log("carChassis", this.carChassis);
-    //this.carChassis.scale.set(0.010, 0.01, 0.010);
-    //	this.carChassis.position.set(0, -1.0, 0);
-    //rotate the car chassis 90 degrees on the x axis
-    //this.carChassis.rotation.y =- Math.PI / 2;
-    this._webgpugroup.add(this.carChassis);
+      })
+
+    );
 
     this.CarMesh.castShadow = true;
     this.CarMesh.receiveShadow = true;
+
+     	this.carChassis = await    LoadingManager.loadGLTF("models/gltf/dirty_car/scene.gltf")
+       this.carChassis .traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+           child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      
+   // this.carChassis = this.CarMesh;
+    console.log("carChassis", this.carChassis);
+    this.carChassis.scale.set(0.010, 0.01, 0.010);
+    	this.carChassis.position.set(0, -1.0, 0);
+  // rotate the car chassis 90 degrees on the x axis
+    this.carChassis.rotation.y =- Math.PI / 2;
+    this._webgpugroup.add(this.carChassis);
+
+    // this.CarMesh.castShadow = true;
+    // this.CarMesh.receiveShadow = true;
 
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
     //this._webgpugroup.add(this.CarMesh);
@@ -330,7 +345,7 @@ class CarComponent extends Component {
       });
       wheelBody.type = CANNON.Body.KINEMATIC;
       wheelBody.collisionFilterGroup = 0; // turn off collisions
-      const quaternion = new CANNON.Quaternion().setFromEuler(
+      let quaternion = new CANNON.Quaternion().setFromEuler(
         -Math.PI / 2,
         0,
         0
@@ -339,8 +354,11 @@ class CarComponent extends Component {
       let wheelMesh2 = await LoadingManager.loadGLTF("models/gltf/wheel.gltf");
 
       let wheelMesh1 = SkeletonUtils.clone(wheelMesh2);
+ 
+    //  wheelMesh1.receiveShadow = true;
 	  wheelMesh1.scale.set(1.3, 1.3, 1.3);
 
+   
       this.wheelMeshes.push(wheelMesh1);
       wheelMesh1.position.copy(
         new THREE.Vector3(
@@ -587,7 +605,10 @@ class CarComponent extends Component {
         wheelBody.quaternion.copy(transform.quaternion);
         this.wheelMeshes[i].position.copy(transform.position);
         this.wheelMeshes[i].quaternion.copy(transform.quaternion);
-        this.wheelMeshes[i].rotateY(Math.PI / 2);
+        if (i === 0 || i === 2) {
+          this.wheelMeshes[i].rotateX(-Math.PI   );
+        }
+         this.wheelMeshes[i].rotateY(Math.PI / 2);
       }
     }
 

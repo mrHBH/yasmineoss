@@ -6,18 +6,20 @@ UIkit.use(Icons);
 
 import * as THREE from "three";
 import { Entity } from "./utils/Entity";
-import { CharacterComponent } from "./utils/Components/CharacterComponent";
+ import { CharacterComponent } from "./utils/Components/CharacterComponent";
+// import { AIInput } from "./utils/Components/AIInput";
+// import { KeyboardInput } from "./utils/Components/KeyboardInput";
+  import { EntityManager } from "./utils/EntityManager";
+  import { MainController } from "./utils/MainController";
 import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
-import { EntityManager } from "./utils/EntityManager";
-import { MainController } from "./utils/MainController";
-import { CarComponent } from "./utils/Components/CarComponent";
-import { StaticCLI } from "./SimpleCLI";
-// InfiniteGridHelper class definition ends here
-import { tween } from "shifty";
-import { HelicopterComponent } from "./utils/Components/HelicopterComponent";
-import { NetworkComponent } from "./utils/Components/NetworkComponent";
-import { DynamicuiComponent } from "./utils/Components/DynamicuiWorkerComponent";
+// // import { CarComponent } from "./utils/Components/CarComponent";
+// // import { StaticCLI } from "./SimpleCLI";
+// // // InfiniteGridHelper class definition ends here
+// // import { tween } from "shifty";
+// // import { HelicopterComponent } from "./utils/Components/HelicopterComponent";
+// // import { NetworkComponent } from "./utils/Components/NetworkComponent";
+// // import { DynamicuiComponent } from "./utils/Components/DynamicuiWorkerComponent";
 
 //define a structire that holds the address of the backends. it is a collection of ports and addresses
 
@@ -60,7 +62,7 @@ class Main {
   private async init(): Promise<void> {
     this.entityManager = new EntityManager();
     this.maincController = new MainController(this.entityManager);
-    // this.maincController.physicsmanager.debug = true;
+   //  this.maincController.physicsmanager.debug = true;
    
 
     // this.inferencewebsocket = new WebSocket(backends.pythonbackendws);
@@ -105,7 +107,7 @@ class Main {
       // { url: "animations/gltf/ybot2@PlayingGuitar.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@PlayingPiano.glb", skipTracks: [0] },
       // { url: "animations/gltf/ybot2@Praying.glb" },
-      // { url: "animations/gltf/ybot2@Pushing.glb" },
+       { url: "animations/gltf/ybot2@Pushing.glb" },
       { url: "animations/gltf/ybot2@Running.glb" },
       { url: "animations/gltf/ybot2@StoppingRunning.glb", skipTracks: [1] },
       // { url: "animations/gltf/ybot2@Salute.glb" },
@@ -115,79 +117,136 @@ class Main {
       { url: "animations/gltf/ybot2@TurningLeft.glb" },
       { url: "animations/gltf/ybot2@TurningRight.glb" },
     ];
-    const bob = new Entity();
-    const bobcontroller = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: animations,
-        behaviourscriptname: "botbasicbehavior.js",
-    });
+    // const bob = new Entity();
+    // bob.Position = new THREE.Vector3(0, 1, 9);
 
-    await bob.AddComponent(bobcontroller);
-    await bob.AddComponent(new AIInput());
-    // await bob.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(bob, "Bob");
-    this.maincController.MainEntity = bob;
-
-    const bob2 = new Entity();
-    // const bobcontroller2 = new CharacterComponent({
+    // const bobcontroller = new CharacterComponent({
     //   modelpath: "models/gltf/ybot2.glb",
     //   animationspathslist: animations,
-    //     behaviourscriptname: "botbasicbehavior.js",
+    //   //  behaviourscriptname: "botbasicbehavior.js",
     // });
 
     // await bob.AddComponent(bobcontroller);
     // await bob.AddComponent(new AIInput());
-    // await bob.AddComponent(new KeyboardInput());
-    //await this.entityManager.AddEntity(bob2, "Bob2");
-    //this.maincController.MainEntity = bob2;
+    // // await bob.AddComponent(new KeyboardInput());
+    // await this.entityManager.AddEntity(bob, "Bob");
+
+    // this.maincController.MainEntity = bob;
+
+    const bob2 = new Entity();
+    bob2.Position = new THREE.Vector3(0, 1, 0);
+
+    const bobcontroller2 = new CharacterComponent({
+      modelpath: "models/gltf/ybot2.glb",
+      animationspathslist: animations,
+     behaviourscriptname: "claude.js",
+    });
+
+     await bob2.AddComponent(bobcontroller2);
+    await bob2.AddComponent(new AIInput());
+    await bob2.AddComponent(new KeyboardInput());
+     await this.entityManager.AddEntity(bob2, "claude");
+    this.maincController.MainEntity = bob2;
+    bobcontroller2.face();
+
+  //   const claude2 = new Entity();
+  //   claude2.Position = new THREE.Vector3(0, 1, 9);
+
+  //   const claude2controller = new CharacterComponent({
+  //     modelpath: "models/gltf/ybot2.glb",
+  //     animationspathslist: animations,
+  //    behaviourscriptname: "claude2.js",
+  //   });
+
+  //    await claude2.AddComponent(claude2controller);
+  //   await claude2.AddComponent(new AIInput());
+  //   await claude2.AddComponent(new KeyboardInput());
+  //   await this.entityManager.AddEntity(claude2, "claude2");
+  //   this.maincController.MainEntity = claude2;
+  //   claude2controller.face();
+
+ 
+  //   this.maincController.MainEntity = bob2;
+
+
+  // //    const syndey2 = new Entity();
+  // //   syndey2.Position = new THREE.Vector3(-8, 1, 0);
+  // //    const sydneycontroller2 = new CharacterComponent({
+  // //     modelpath: "models/gltf/Xbot.glb",
+  // //     animationspathslist: animations,
+  // //     behaviourscriptname: "minienvman.js",
+  // //   });
+  // //   await syndey2.AddComponent(sydneycontroller2);
+  // //   await syndey2.AddComponent(new AIInput());
+  // //   await syndey2.AddComponent(new KeyboardInput());
+  // //  await this.entityManager.AddEntity(syndey2, "minienvman");
+
+
+  //  //add script entity environmentbot to the scene
+  //   const environmentbot = new Entity();
+  //   environmentbot.Position = new THREE.Vector3(0, 1,4);
+  //   const environmentcontroller = new CharacterComponent({
+  //     modelpath: "models/gltf/Xbot.glb",
+  //     animationspathslist: animations,
+  //     behaviourscriptname: "environmentbot.js",
+  //   });
+  //   await environmentbot.AddComponent(environmentcontroller);
+  //   await environmentbot.AddComponent(new AIInput());
+  //   await environmentbot.AddComponent(new KeyboardInput());
+  //  await this.entityManager.AddEntity(environmentbot, "environmentbot");
+
+  //   // const introui = new Entity();
+
 
 
  
-    // const dynamicbaseui = new Entity();
-    // const dynamicbaseuicontroller = new DynamicuiComponent("../pages/homepage.js");
-    // dynamicbaseui.Position = new THREE.Vector3(0, 0, 0);
-    // //rotate to be flat on the ground
-    // // dynamicbaseui.Quaternion = new THREE.Quaternion( 0,0 , 0, 1);
-    // dynamicbaseui.Quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-    // await dynamicbaseui.AddComponent(dynamicbaseuicontroller);
-    // await this.entityManager.AddEntity(dynamicbaseui, "DynamicBaseUI");
+  //   // const dynamicbaseui = new Entity();
+  //   // const dynamicbaseuicontroller = new DynamicuiComponent("../pages/homepage.js");
+  //   // dynamicbaseui.Position = new THREE.Vector3(0, 0, 0);
+  //   // //rotate to be flat on the ground
+  //   // // dynamicbaseui.Quaternion = new THREE.Quaternion( 0,0 , 0, 1);
+  //   // dynamicbaseui.Quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  //   // await dynamicbaseui.AddComponent(dynamicbaseuicontroller);
+  //   // await this.entityManager.AddEntity(dynamicbaseui, "DynamicBaseUI");
 
  
-    let sydney = new Entity();
-    sydney.Position= new THREE.Vector3(0, 1,8);
-    //rotate sydney 90 degrees
-    sydney.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
-    const sydneycontroller = new CharacterComponent({
-      modelpath: "models/gltf/Xbot.glb",
-      animationspathslist: animations,
-      behaviourscriptname: "sydney.js",
-    });
-    const keyboardinput = new KeyboardInput();
+  //   let sydney = new Entity();
+  //   sydney.Position= new THREE.Vector3(0, 1,8);
+  //   //rotate sydney 90 degrees
+  //   sydney.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
+  //   const sydneycontroller = new CharacterComponent({
+  //     modelpath: "models/gltf/Xbot.glb",
+  //     animationspathslist: animations,
+  //     behaviourscriptname: "sydney.js",
+  //   });
+  //    const keyboardinput = new KeyboardInput();
 
-    await sydney.AddComponent(sydneycontroller);
-    await sydney.AddComponent(keyboardinput);
+  //   await sydney.AddComponent(sydneycontroller);
+  //   await sydney.AddComponent(keyboardinput);
 
-    await this.entityManager.AddEntity(sydney, "Sydney");
+  //   await this.entityManager.AddEntity(sydney, "Sydney");
+  // //await this.maincController.LoadScene();
 
-    let sydney2 = new Entity();
-    sydney2.Position = new THREE.Vector3(0, 1, 8);
-    //rotate sydney 90 degrees
-    sydney2.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
-    const sydneycontroller2 = new CharacterComponent({
-      modelpath: "models/gltf/Xbot.glb",
-      animationspathslist: animations,
-      behaviourscriptname: "sydney.js",
-    });
-    const keyboardinput2 = new KeyboardInput();
+  //   let sydney2 = new Entity();
+  //   sydney2.Position = new THREE.Vector3(0, 1, 18);
+  //   //rotate sydney 90 degrees
+  //   sydney2.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
+  //   const sydneycontroller2 = new CharacterComponent({
+  //     modelpath: "models/gltf/Xbot.glb",
+  //     animationspathslist: animations,
+  //     behaviourscriptname: "sydney.js",
+  //   });
+  //    const keyboardinput2 = new KeyboardInput();
 
-    // await sydney2.AddComponent(sydneycontroller2);
-    // await sydney2.AddComponent(keyboardinput2);
+  //   await sydney2.AddComponent(sydneycontroller2);
+  //    await sydney2.AddComponent(keyboardinput2);
 
-    // await this.entityManager.AddEntity(sydney2, "Sydney2");
+  //   await this.entityManager.AddEntity(sydney2, "Sydney2");
+  //   await bob2.Broadcast({ topic: "face", data: { radius: 15} });
 
-    this.maincController.MainEntity = sydney;
-    //this.maincController.UIManager.toggleBirdEyemode(new THREE.Vector3(0, 1.5, 0));
-    this.maincController.UIManager.toggleScrollmode();
+  //this.maincController.UIManager.toggleBirdEyemode(new THREE.Vector3(0, 0, 0));
+
+   // this.maincController.UIManager.toggleScrollmode();
     //  setTimeout(() => {
     //     this.maincController.UIManager.toggleBirdEyemode()
     //       sydney.Broadcast ({ topic: "face", data: {radius: 10}});
@@ -197,8 +256,7 @@ class Main {
 
 
    
-    //this.maincController.UIManager.toggleBirdEyemode();
-
+   this.maincController.UIManager.toggleBirdEyemode();
 
     // const car = new Entity();
     // const carcontroller = new CarComponent({
@@ -224,32 +282,7 @@ class Main {
     // setTimeout(() => {
 
      
-    //   //create 60 more random entities , and animate them in a random fashion
-    //   // for (let i = 0; i < 6; i++) {
-    //   //   let entity = new Entity();
-    //   //   let randoemclass =
-    //   //     Math.random() < 0.5 ? "models/gltf/ybot2.glb" : "models/gltf/Xbot.glb";
-    //   //   let randomposition = new THREE.Vector3(
-    //   //     Math.random() * 200,
-    //   //     0,
-    //   //     Math.random() * 500
-    //   //   );
-    //   //   let randomcontroller = new CharacterComponent({
-    //   //     modelpath: randoemclass,
-    //   //     animationspathslist: animations,
-    //   //   });
-    //   //   entity.position.set(randomposition.x, randomposition.y, randomposition.z);
-    //   //   entity.AddComponent(randomcontroller).then(() => {
-    //   //   this.entityManager.AddEntity(entity, "RandomEntity" + i);
-    //   //   })
-    //   //   let deathtimeout = Math.random() * 32000 + 2000;
-    //   //   setTimeout(() => {
-    //   //    // entity.kill();
-    //   //   }, deathtimeout);
-    //   // }
-    //   h();
-    // }, 1000);
-
+    
     //add an entity every 5 seconds and zoom to it
     // setInterval(() => {
     //   const h = async () => {

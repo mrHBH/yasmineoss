@@ -36,27 +36,28 @@ class PhysicsManager {
 	get World() {
 		return this.world;
 	}
-	addGroundPlane(mesh : THREE.Mesh) {
-		//get size of mesh
-		const size = new THREE.Vector3();
-		mesh.geometry.computeBoundingBox();
-		mesh.geometry.boundingBox.getSize(size);
+	// addGroundPlane(mesh : THREE.Mesh) {
+	// 	//get size of mesh
+	// 	const size = new THREE.Vector3();
+	// 	mesh.geometry.computeBoundingBox();
+	// 	mesh.geometry.boundingBox.getSize(size);
 
-		//create a plane and set size to mesh
-		const groundShape = new CANNON.Box(new CANNON.Vec3(size.x / 2 * mesh.scale.x,  size.y / 2 * mesh.scale.y, 0.1));
-		const gr = new CANNON.Body({
-			mass: 0,
-			material: this.slipperyMaterial,
-			shape: groundShape,
-			type: CANNON.Body.STATIC,
-		});
-		gr.position.set(mesh.position.x, mesh.position.y, mesh.position.z );
-		gr.quaternion.set(mesh.quaternion.x, mesh.quaternion.y, mesh.quaternion.z, mesh.quaternion.w);
+	// 	//create a plane and set size to mesh
+	// 	const groundShape = new CANNON.Box(new CANNON.Vec3(size.x / 2 * mesh.scale.x,  size.y / 2 * mesh.scale.y, 0.1));
+	// 	const gr = new CANNON.Body({
+	// 		mass: 0,
+	// 		material: this.slipperyMaterial,
+	// 		shape: groundShape,
+	// 		type: CANNON.Body.STATIC,
+	// 	});
+	// 	gr.position.set(mesh.position.x, mesh.position.y, mesh.position.z );
+	// 	gr.quaternion.set(mesh.quaternion.x, mesh.quaternion.y, mesh.quaternion.z, mesh.quaternion.w);
 		
-		this.world.addBody(gr);
-		return gr;
+	// //	this.world.addBody(gr);
+		 
+	// 	return gr;
 		
-	}
+	// }
 
     get debug() {
         return this.debugren;
@@ -71,19 +72,6 @@ class PhysicsManager {
         }
     }
  
-	updateGroundPlane(mesh : THREE.Mesh, body : CANNON.Body) {
-		//get size of mesh
-		const size = new THREE.Vector3();
-		mesh.geometry.computeBoundingBox();
-		mesh.geometry.boundingBox.getSize(size);
-
-		//create a plane and set size to mesh
-		const groundShape = new CANNON.Box(new CANNON.Vec3(size.x / 2 * mesh.scale.x,  size.y / 2 * mesh.scale.y, 0.1));
-		body.shapes = [];
-		body.addShape(groundShape);
-		body.position.set(mesh.position.x, mesh.position.y, mesh.position.z );
-		body.quaternion.set(mesh.quaternion.x, mesh.quaternion.y, mesh.quaternion.z, mesh.quaternion.w);
-	}
 	Reset()
 	{
 		this.world.bodies.forEach(body => {
@@ -231,7 +219,7 @@ class PhysicsManager {
 
 	
 
-		this.world.addBody(this.ground);
+		//this.world.addBody(this.ground);
  
 	
 	}
@@ -356,12 +344,12 @@ class PhysicsManager {
 
 	Update(dt: number) {
 	//	console.log(dt); 
-		if (dt > 0.5) {
-			dt = 0.01;
+		if (dt > 0.1) {
+			dt = 0.0001;
 		}
 		   // If the worker was faster than the time step (dt seconds), we want to delay the next timestep
 		 
-		 this.world.fixedStep(dt,1);
+		 this.world.step(dt);
             this.debugRenderer?.update();
 
 		//loop through the meshes and update their positions

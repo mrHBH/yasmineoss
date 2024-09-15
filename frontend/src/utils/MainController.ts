@@ -1,48 +1,56 @@
-import * as THREE from "three";
-import { OrbitControls } from "./OrbitControls";
-import { CSS2DRenderer } from "./CSS2D";
+import * as THREE from "three/webgpu"; 
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
+import * as CANNON from "cannon-es";
+import { MeshPhysicalNodeMaterial, WebGPURenderer } from "three/webgpu";
 
-import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
+// import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
 import { InfiniteGridHelper } from "./InfiniteGridHelper";
 import { tween , Tweenable } from "shifty";
 import { Pane } from "tweakpane";
 import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
-import {
-  acceleratedRaycast,
-  computeBoundsTree,
-  disposeBoundsTree,
-} from "three-mesh-bvh";
+ 
 import { EntityManager } from "./EntityManager";
 import { CSS3DRenderer } from "./CSS3D";
 import { twoDUIComponent } from "./Components/2dUIComponent";
-import { PhysicsManager } from "./PhysicsManager";
-import { UIManager } from "./UIManager";
+  import { PhysicsManager } from "./PhysicsManager";
+ import { UIManager } from "./UIManager";
 import { Entity } from "./Entity";
-import { CarComponent } from "./Components/CarComponent";
+ import { CarComponent } from "./Components/CarComponent";
 import { KeyboardInput } from "./Components/KeyboardInput.js";
 import { HelicopterComponent } from "./Components/HelicopterComponent.js";
 import { SoundGeneratorAudioListener } from "./Sound_generator_worklet_wasm.js";
-import CameraControls from "camera-controls";
+ import CameraControls from "camera-controls";
 
-import { CustomCursor } from "./CustomCursor.js";
-import { StaticCLI } from "../SimpleCLI.js";
-import { DynamicuiComponent } from "./Components/DynamicuiComponent.js";
-
-let customcursor = new CustomCursor();
+// import { CustomCursor } from "./CustomCursor.js";
+// import { StaticCLI } from "../SimpleCLI.js";
+// import { DynamicuiComponent } from "./Components/DynamicuiComponent.js";
+// // import { MeshPhongNodeMaterial,MeshBasicNodeMaterial, MeshPhysicalNodeMaterial, MeshStandardNodeMaterial } from 'three/tsl';
+   import Stats from 'three/addons/libs/stats.module.js';
+// // import { t } from "xstate";
+  import { CharacterComponent } from "./Components/CharacterComponent.js";
+// // import {  VolumeNodeMaterial, vec3, materialReference, smoothstep, If, Break, tslFn } from 'three/tsl';
+// import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
+  import { LoadingManager } from "./LoadingManager.js";
+import { stat } from "fs";
+ // import { BoxLineGeometry } from "three/examples/jsm/Addons.js";
+// let customcursor = new CustomCursor();
+  const stats = new Stats();
+ 
+  stats.showPanel( 2 ); // Panel 2
+ 
+  document.body.appendChild( stats.dom );
+  stats.dom.setAttribute("style", "position: absolute; bottom: 0; left: 0; cursor: pointer; opacity: 0.4; z-index: 10000");
+  // stats.dom.style.zIndex = "1000";
+  // stats.dom.style.position = "absolute";
+  // stats.dom.style.left = " 
+  // stats.dom.style.top = "10px";
 
 CameraControls.install({ THREE: THREE });
-
-THREE.Mesh.prototype.raycast = acceleratedRaycast;
-//@ts-ignore
-THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
-//@ts-ignore
-THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
-
+ 
 class MainController {
   camera: THREE.PerspectiveCamera;
-  CameraControls: OrbitControls;
-  scene: THREE.Scene;
-  webgpu: WebGPURenderer;
+//  CameraControls: OrbitControls;
+   webgpu: THREE.WebGPURenderer;
   annotationRenderer: CSS2DRenderer;
   annoationsScene: THREE.Scene = new THREE.Scene();
   entitymanager: EntityManager;
@@ -60,20 +68,38 @@ class MainController {
   listener: any;
   isFollowing: any;
   cottonCursor: any;
+  spotLight: THREE.SpotLight;
+  dirLight: THREE.DirectionalLight;
+  sunLight: THREE.DirectionalLight;
+  CameraControls: CameraControls;
 
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
+    // this.webgpuscene.backgroundNode = new THREE.Color( 0x202020 );
 
-    this.webgpu = new WebGPURenderer({ antialias: true });
-    this.webgpu.init().then(() => {
-      this.webgpu.setPixelRatio(window.devicePixelRatio);
-      this.webgpu.setSize(window.innerWidth, window.innerHeight);
-    });
-    this.webgpu.setClearColor(new THREE.Color(0x000000));
+ //  this.webgpuscene.fog = new THREE.Fog( 0x202020, 50, 100 );
+
+   this.webgpu = new THREE.WebGPURenderer({ antialias: true , logarithmicDepthBuffer: false , powerPreference: "high-performance" , }) as THREE.WebGPURenderer;
+   
+   this.webgpu.setPixelRatio(    window.devicePixelRatio);
+      this.webgpu.shadowMap.enabled = true;
+    // this.webgpu.shadowMap.type = THREE.VSMShadowMap;
+
+    // this.webgpu.init().then(() => {
+      
+    //   this.webgpu.setPixelRatio(window.devicePixelRatio*2);
+    //   this.webgpu.setSize(window.innerWidth, window.innerHeight);
+      
+    // });
+    this.webgpu.setClearColor(new THREE.Color(0x202020));
+        
+    const fog = new THREE.Fog(0x202020, 0.1, 50);
+    this.webgpuscene.fog = fog;
     this.entitymanager = entityManager;
     this.entitymanager._mc = this;
     this.annotationRenderer = new CSS2DRenderer();
     this.annotationRenderer.setSize(window.innerWidth, window.innerHeight);
+    
     this.annotationRenderer.domElement.style.position = "absolute";
     this.annotationRenderer.domElement.style.top = "0px";
     this.annotationRenderer.domElement.style.pointerEvents = "none";
@@ -108,17 +134,22 @@ class MainController {
     document.body.appendChild(this.webgpu.domElement);
     document.body.appendChild(this.html3dRenderer.domElement);
 
-    this.camera = new THREE.PerspectiveCamera(
-      50,
-      window.innerWidth / window.innerHeight,
-      0.01,
-      2000
-    );
-    this.camera.position.set(2.5, 20, 5);
-    this.camera.position.multiplyScalar(0.8);
-    this.camera.lookAt(0, 5, 0);
+    //disable visbile scrollbars 
+    document.body.style.overflow = "hidden";
+    // document.body.appendChild(this.webgpu.domElement);
 
-    this.webgpuscene.add(this.camera);
+    this.camera = new THREE.PerspectiveCamera(
+      80,
+      window.innerWidth / window.innerHeight,
+      0.005,
+      10000
+    );
+ 
+    // this.camera.position.set(2.5, 20, 5);
+    // this.camera.position.multiplyScalar(0.8);
+    //this.camera.lookAt(0, 5, 0);
+
+  this.webgpuscene.add(this.camera);
 
     const pane = new Pane({});
     //makesure the pane is at the bottom left corner
@@ -135,10 +166,31 @@ class MainController {
     pane.element.style.opacity = "0.5";
     pane.registerPlugin(EssentialsPlugin);
 
-    // //left bottom corner
-    // pane.element.style.bottom = "0px";
-    // pane.element.style.left = "0px";
+    
 
+
+        // const canvas = document.createElement( 'canvas' );
+				// canvas.width = 1;
+				// canvas.height = 32;
+
+				// const context = canvas.getContext( '2d' );
+				// const gradient = context.createLinearGradient( 0, 0, 0, 32 );
+				// gradient.addColorStop( 0.0, '#014a84' );
+				// gradient.addColorStop( 0.5, '#0561a0' );
+				// gradient.addColorStop( 1.0, '#437ab6' );
+				// context.fillStyle = gradient;
+				// context.fillRect( 0, 0, 1, 32 );
+
+				// const skyMap = new THREE.CanvasTexture( canvas );
+				// skyMap.colorSpace = THREE.SRGBColorSpace;
+
+				// // const sky = new THREE.Mesh(
+				// // 	new THREE.SphereGeometry( 50 ),
+				// // 	new MeshBasicNodeMaterial( { map: skyMap, side: THREE.BackSide } )
+				// // );
+        // // this.webgpuscene.add( sky );
+
+  
     this.fpsGraph = pane.addBlade({
       view: "fpsgraph",
       lineCount: 8,
@@ -147,25 +199,28 @@ class MainController {
       max: 244,
     });
 
-    // this.orbitControls = new OrbitControls(
-    //   this.camera,
-    //   this.html2dRenderer.domElement
-    // ) as OrbitControls;
-
+ 
     this.CameraControls = new CameraControls(
       this.camera,
       this.html2dRenderer.domElement
     );
+    this.CameraControls.saveState()
 
-    // this.orbitControls.target.set(0, 5, 0);
-    // // this.orbitControls.maxAzimuthAngle = Math.PI  ;
-    // // this.orbitControls.maxPolarAngle = Math.PI / 2;
-    // // this.orbitControls.minAzimuthAngle =- Math.PI / 2;
-    // // this.orbitControls.minPolarAngle = - Math.PI / 2;
-    // this.orbitControls.enableDamping = false;
-    // this.orbitControls.dampingFactor = 0.01;
-    // this.orbitControls.update();
 
+          // Create a point light
+      // const lightz = new THREE.PointLight(0xffffff, 1000, 10000);
+      // lightz.position.set(5, 10, 0); // Position the light above and to the side of the mirror
+      // lightz.castShadow = true; // Enable shadow casting
+
+      // // Add the light to the scene
+      // this.webgpuscene.add(lightz);
+
+      // this.camera.attach(lightz);
+ 
+     
+ 
+
+     
     window.addEventListener("resize", () => this.onWindowResize());
     //disable context menu
     document.addEventListener("contextmenu", (event) => event.preventDefault());
@@ -206,6 +261,7 @@ class MainController {
         const car = new Entity();
         const carcontroller = new CarComponent({});
         const keyboardinput = new KeyboardInput();
+        this.initSound();
 
         car.Position = new THREE.Vector3(0, 1, 0);
         car.AddComponent(carcontroller).then(() => {
@@ -236,21 +292,151 @@ class MainController {
       }
     });
 
-    const light = new THREE.PointLight(0xffffff, 1);
+    const light = new THREE.PointLight(0xffffff, 3);
     light.position.set(0, 1, 5);
-    this.webgpuscene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
-    this.webgpuscene.add(light);
+    light.castShadow = true;
+    light.shadow.camera.near = 0.1;
+    //this.webgpuscene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
+  this.webgpuscene.add(light);
+
 
     this.grid = new InfiniteGridHelper(
       this.camera,
-      10,
+      150,
       100,
       new THREE.Color(0x888888),
       new THREE.Color(0x444444)
     );
-    this.webgpuscene.add(this.grid);
+    this.grid.castShadow = false;
+    this.grid.position.y =  0.01;
+   this.webgpuscene.add(this.grid);
 
-    this.physicsmanager = new PhysicsManager({ scene: this.webgpuscene });
+   const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(100, 100),
+     new THREE.MeshPhongNodeMaterial({
+      color: new THREE.Color(0x888888),
+      side: THREE.FrontSide,
+    })
+  );
+  
+  
+
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  ground.castShadow = false;
+  ground.position.y = -0.01;
+
+   this.webgpuscene.add(ground);
+ 
+    this.sunLight = new THREE.DirectionalLight(0xeeeeff, 5);
+
+    this.sunLight.castShadow = true;
+    this.sunLight.shadow.camera.near = 0.0001;
+    this.sunLight.shadow.camera.far = 40;
+    this.sunLight.shadow.camera.right = 16;
+    this.sunLight.shadow.camera.left = -16;
+    this.sunLight.shadow.camera.top = 16;
+    this.sunLight.shadow.camera.bottom = -16;
+    this.sunLight.shadow.mapSize.width = 4048;
+    this.sunLight.shadow.mapSize.height = 4048;
+    this.sunLight.shadow.bias = -0.001;
+    this.sunLight.position.set(0,5, -1); // This positions the light slightly in front of the camera
+
+
+ // this.camera.attach(this.sunLight);
+
+
+ this.webgpuscene.add(this.sunLight);
+
+
+    //reset the 
+
+    // Position the light relative to the camera
+    //this.sunLight.quaternion.copy(this.camera.quaternion);
+
+  //  this.spotLight = new THREE.SpotLight( new THREE.Color("cyan"), 90 );
+  //  this.spotLight.penumbra = 0.81;
+  //  this.spotLight.position.set(-2, 3, 2 );
+  //  this.spotLight.castShadow = true;
+  //   this.spotLight.distance = 500;
+  //    this.spotLight.shadow.camera.near = 0.07;
+  //    this.spotLight.shadow.camera.far = 2000;
+  //    this.spotLight.shadow.mapSize.width = 2048;
+  //    this.spotLight.shadow.mapSize.height = 2048;
+
+
+    //  const sunLight = new Three.DirectionalLight(0xffe499, 5);
+    // sunLight.castShadow = true;
+    // sunLight.shadow.camera.near = 0.001;
+    // sunLight.shadow.camera.far = 20;
+    // sunLight.shadow.camera.right = 6;
+    // sunLight.shadow.camera.left = -6;
+    // sunLight.shadow.camera.top = 6;
+    // sunLight.shadow.camera.bottom = -6;
+    // sunLight.shadow.mapSize.width = 4048;
+    // sunLight.shadow.mapSize.height = 4048;
+    // sunLight.shadow.bias = -0.001;
+    // camera.attach(sunLight);
+ 
+// Position the light relative to the camera
+// sunLight.position.set(0, 0, 1.1); // This positions the light slightly in front of the camera
+// sunLight.quaternion.copy(camera.quaternion);
+
+ 
+
+
+     
+ 
+ //  this.webgpuscene.add(  this.spotLight );
+
+
+    // this.dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
+    // this.dirLight.position.set( - 0, 10, 0);
+    // // this.dirLight.castShadow = tr;
+
+
+    
+ 
+    //     this.dirLight.shadow.mapSize.set( 2048, 2048 );
+  	//  this.webgpuscene.add(  this.dirLight );
+
+/// Three.js setup
+const roomWidth = 30;
+const roomHeight = 20;
+const roomDepth = 30;
+
+// Create visual representation of the room using BoxLineGeometry
+const room = new THREE.LineSegments(
+  new THREE.BoxGeometry(roomWidth-2.2, roomHeight, roomDepth -2.2, 5, 5, 5).translate(0, roomHeight/2, 0),
+  new THREE.LineBasicMaterial({ color: 0x808080, side: THREE.BackSide })
+);
+
+// // Add room to the scene
+ //this.webgpuscene.add(room);
+
+// Cannon.js setup
+const physicsWalls = [
+  { position: new CANNON.Vec3(0, roomHeight/2, -roomDepth/2), size: new CANNON.Vec3(roomWidth/2, roomHeight/2, 1.1) },
+  { position: new CANNON.Vec3(roomWidth/2, roomHeight/2, 0), size: new CANNON.Vec3(1.1, roomHeight/2, roomDepth/2) },
+  { position: new CANNON.Vec3(0, roomHeight/2, roomDepth/2), size: new CANNON.Vec3(roomWidth/2, roomHeight/2, 1.1) },
+  { position: new CANNON.Vec3(-roomWidth/2, roomHeight/2, 0), size: new CANNON.Vec3(1.1, roomHeight/2, roomDepth/2) },
+];
+
+const floorShape = new CANNON.Plane();
+const floorBody = new CANNON.Body({ mass: 0 });
+floorBody.addShape(floorShape);
+floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+
+this.physicsmanager = new PhysicsManager({ scene: this.webgpuscene });
+this.physicsmanager.World.addBody(floorBody);
+
+// physicsWalls.forEach(wall => {
+//   const wallShape = new CANNON.Box(wall.size);
+//   const wallBody = new CANNON.Body({ mass: 0 });
+//   wallBody.addShape(wallShape);
+//   wallBody.position.copy(wall.position);
+//   this.physicsmanager.World.addBody(wallBody);
+// });
     this.clock = new THREE.Clock();
 
     this.UIManager = new UIManager(this);
@@ -285,6 +471,7 @@ class MainController {
     );
 
     console.log(intersects[0].point)
+    //add an arrow pointing towards the point 
     if (intersects[0].point && this.mainEntity) {
       this.mainEntity.Broadcast({
         topic: "walk",
@@ -296,24 +483,71 @@ class MainController {
 
   }
 
-  set MainEntity(entity: any) {
+  set MainEntity(entity: Entity) {
     this.mainEntity = entity;
+
+    //check if the entity is a character component and if it is then set the camera to follow it, then adjust the  this.spotLight  color to match a random child of the entity mesh
+    let charcomponent = entity.getComponent("CharacterComponent") as CharacterComponent
+    if (charcomponent){
+      let color =  new THREE.Color(0xffffff);
+
+  
+
+      //get a random child of the _model that is a mesh and set the color of the spot light to match it
+      let mesh = charcomponent._model.children[0].children.find(c => c instanceof THREE.Mesh);
+      if (mesh) {
+        console.log(mesh);
+        //@ts-ignore
+        color = (mesh as THREE.Mesh).material.color;
+
+
+
+      }
+
+      charcomponent.activate();
+
+ 
+     //create a animating circle around the character at the position of the character , this circle will be used to show the character is selected
+     //a threejs mesh with a circle geometry and a line basic material
+    // this.spotLight.color = color;
+  }
+    
   }
   get MainEntity() {
     return this.mainEntity;
   }
 
   async update(delta: number) {
-    await this.webgpu.renderAsync(this.webgpuscene, this.camera);
+ 
+
+       await this.webgpu.renderAsync(this.webgpuscene, this.camera);
     //  TWEEN.update();
     this.fpsGraph?.begin();
-    this.annotationRenderer.render(this.annoationsScene, this.camera);
-    this.html2dRenderer.render(this.html2dScene, this.camera);
-    this.html3dRenderer.render(this.html3dScene, this.camera);
-    this.physicsmanager?.Update(delta);
+    stats.begin();
+
+ //   stats.begin();
+   this.annotationRenderer.render(this.annoationsScene, this.camera);
+   this.html2dRenderer.render(this.html2dScene, this.camera);
+ //  this.html3dRenderer.render(this.html3dScene, this.camera);
+   this.physicsmanager?.Update(delta);
     this.UIManager?.Update();
-    this.CameraControls?.update(delta);
-    this.fpsGraph?.end();
+    this.CameraControls?.update(delta/2);
+    this.fpsGraph?.end(); 
+    //this.sunLight.position.copy(this.MainEntity?.Position)
+    
+
+    stats.end();
+
+
+    // this.sunLight.shadow.camera.updateProjectionMatrix();
+    // this.sunLight.shadow.camera.updateMatrixWorld();
+  
+
+    this.updateLight();
+
+    //check if a main entity is set and if it is , then  this.spotLight.target = this.mainEntity.Position;
+
+   // stats.end();
   }
 
   private onWindowResize(): void {
@@ -329,6 +563,22 @@ class MainController {
 
   private resetview(): void {
     // Repeat type enforcement for orbit controls target tween
+  }
+
+  async LoadScene(){
+    await LoadingManager.loadGLTF( "models/gltf/tiny_low_poly_town_-_modular_set.glb" ).then((scene) => {
+      // make all childs able to cast shadows and receive shadows
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      this.webgpuscene.add(scene);
+      console.log(scene);
+    }
+  );
+
   }
 
   async typeinelement(container: HTMLElement, classname: string ,  text: string, speed: number = 50) {
@@ -369,7 +619,7 @@ class MainController {
       let quaternion = new THREE.Quaternion();
       if (component) {
         component.zoom();
-        this.mainEntity = component._entity;
+        this.MainEntity = component._entity;
         return;
 
         quaternion = component._entity.Quaternion;
@@ -383,26 +633,44 @@ class MainController {
           quaternion = new THREE.Quaternion();
         }
       }
+
     }
 
-    // if (intersects.length > 0) {
-    //   const p = intersects[0].point;
-    //   let component = intersects[0].object.userData.component;
+ 
 
-    //   let quaternion = new THREE.Quaternion();
-    //   if (component) {
+    else if (intersects.length > 0) {
+      const p = intersects[0].point;
+ 
+      let quaternion = new THREE.Quaternion();
+   
+      this.zoomTo(p, 5 );
+      // tween the orbit controls phi and theta to face the new target
+      //
 
-    //     quaternion = component._entity.rotation;
+    }
+  }
 
-    //     if (!quaternion) {
-    //       quaternion = c
-    //     }
-    //   }
-    //   this.zoomTo(p, 5 , quaternion);
-    //   // tween the orbit controls phi and theta to face the new target
-    //   //
-
-    // }
+  updateLight() {
+    // Get the camera's position
+    const cameraPosition = this.CameraControls.getPosition(new THREE.Vector3());
+    const cameraOffset =  this.CameraControls.getTarget(new THREE.Vector3());
+    // Set the light's position to match the camera's position
+ //   this.sunLight.position.copy(cameraPosition.clone().add(new THREE.Vector3(0, 0, -0)));
+    
+    // Get the camera's target (assuming CameraControls has a getTarget method)
+    const target = this.CameraControls.getTarget(new THREE.Vector3());
+    
+    // Calculate the direction from the camera to the target
+    const direction = new THREE.Vector3().subVectors(target, cameraPosition).normalize();
+    
+    // Set the light's target
+    this.sunLight.target.position.copy(target);
+     
+     this.sunLight.position.copy( cameraPosition.clone().add(new THREE.Vector3(0, 4, 0)));
+    
+    // Update the light's matrix
+    this.sunLight.updateMatrixWorld();
+     this.sunLight.target.updateMatrixWorld();
   }
 
   async zoomTo(

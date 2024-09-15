@@ -1,5 +1,5 @@
-import { GLTF, GLTFLoader } from "three/examples/jsm/Addons.js";
-import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { GLTFLoader, GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from  "./SkeletonUtils.js";
 import { AnimationClip } from "three";
 
 
@@ -22,7 +22,8 @@ class LoadingManager {
             const gltf = await loader.loadAsync(url);
             this.assets.set(url, gltf);  // Store the raw GLTF
             console.log("Loaded GLTF:", url);
-            return   gltf.scene; 
+           // return   gltf.scene; 
+            return SkeletonUtils.clone(gltf.scene);
 
         }
 

@@ -6,10 +6,32 @@ import { CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 import { createMachine, interpret, t } from "xstate";
 import * as CANNON from "cannon-es";
 import { StaticCLI } from "../../SimpleCLI";
-import * as jsonpatch from 'fast-json-patch/index.mjs';
-import { applyOperation } from 'fast-json-patch/index.mjs';
-class CharacterComponent extends Component {
-  private _model: THREE.Object3D;
+ 
+import { MeshPhongNodeMaterial,PointsNodeMaterial ,  uniform, skinning , MeshPhysicalNodeMaterial, MeshBasicNodeMaterial ,MeshStandardNodeMaterial , LineBasicNodeMaterial, vec2, distance, NodeMaterial, smoothstep, Break, materialReference, float, sub, VolumeNodeMaterial, vec3, tslFn, all   } from 'three/tsl';
+import {   reflector, uv, texture, color , mix } from 'three/tsl';
+ 
+
+ 
+import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
+let uva= uv( 0 );
+let vec2a= vec2( 0.0, 0.0 );
+let dist = distance(  vec2a, vec2a );
+let nm = new NodeMaterial();
+ const st=  smoothstep( 0.0, 1.0, 0.5 );
+ const breaknode = Break( 0.5 );
+const perlin = new ImprovedNoise();
+const range = materialReference('range', 'float');
+let a = float( 1.0 );
+let b = sub( a, 0.5 );
+ const material = new VolumeNodeMaterial({
+  side: THREE.BackSide,
+  transparent: true
+});
+tslFn( material, 'color', vec3( 1.0, 0.0, 0.0 ) );
+
+let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
+ class CharacterComponent extends Component {
+    _model: THREE.Object3D;
   private _modelpath: string;
 
   private _animationspathslist: { url: string; shiftTracks: boolean }[];
@@ -19,6 +41,7 @@ class CharacterComponent extends Component {
   private _css2dgroup: THREE.Group;
   private _css3dgroup: THREE.Group;
   private _titlebar: HTMLElement;
+
   animations_: { string: THREE.AnimationClip };
   body: CANNON.Body;
   AnimationFSMService_: any;
@@ -42,23 +65,32 @@ class CharacterComponent extends Component {
   websocket: WebSocket;
    workspace : DynamicsCompressorNode
   document : { htmltext : string}
-  jsonpatch: any;
- 
+   workerloop = null;
+  behaviourscriptname: string;
+  activationCircle: THREE.Line<THREE.CircleGeometry, THREE.LineBasicMaterial, THREE.Object3DEventMap>;
+   arrows: [] = [];
+  
 
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
     super();
+    let mat =       new MeshPhongNodeMaterial( { color: "rgb(200, 200, 200)", shininess: 150 } )
+    console.log("mat", mat)
+    const mirrorReflector = reflector();
+    const fogColor = color(0xcccccc);  // Light grey fog
+    const foggyReflection = mix(mirrorReflector, fogColor, 150);
+
     this._modelpath = modelpath;
     this.task = "N";
     this._animationspathslist = animationspathslist;
     this.canJump = true;
     this.isColliding_ = false;
     this.document = { htmltext : ""};
-    this.jsonpatch = jsonpatch;
-
+    this.behaviourscriptname = behaviourscriptname;
+ 
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
-    if (behaviourscriptname !== "")
-      this.LoadWorker(behaviourscriptname);
+    //if (behaviourscriptname !== "")
+      //this.LoadWorker(behaviourscriptname);
   }
 
   async InitComponent(entity: Entity): Promise<void> {
@@ -93,29 +125,37 @@ class CharacterComponent extends Component {
       function (child: any) {
         if (child.isMesh) {
           child.userData.component = this;
+          //cast and receive shadows
+           child.castShadow = true;
+        child.receiveShadow = true;
+        //  //get current color of the mesh
+        //  let color = child.material.color;
+        //   let material2 = new MeshPhysicalNodeMaterial( { color: color, roughness: 0.02, clearcoat:0.1, clearcoatRoughness: 0.09 , metalness: 0.89 , flatShading: true ,side : THREE.FrontSide ,   reflectivity : 0.1 , transmission : 0.0095 , opacity: 1, transparent: false , sheen: 50  , depthWrite: true, depthTest: true,  } );
+        //  child.material =   Math.random() > 0.99 ? material : material2;
+       
           //hide the mesh
-          //  child.visible = false;
-          // const materialPoints = new PointsNodeMaterial({ size: 0.05, color: new THREE.Color(0x0011ff) });
-          // child.updateMatrixWorld(true); // Force update matrix and children
-          //create a skinning node
-          //    const animatedskinning =  skinning( child ) ;
-          //   materialPoints.positionNode = animatedskinning;
-          // child.geometry.computeBoundsTree();
-          // let boundsViz = new MeshBVHHelper( child );
-          //this._group.attach(boundsViz);
+         //  child.visible = false;
+        //  const materialPoints = new PointsNodeMaterial({ size: 0.05, color: new THREE.Color(0x0011ff) });
+      //    child.updateMatrixWorld(true); // Force update matrix and children
+        //  // create a skinning node
+        //      const animatedskinning =  skinning( child ) ;
+        //     materialPoints.positionNode = animatedskinning;
+        //   child.geometry.computeBoundsTree();
+        //   let boundsViz = new MeshBVHHelper( child );
+          //this._group.attach(materialPoints);
 
           //set scale and rotation of the points
 
           //adjust scale and rotation of the points
-          //materialPoints.positionNode = uniform( child.scale );
+        //  materialPoints.positionNode = uniform( child.scale );
 
-          //materialPoints.positionNode = skinning( child );
-          // materialPoints.positionNode = uniform( child.position );
+        //    materialPoints.positionNode = skinningReference( child );
+        //    //materialPoints.positionNode = uniform( child.position );
 
-          // //   child.updateMatrixWorld(true); // Force update matrix and children
-          // this._pointCloud = new THREE.Points(child.geometry, materialPoints);
+        //      child.updateMatrixWorld(true); // Force update matrix and children
+        //  this._pointCloud = new THREE.Points(child.geometry, materialPoints);
 
-          // this._webgpugroup.add(this._pointCloud);
+         //  this._webgpugroup.add(this._pointCloud);
         }
       }.bind(this)
     );
@@ -146,6 +186,8 @@ class CharacterComponent extends Component {
     this.body.fixedRotation = true;
     this.taskintervals = [];
     this.CreateFSM_();
+
+    this.setupCollisionDetection()
 
     // this.walktopos( new THREE.Vector3( Math.random() * 150, 0, Math.random() * 190));
   }
@@ -327,6 +369,11 @@ class CharacterComponent extends Component {
             entry: "StartPushing",
             on: {
               STOP: {
+              
+                target: "Ideling",
+              },
+
+              STAND: {
                 target: "Ideling",
               },
               WALK: {
@@ -656,7 +703,7 @@ class CharacterComponent extends Component {
                 curAction.enabled = true;
                 curAction.setEffectiveTimeScale(1.0);
                 curAction.setEffectiveWeight(1.0);
-                curAction.crossFadeFrom(prevAction, 0.25, false);
+                curAction.crossFadeFrom(prevAction, 0.35, false);
                 curAction.play();
               } else {
                 const actionprev =
@@ -666,7 +713,7 @@ class CharacterComponent extends Component {
                 curAction.enabled = true;
                 curAction.setEffectiveTimeScale(1.0);
                 curAction.setEffectiveWeight(1.0);
-                curAction.crossFadeFrom(actionprev, 0.25, false);
+                curAction.crossFadeFrom(actionprev, 0.35, false);
                 curAction.play();
               }
             }
@@ -751,6 +798,26 @@ class CharacterComponent extends Component {
               }, curAction.getClip().duration * 1000);
             }
           },
+
+
+          StartPushing: (context, event) => {
+
+            const ac1 = this.animations_[this.AnimationFSMService_.state.value];
+
+            const ac2 =
+              this.animations_[this.AnimationFSMService_._state.history.value];
+
+            const curAction = this._mixer.clipAction(ac1);
+            const prevAction = this._mixer.clipAction(ac2);
+
+            curAction.time = 0.0;
+            curAction.enabled = true;
+            curAction.setEffectiveTimeScale(1.0);
+            curAction.setEffectiveWeight(1.0);
+            curAction.crossFadeFrom(prevAction, 0.65, true);
+            curAction.play();
+          }
+          ,
 
           StartTurningLeft: (context, event) => {
             const ac1 = this.animations_[this.AnimationFSMService_.state.value];
@@ -878,10 +945,19 @@ class CharacterComponent extends Component {
         this.AnimationFSMService_.state.value == "SlowWalking" ||
         this.AnimationFSMService_.state.value == "Pushing" ||
         this.AnimationFSMService_.state.value == "Executing") &&
-      !input._keys.shift
+      !input._keys.shift && !this.isColliding_
     ) {
       this.AnimationFSMService_.send("WALK");
     }
+    else if (
+      input._keys.forward &&
+      this.AnimationFSMService_.state.value !== "Pushing" &&
+      this.isColliding_
+    ) {
+      this.AnimationFSMService_.send("STOP");
+    }
+    
+     
     if (
       input._keys.forward &&
       this.AnimationFSMService_.state.value == "Pushing" &&
@@ -889,6 +965,11 @@ class CharacterComponent extends Component {
     ) {
       this.AnimationFSMService_.send("WALK");
     }
+
+    if (!input._keys.forward && this.AnimationFSMService_.state.value == "Pushing") {
+      this.AnimationFSMService_.send("STAND");
+    }
+
 
     if (
       input._keys.forward &&
@@ -902,7 +983,8 @@ class CharacterComponent extends Component {
       (this.AnimationFSMService_.state.value == "Walking" ||
         this.AnimationFSMService_.state.value == "Running" ||
         this.AnimationFSMService_.state.value == "SlowWalking" ||
-        this.AnimationFSMService_.state.value == "Pushing")
+        this.AnimationFSMService_.state.value == "Pushing") 
+ 
     ) {
       this.AnimationFSMService_.send("STOP");
     }
@@ -922,6 +1004,7 @@ class CharacterComponent extends Component {
       this.AnimationFSMService_.send("STOP");
     }
   }
+
 
   StepToPosition(locationposition: THREE.Vector3) {
     //steps to position, if position is reached returns true
@@ -1108,148 +1191,169 @@ class CharacterComponent extends Component {
         type: "stop",
       });
     }
+    this.workerloop= null
   }
  
-  walktopos(locationposition: THREE.Vector3) {
-    if (this.taskintervals) {
-      for (let i = 0; i < this.taskintervals.length; i++) {
-        clearInterval(this.taskintervals[i]);
-      }
-    }
+  // walktopos(locationposition: THREE.Vector3) {
+  //   if (this.taskintervals) {
+  //     for (let i = 0; i < this.taskintervals.length; i++) {
+  //       clearInterval(this.taskintervals[i]);
+  //     }
+  //   }
 
-    let interval = setInterval(() => {
+  //   let interval = setInterval(() => {
 
-       const controlObject = new THREE.Object3D();
-      controlObject.position.copy(this._entity.Position);
-      controlObject.quaternion.copy(this._entity.Quaternion);
-      controlObject.lookAt(locationposition);
-      const distance = controlObject.position.distanceTo(locationposition);
-      //rotation
-      const targetDirection = new THREE.Vector3()
-        .subVectors(locationposition, this._entity.Position)
-        .normalize();
-      const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
-        this._entity.Quaternion
-      );
-      const crossProduct = new THREE.Vector3().crossVectors(
-        currentDirection,
-        targetDirection
-      );
-      const deadZone = 0.05; // Change this value according to required dead zone size.
-      console.log(distance)
-      //  //console.log(distance);
-      if (distance > 1.7) {
-        //console.log("walking");
-        try {
-          if (
-            this.AnimationFSMService_.state.value == "Walking" ||
-            this.AnimationFSMService_.state.value == "Running"
-          ) {
-            //shift
-            if (distance > 8) {
-              this.Input._keys.shift = true;
-            }
-          } else {
-            this.Input._keys.shift = false;
-          }
-        } catch (error) {
-          console.log(error);
-        }
+  //      const controlObject = new THREE.Object3D();
+  //     controlObject.position.copy(this._entity.Position);
+  //     controlObject.quaternion.copy(this._entity.Quaternion);
+  //     controlObject.lookAt(locationposition);
+  //     const distance = controlObject.position.distanceTo(locationposition);
+  //     //rotation
+  //     const targetDirection = new THREE.Vector3()
+  //       .subVectors(locationposition, this._entity.Position)
+  //       .normalize();
+  //     const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
+  //       this._entity.Quaternion
+  //     );
+  //     const crossProduct = new THREE.Vector3().crossVectors(
+  //       currentDirection,
+  //       targetDirection
+  //     );
+  //     const deadZone = 0.05; // Change this value according to required dead zone size.
+  //     console.log(distance)
+  //     //  //console.log(distance);
+  //     if (distance > 1.7) {
+  //       //console.log("walking");
+  //       try {
+  //         if (
+  //           this.AnimationFSMService_.state.value == "Walking" ||
+  //           this.AnimationFSMService_.state.value == "Running"
+  //         ) {
+  //           //shift
+  //           if (distance > 8) {
+  //             this.Input._keys.shift = true;
+  //           }
+  //         } else {
+  //           this.Input._keys.shift = false;
+  //         }
+  //       } catch (error) {
+  //         console.log(error);
+  //       }
 
-        if (crossProduct.y < -deadZone) {
-          // Needs to turn right
-          this.Input._keys.right = true;
-          this.Input._keys.left = false;
-        } else if (crossProduct.y > deadZone) {
-          // Needs to turn left
-          this.Input._keys.right = false;
-          this.Input._keys.left = true;
-        } else {
-          // Within the dead zone, maintain current direction
-          //we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
-          const deviation = controlObject.quaternion.angleTo(
-            this._entity.Quaternion
-          );
-          if (Math.abs(deviation) > 1) {
-            this.Input._keys.left = true;
-            this.Input._keys.right = false;
-          } else {
-            this.Input._keys.left = false;
-            this.Input._keys.right = false;
-          }
+  //       if (crossProduct.y < -deadZone) {
+  //         // Needs to turn right
+  //         this.Input._keys.right = true;
+  //         this.Input._keys.left = false;
+  //       } else if (crossProduct.y > deadZone) {
+  //         // Needs to turn left
+  //         this.Input._keys.right = false;
+  //         this.Input._keys.left = true;
+  //       } else {
+  //         // Within the dead zone, maintain current direction
+  //         //we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
+  //         const deviation = controlObject.quaternion.angleTo(
+  //           this._entity.Quaternion
+  //         );
+  //         if (Math.abs(deviation) > 1) {
+  //           this.Input._keys.left = true;
+  //           this.Input._keys.right = false;
+  //         } else {
+  //           this.Input._keys.left = false;
+  //           this.Input._keys.right = false;
+  //         }
 
-          this.Input._keys.forward = true;
+  //         this.Input._keys.forward = true;
 
-          const targetDirection = new THREE.Vector3()
-            .subVectors(locationposition, controlObject.position)
-            .normalize();
-          const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
-            this._entity.Quaternion
-          );
-          const crossProduct = new THREE.Vector3().crossVectors(
-            currentDirection,
-            targetDirection
-          );
-          const deadZone = 0.05; // Change this value according to required dead zone size.
+  //         const targetDirection = new THREE.Vector3()
+  //           .subVectors(locationposition, controlObject.position)
+  //           .normalize();
+  //         const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
+  //           this._entity.Quaternion
+  //         );
+  //         const crossProduct = new THREE.Vector3().crossVectors(
+  //           currentDirection,
+  //           targetDirection
+  //         );
+  //         const deadZone = 0.05; // Change this value according to required dead zone size.
 
-          try {
-            if (crossProduct.y < -deadZone) {
-              // Needs to turn right
-              this.Input._keys.right = true;
-              this.Input._keys.left = false;
-            } else if (crossProduct.y > deadZone) {
-              // Needs to turn left
-              this.Input._keys.right = false;
-              this.Input._keys.left = true;
-            } else {
-              // Within the dead zone, maintain current direction
-              //we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
-              const deviation = controlObject.quaternion.angleTo(
-                this._entity.Quaternion
-              );
-              if (Math.abs(deviation) > 1) {
-                this.Input._keys.left = true;
-                this.Input._keys.right = false;
-              } else {
-                this.Input._keys.left = false;
-                this.Input._keys.right = false;
-              }
-            }
-            this.Input._keys.forward = true;
-          } catch (error) {
-            //console.log(error);
-          }
-        }
-      } else {
-        try {
-          this.Input._keys.shift = false;
-          this.Input._keys.forward = false;
-          this.Input._keys.left = false;
-          this.Input._keys.right = false;
-          clearInterval(interval);
-          return;
-        } catch (error) {
-          ////console.log(error);
-        }
-      }
-    }, 5);
+  //         try {
+  //           if (crossProduct.y < -deadZone) {
+  //             // Needs to turn right
+  //             this.Input._keys.right = true;
+  //             this.Input._keys.left = false;
+  //           } else if (crossProduct.y > deadZone) {
+  //             // Needs to turn left
+  //             this.Input._keys.right = false;
+  //             this.Input._keys.left = true;
+  //           } else {
+  //             // Within the dead zone, maintain current direction
+  //             //we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
+  //             const deviation = controlObject.quaternion.angleTo(
+  //               this._entity.Quaternion
+  //             );
+  //             if (Math.abs(deviation) > 1) {
+  //               this.Input._keys.left = true;
+  //               this.Input._keys.right = false;
+  //             } else {
+  //               this.Input._keys.left = false;
+  //               this.Input._keys.right = false;
+  //             }
+  //           }
+  //           this.Input._keys.forward = true;
+  //         } catch (error) {
+  //           //console.log(error);
+  //         }
+  //       }
+  //     } else {
+  //       try {
+  //         this.Input._keys.shift = false;
+  //         this.Input._keys.forward = false;
+  //         this.Input._keys.left = false;
+  //         this.Input._keys.right = false;
+  //         clearInterval(interval);
+  //         return;
+  //       } catch (error) {
+  //         ////console.log(error);
+  //       }
+  //     }
+  //   }, 5);
 
-    this.taskintervals.push(interval);
+  //   this.taskintervals.push(interval);
 
    
-  }
+  // }
 
-  async walkToPos(locationPosition, timeout = 10000) {
+  async walkToPos(locationPosition: THREE.Vector3, timeout = 20000) {
+       //create a red arrow above the  target position and pointing down 
+    
+
     return new Promise((resolve, reject) => {
       // Clear any existing intervals
       if (this.taskintervals) {
         for (let i = 0; i < this.taskintervals.length; i++) {
           clearInterval(this.taskintervals[i]);
+          //remove the arrow
+          //remove all arrows
+          for (let i = 0; i < this.arrows.length; i++) {
+            this._entity._entityManager._mc.webgpuscene.remove(this.arrows[i]);
+          }
         }
       }
-      
+      let arrow = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), locationPosition.clone().add(new THREE.Vector3(0,1,0)), 1, 0xff0000 , 1.0, 0.65);
+      //assign a physics material to the arrow
+      let material = new  MeshStandardNodeMaterial({ color: 0xff0000 });
+      // arrow.line.material = material;
+        arrow.cone.material = material;
+      arrow.castShadow = true;
+      arrow.receiveShadow = true;
+      this.arrows.push(arrow);
+
+      this._entity._entityManager._mc.webgpuscene.add(arrow);
+
+
       // Setup the interval to check position
       const interval = setInterval(() => {
+       locationPosition.y = this._entity.Position.y;
         const controlObject = new THREE.Object3D();
         controlObject.position.copy(this._entity.Position);
         controlObject.quaternion.copy(this._entity.Quaternion);
@@ -1289,6 +1393,9 @@ class CharacterComponent extends Component {
             console.error("Error during walking logic:", error);
           }
         } else {
+          
+          this._entity._entityManager._mc.webgpuscene. remove(arrow);
+
           // Target reached, stop and resolve
           clearInterval(interval);
           this.Input._keys.shift = false;
@@ -1297,21 +1404,32 @@ class CharacterComponent extends Component {
           this.Input._keys.right = false;
           resolve(true);
         }
-      }, 25);
+      }, 5);
   
       this.taskintervals.push(interval);
   
       // Setup the timeout
       setTimeout(() => {
+
+        //if it is the last interval ; then reset the keys
+        if (this.taskintervals.length == 1) {
+          this.Input._keys.shift = false;
+          this.Input._keys.forward = false;
+          this.Input._keys.left = false;
+          this.Input._keys.right = false;
+        }
         clearInterval(interval);
-        this.Input._keys.shift = false;
-        this.Input._keys.forward = false;
-        this.Input._keys.left = false;
-        this.Input._keys.right = false;
-        reject(new Error('Timeout reached before reaching the target position'));
+
+ 
+       
+        resolve('Timeout reached before reaching the target position');
       }, timeout);
     });
   }
+
+
+
+
   createNameTag() {
     const nameTag = document.createElement("div");
     nameTag.className = "name-tag";
@@ -1354,12 +1472,7 @@ class CharacterComponent extends Component {
     cliContainer.style.scrollbarWidth = "none";
    // cliContainer.style.transition = "opacity 0.3s ease-in-out";
   
-    const loadButton = document.createElement("button");
-    loadButton.id = "load";
-    loadButton.className = "uk-button uk-button-default";
-    loadButton.style.fontSize = "smaller";
-    loadButton.textContent = "Load";
-    cliContainer.appendChild(loadButton);
+   
   
     const inlineContainer = document.createElement("div");
     inlineContainer.className = "uk-inline";
@@ -1390,18 +1503,15 @@ class CharacterComponent extends Component {
   
     this.uiElement = cliContainer;
   
-    if (loadButton) {
-      loadButton.addEventListener("click", () => {
-        this.Reset();
-      });  }
-  
+ 
     const label = new CSS2DObject(this._titlebar);
     label.position.set(0, 2, 0);
     this._css2dgroup.add(label);
   
     if (nameElement && dropIcon && resetIcon) {
       nameElement.addEventListener("click", () => {
-        this.face();
+        this._entity._entityManager._mc.MainEntity = this._entity;
+                this.face();
         this.toggleDropdown();
       });
 
@@ -1413,11 +1523,39 @@ class CharacterComponent extends Component {
         this.toggleDropdown();
       });
     }
+    this.resetConsole();
+
+
+    
+
   
     // this.uiElement.addEventListener("wheel", (event) => {
     //   event.preventDefault();
     //   this.uiElement.scrollTop += event.deltaY;
     // });
+  }
+  resetConsole(){
+    let inithtml = /*html*/ `
+    <div class="uk-card uk-card-secondary uk-card-body">
+      <h3 class="uk-card-title">Greetings !</h3>
+      <p class="content">I am your personal coder.</p>
+      <button id="loadEnvironment" class="uk-button-default uk-margin-small-right">
+        Load Script
+        
+    </div>
+
+    
+  `;
+   
+  
+  StaticCLI.typeSync(this.uiElement, inithtml, 5, true);
+  
+  
+  let button = this.uiElement.querySelector("#loadEnvironment");
+   button.addEventListener("click", () => {
+    this.Reset();
+  }
+  );
   }
   
   toggleDropdown() {
@@ -1437,58 +1575,24 @@ class CharacterComponent extends Component {
       dropIcon.setAttribute("uk-icon", "icon: chevron-down; ratio: 0.8");
     }
   } 
-  async loadDialogueStep() {
-    const dialogueSteps = [
-      {
-        html: `
-          <div class="uk-card uk-card-secondary uk-card-body">
-            <h3 class="uk-card-title">Step 1</h3>
-            <p class="content">This is the first step of the dialogue.</p>
-            <button class="uk-button uk-button-primary">Load Behavior</button>
-            
-          </div>
-        `,
-        title: "Hello, my name is " + this._entity.name,
-        content: "I am here to assist you. Please click this window to continue.",
-      },
-      {
-        html: `
-        <div class="uk-card uk-card-secondary uk-card-body">
-          <h3 class="uk-card-title">Step 1</h3>
-          <p class="content">This is the first step of the dialogue.</p>
-        </div>
-      `,
-        title: "Great, let's move on!",
-        content: "Click to proceed to the next step.",
-      },
-      {
-        html: `
-          <div class="uk-card uk-card-secondary uk-card-body">
-            <h3 class="uk-card-title">Step 3</h3>
-            <p class="content">This is the final step of the dialogue.</p>
-          </div>
-        `,
-        title: "Thank you for your attention!",
-        content: "This concludes our dialogue.",
-      },
-    ];
-  
-    if (this.currentStep >= 0 && this.currentStep < dialogueSteps.length) {
-      const step = dialogueSteps[this.currentStep];
-      this.uiElement.innerHTML = step.html;
-  
-      await StaticCLI.typeInside(this.uiElement, "uk-card-title", step.title, 25, false);
-      await StaticCLI.typeInside(this.uiElement, "content", step.content, 25, false);
-    }
-  }
  
  
  
   Reset() {
+    this.resetConsole();
+    if (!this.worker) {
+      if (this.behaviourscriptname !== "") {
+      this.LoadWorker( this.behaviourscriptname);
+      }
+    }
     this.worker?.postMessage({
       type: "reload",
       filename: "botbasicbehavior.js",
     });
+
+    if (this.workerloop){
+      this.workerloop = null;
+    }
 
     //clear all intervals
     if (this.taskintervals) {
@@ -1542,6 +1646,8 @@ class CharacterComponent extends Component {
       }
     );
 
+
+
     this._entity._RegisterHandler("inputdestroyed", (data: any) => {
       this.Input = null;
       //console.log("input destroyed");
@@ -1577,6 +1683,36 @@ class CharacterComponent extends Component {
     });
   }
 
+
+  respond(message : string){
+    StaticCLI.typeSync(
+      this.uiElement,
+       message,
+      1,
+      false
+    );
+
+
+  }
+
+
+
+  activate(){
+    
+     //create a animating circle around the character at the position of the character , this circle will be used to show the character is selected
+     //a threejs mesh with a circle geometry and a line basic material
+
+ 
+
+    
+
+  }
+
+  deactivate(){
+      
+    this._webgpugroup.remove(this.activationCircle);
+    }
+
   async zoom(radius = 8) {
     let p = this._entity.Position.clone(); // Make sure to clone so you don't accidentally modify the original position
     p.y += 1.5;
@@ -1588,22 +1724,63 @@ class CharacterComponent extends Component {
     this._entity._entityManager._mc.zoomTo(p, radius);
   }
 
-  async face() {
+  async face(radius = 8) {
     let p = this._entity.Position.clone(); // Make sure to clone so you don't accidentally modify the original position
     p.y += 1.5;
+    
     let quat = this._entity.Quaternion.clone();
+    //add a small 20 degree rotation around y offset 
+    quat.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 1), 20 * (-Math.PI / 180)));
     //rotate quat around y 180 degrees
     quat.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
-    await this._entity._entityManager._mc.zoomTo(p, 4, quat);
+    await this._entity._entityManager._mc.zoomTo(p, radius, quat);
   }
 
+  private setupCollisionDetection(): void {
+    this.body.addEventListener("collide", (event) => {
+      const contact = event.contact;
+
+      // Ensure we're detecting collision on the character's body
+      if (contact.bi === this.body || contact.bj === this.body) {
+        // Get the other body involved in the collision
+        const otherBody = contact.bi === this.body ? contact.bj : contact.bi;
+
+        // Get the collision normal
+        const normal = contact.ni.clone();
+        if (contact.bi !== this.body) {
+          normal.negate(); // Ensure the normal is pointing from our body to the other body
+        }
+        let forwardDirection: CANNON.Vec3 = new CANNON.Vec3(0, 0, -1);
+        // Check if the collision is roughly in front of the character
+        this.body.quaternion.vmult( forwardDirection, forwardDirection);
+        const angle = normal.dot( forwardDirection);
+
+        // You can adjust this threshold to fine-tune what's considered "in front"
+        if (angle < -0.9) { // Collision is in front if the angle is close to -1
+         console.log("colliding with a wall");
+         this.isColliding_ = true;
+        }
+        else{
+          this.isColliding_ = false;
+        }
+      }
+    });
+  }
   async Update(deltaTime: number): Promise<void> {
     
     //update state name in the title bar
     // this._titlebar.querySelector(".status").textContent =
     //   this.state + " " + this.task;
-
+    if (this.workerloop ){
+      this.workerloop();
+  }
     this._mixer.update(deltaTime);
+
+
+    //check if no current front collision
+    if (!this.body.collisionResponse) {
+      this.isColliding_ = false;
+    }
 
     const controlObject = this._webgpugroup;
     const velocity = this.velocity_;
@@ -1723,6 +1900,10 @@ class CharacterComponent extends Component {
         //check if colliding with a wall
       });
 
+ 
+      //check if body is colliding with a wall
+      
+
       if (this.body.velocity.y > 0.1 && this.canJump == true) {
         //	this.body.velocity.y = 0;
       }
@@ -1826,8 +2007,14 @@ class CharacterComponent extends Component {
       case "Ideling":
         return 0;
       case "Walking":
+        if (this.isColliding_) {
+          return 0;
+        }
         return 4;
       case "Running":
+        if (this.isColliding_) {
+          return 0;
+        }
         return 9;
       case "BackwardWalking":
         return 1.45;

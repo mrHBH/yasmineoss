@@ -1,5 +1,5 @@
 # Use the official bun image as base
-FROM imbios/bun-node:latest
+FROM imbios/bun-node
 
  # Set the working directory
 WORKDIR /frontend

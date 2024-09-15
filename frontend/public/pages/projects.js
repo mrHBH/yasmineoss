@@ -14,35 +14,39 @@ let cb = function (e) {
   const fronthtml = /*html*/ `
   ${div}
   <div class="uk-container-expand uk-padding uk-margin uk-text-center">
-       <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
-        <article class="uk-comment" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
-        <h3  class="consola uk-card-title">Dynamic Page titlez</h3>
-
-           <div>
-
-            <div  class="console uk-card uk-card-secondary uk-card-body uk-card-hover uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-
-            <article>
-            <h3 class="uk-card-title">Projects</h3>
-            <p>Here are some of the projects I have worked on.</p>
-
-                <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
-                  <li><a href="#">Electrical Engineer</a></li>
-                  <li class="uk-active"><a href="#">Software Developer</a></li>
-                  <button id ="findcursor" class="uk-button uk-button-default">findcursor</button>
-                  
-                </ul>
-
-
-
-            </article>
-
-               
-
+         <h2 id="header" class="consola uk-card-title">Dynamic Page titlez</h2>
+ 
+        <div class="uk-card uk-card-default uk-card-body uk-margin-large" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+            <h3 class="uk-card-title">Electrical Engineering</h3>
+            <p>As part of my Electrical Engineering education, I had a course designing a RISC-V processor. This experience was an enlightening exposure to Verilog and digital design.</p>
         </div>
 
-            </div>
-  
+       
+        <div class="uk-card uk-card-default uk-card-body uk-margin-large" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+            <h3 class="uk-card-title">Master Thesis</h3>
+            <p>In my master thesis, I explored designing and prototyping a wireless infrared tracker for infrared tracking. This project was valuable as it covered everything from ideation, parts selection, firmware design, and finally, testing.</p>
+        </div>
+
+     
+        <div class="uk-card uk-card-default uk-card-body uk-margin-large" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+            <h3 class="uk-card-title">Test Automation in Automotive Sector</h3>
+            <p>After my thesis, I worked on test automation in the automotive sector. Here, I honed my Python skills by writing several automation scripts for testing different automotive components.</p>
+        </div>
+ 
+        <div class="uk-card uk-card-default uk-card-body uk-margin-large" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+            <h3 class="uk-card-title">Experimenting with Large Language Models</h3>
+            <p>Recently, I have been experimenting with large language models, focusing on their code-writing capabilities. This exploration has been both challenging and rewarding.</p>
+            <button id="learnMoreLLM" class="uk-button uk-button-primary">Learn More</button>
+        </div>
+ 
+        <div id="footer" class="uk-margin-large-top">
+            <button id="findcursor" class="uk-button uk-button-default">Find Cursor</button>
+            <button id="loadworkspace" class="uk-button uk-button-default">Load Workspace</button>
+        </div>
+    </div>
+</div>
+
+
    
   `;
   let mc = this._entity._entityManager._mc;
@@ -51,10 +55,9 @@ let cb = function (e) {
     this.HtmlElement.innerHTML = "";
  
     const h = async () => {
-   await StaticCLI.type( this.HtmlElement, fronthtml,  5, false); 
-  // await  StaticCLI.typeInside( this.HtmlElement, "console" , "Hello World",  5, true);
- 
-   await  StaticCLI.insertNewLine( this.HtmlElement, "console")
+    await StaticCLI.type( this.HtmlElement, fronthtml,  1, false); 
+    // await  StaticCLI.typeInside( this.HtmlElement, "console" , "Hello World",  5, true);
+  
     await  StaticCLI.insertNewLine( this.HtmlElement, "consola") 
 
 
@@ -94,10 +97,19 @@ let cb = function (e) {
           await StaticCLI.typeInside( this.HtmlElement, "consola" , "Cursor found",  5, true);
           await  StaticCLI.insertNewLine( this.HtmlElement, "consola") 
 
-          await mc.mainEntity.Broadcast({
-            topic: "walk",
-            data : {position:  cursorposition}
-          });
+
+          //go back to button: 
+          let buttonposition= this.getElementPosition(findcursor);
+          if (buttonposition) {
+            await mc.mainEntity.Broadcast({
+              topic: "walk",
+              data : {position:  buttonposition}
+            });
+          }
+          // await mc.mainEntity.Broadcast({
+          //   topic: "walk",
+          //   data : {position:  cursorposition}
+          // });
 
 
         
@@ -111,29 +123,85 @@ let cb = function (e) {
     
   }
 
+  let loadworkspace = this.HtmlElement.querySelector("#loadworkspace");
+  if ( loadworkspace) {
+    loadworkspace.addEventListener("click", () => {
+       
+        console.log("agent clicked");
+        let jsoncmd = JSON.stringify({
+          cmd: "task",
+          task:
+            "can you tell me about prime numbers in a minimal layout , use 2 cards , with one that calculates prime numbers and another that explains what they are. use a code block to show the code for calculating prime numbers.",
+
+        });
+   
+       
+        if (!this.websocket) {
+          let pythonbackend = "ws://localhost:8000/ws/lg/";
+          this.websocket = new WebSocket(pythonbackend);
+          let currenthtml= "";
+          this.websocket.onopen = function open() {
+            this.send(jsoncmd);
+          };
+          let tokens = [];
+
+          this.websocket.onmessage = function incoming(data) {
+             console.log(data);
+  
+            try {
+              let json = JSON.parse(data.data);
+              console.log(json);
+             
+  
+              if (json.command === "answer") {
+                //concatenate all tokens
+               
+                console.log( tokens);
+                console.log(json.text);
+                let combinedString = tokens.join(''); 
+                this.HtmlElement.innerHTML += combinedString;
+                completestring = "";
+                return;
+              }
+              if (json.command === "jsupdate") {
+                let jscodestring = json.code;
+                console.log(jscodestring);
+                eval(jscodestring).bind(this);
+  
+  
+                return;
+              }
+              
+              if (json.command === "jsonpatch") {
+                console.log(json.patch);
+                tokens.push(json.patch);
+                //create a div and append 
+                currenthtml += json.patch;
+                this.HtmlElement.innerHTML= currenthtml;
+                
+                return;
+              }
+            } catch (error) {
+              console.error(error);
+            }
+  
+    
+          }.bind(this);
+
+        
+        } else {
+ 
+          this.websocket.send(jsoncmd);
+        }
+      });
+   
+  }
+ 
+
   //find cursor 
 
 });
-    let startpos = this._entity.Position.clone().add(new THREE.Vector3(0,7, 0)); 
-
-    let contactFlow = [
-      startpos,
-      startpos.clone().add(new THREE.Vector3(0,0, 5)),
-      startpos.clone().add(new THREE.Vector3(0,0, 10)),
- 
-     
-    ];
-
-    let lookatFlow = [
-      new THREE.Vector3( 0,  -1,  0),
-    ];
-    mc.UIManager.splinePath.points = contactFlow;   
-    mc.UIManager.lookatPath = lookatFlow;
   
-    mc.UIManager.cubePosition = 0.01;
-    mc.UIManager.updateScrollbarPosition();
-    mc.UIManager.updateSplineObject();
-
   }
 }
  

@@ -3,7 +3,9 @@ import * as THREE from "three";
 import { Entity } from "../Entity";
 import { CSS2DObject } from "../CSS2D";
 import { tween } from "shifty";
-class twoDUIComponent extends Component {
+import { max } from "three/webgpu";
+import { StaticCLI } from "../../SimpleCLI";
+ class twoDUIComponent extends Component {
   private _html: string;
   private _css2dobject: CSS2DObject;
   private _webgpuplane: THREE.Mesh;
@@ -12,6 +14,8 @@ class twoDUIComponent extends Component {
   private _webgpugroup: THREE.Group = new THREE.Group();
   private _size: THREE.Vector2;
   sticky: boolean = false;
+   maximized: boolean;
+   typed: boolean;
 
   constructor(html: string, size?: THREE.Vector2) {
     super();
@@ -29,10 +33,10 @@ class twoDUIComponent extends Component {
 
   set Size(size: THREE.Vector2) {
     this._size = size;
-    // this._htmlElement.style.height =  this._size.y  + "px"
-    // this._htmlElement.style.width =    this._size.x  + "px"
-    //  this._webgpuplane?.geometry.scale(2*this._size.x/100, 1.5*this._size.y/100, 1);
-    //this._webgpuplane.geometry = new THREE.PlaneGeometry(2*this._size.x/100, 1.5*this._size.y/100);
+     this._htmlElement.style.height =  this._size.y  + "px"
+     this._htmlElement.style.width =    this._size.x  + "px"
+   //   this._webgpuplane?.geometry.scale(2*this._size.x/100, 1.5*this._size.y/100, 1);
+    this._webgpuplane.geometry = new THREE.PlaneGeometry(2*this._size.x/100, 1.5*this._size.y/100);
   }
 
   set HtmlElement (htmlElement: HTMLElement) {
@@ -41,7 +45,9 @@ class twoDUIComponent extends Component {
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
     this._htmlElement = document.createElement("div");
+ 
     this._htmlElement.innerHTML = this._html;
+ 
     //opacity and position transitions
     this._htmlElement.style.transition = " opacity 0.5s ";
     this._htmlElement.style.height = this._size.y + "px";
@@ -66,6 +72,13 @@ class twoDUIComponent extends Component {
 
     this._webgpuplane.userData.component = this;
     this._webgpugroup.add(this._webgpuplane);
+  }
+
+
+  async AnimateType(text: string, delay: number = 100) {
+      
+      await   StaticCLI.type(this._htmlElement, text, delay, true);
+  
   }
 
   async InitEntity(): Promise<void> {
@@ -153,6 +166,12 @@ class twoDUIComponent extends Component {
       this._entity._entityManager._mc.camera.position
     );
     //hide the opacity of this._titlebar if the distance is greater than 10
+
+    if (this.maximized    &&  (this._size.x !== window.innerWidth || this._size.y !== window.innerHeight)) {
+
+      console.log("maximized");
+      this.Size = new THREE.Vector2( window.innerWidth, window.innerHeight);
+    }
     if (this.sticky) {
       return;
     }
@@ -186,9 +205,33 @@ class twoDUIComponent extends Component {
   }
 
    async Destroy(): Promise<void> {
-    this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
-    this._entity._entityManager._mc.html2dScene.remove(this._css2dgroup);
-    this._htmlElement.remove();
+    //apply a transition to the opacity of the html element
+    // this._htmlElement.style.transition = "opacity 0.5s";
+    // this._htmlElement.style.opacity = "0";
+    this._webgpuplane.material.transparent = true;
+     tween({
+      from: { x:  1},
+      to: { x: 0 },
+      duration: 1000,
+      easing: "easeOutQuad",
+      render: (state: any) => {
+        this._webgpuplane.material.opacity = 0;
+        this._htmlElement.style.opacity = state.x;
+      },
+      finish: () => {
+        this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+        this._entity._entityManager._mc.html2dScene.remove(this._css2dgroup);
+        this._htmlElement.remove();
+      }
+      
+    });
+ 
+    // setTimeout(() => {
+    // this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+    // this._entity._entityManager._mc.html2dScene.remove(this._css2dgroup);
+    // this._htmlElement.remove();
+
+    // }
     
 
   }

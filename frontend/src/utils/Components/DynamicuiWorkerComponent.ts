@@ -60,7 +60,7 @@ class DynamicuiWorkerComponent extends Component {
     this._webgpuplane = new THREE.Mesh(
       new THREE.PlaneGeometry(
         (1.5  * this._size.x) / 100,
-        (1.5  * this._size.y) / 100
+        (1.5 * this._size.y) / 100
       ),
       planeMaterial
     );
@@ -164,21 +164,23 @@ class DynamicuiWorkerComponent extends Component {
  
     
   }
-  async zoom(radius =10) {
+  async zoom(radius =8) {
 
      // this._entity._entityManager._mc.zoomTo(p, radius, this._entity.Quaternion);
-     let startpos = new THREE.Vector3(
+
+  
+      let startpos = new THREE.Vector3(
       this._entity.Position.x ,
-      this._entity.Position.y  ,
+      this._entity.Position.y + radius,
       this._entity.Position.z 
     );
 
 
 
      let contactFlow = [
-       startpos,   
-       startpos.clone().add( new THREE.Vector3 (0, 0, 5) ),
- 
+       startpos.clone().add( new THREE.Vector3 (0, 0, -0.25* this._size.y/100 ) ), 
+       startpos.clone().add( new THREE.Vector3 (0, 0,0.25* this._size.y/100 ) ),
+  
 
        
      ];
@@ -195,27 +197,33 @@ class DynamicuiWorkerComponent extends Component {
      this._entity._entityManager._mc.UIManager.splinePath.points = contactFlow;   
      this._entity._entityManager._mc.UIManager.lookatPath = lookatFlow;
      this._entity._entityManager._mc.UIManager.updateSplineObject();
-     this._entity._entityManager._mc.UIManager.cubePosition =  0.001;
+     this._entity._entityManager._mc.UIManager.cubePosition =  0.4;
 
      this._entity._entityManager._mc.UIManager.updateScrollbarPosition();
+
+
+    if (this._entity._entityManager._mc.UIManager.scrollmodenavigation == false) {
+      this._entity._entityManager._mc.UIManager.toggleScrollmode();
+    }
   
-    this._entity._entityManager._mc.UIManager.toggleScrollmode();
+    // this._entity._entityManager._mc.UIManager.toggleScrollmode();
+  //  this._entity._entityManager._mc.CameraControls.zoom(10*radius  , true )
       const _centerPosition = new THREE.Vector3();
       const _normal = new THREE.Vector3();
       const _cameraPosition = new THREE.Vector3();
 
 
 
-      const rectCenterPosition = _centerPosition.copy(   this._entity.Position );
-      const rectNormal = _normal.set( 0, 0, 1 ).applyQuaternion(  this._entity.Quaternion );
-      const distance =  radius;
-      const cameraPosition = _cameraPosition.copy( rectNormal ).multiplyScalar( - distance ).add( rectCenterPosition );
+      // const rectCenterPosition = _centerPosition.copy(   this._entity.Position );
+      // const rectNormal = _normal.set( 0, 0, 1 ).applyQuaternion(  this._entity.Quaternion );
+      // const distance =  radius;
+      // const cameraPosition = _cameraPosition.copy( rectNormal ).multiplyScalar( - distance ).add( rectCenterPosition );
     
-      this._entity._entityManager._mc.CameraControls.setLookAt(
-        cameraPosition.x, cameraPosition.y, cameraPosition.z,
-        rectCenterPosition.x, rectCenterPosition.y, rectCenterPosition.z,
-        true,
-      );  
+      // this._entity._entityManager._mc.CameraControls.setLookAt(
+      //   cameraPosition.x, cameraPosition.y, cameraPosition.z,
+      //   rectCenterPosition.x, rectCenterPosition.y, rectCenterPosition.z,
+      //   true,
+      // );  
   
      
   }
@@ -355,8 +363,40 @@ class DynamicuiWorkerComponent extends Component {
 
     return intersection;
 }
-Explanatio
 
+getElementPosition( htmlElement: HTMLElement) {
+  // Find the span element with the data attribute data-cli-cursor
+
+  //
+   let cursor =  htmlElement
+  let rect = cursor.getBoundingClientRect();
+
+  // Calculate normalized device coordinates (NDC)
+  let ndcX = (rect.left + rect.width / 2) / window.innerWidth * 2 - 1;
+  let ndcY = -(rect.top + rect.height / 2) / window.innerHeight * 2 + 1;
+
+  // Create a vector for NDC
+  let ndcVector = new THREE.Vector3(ndcX, ndcY, 0.5); // z = 0.5 for the unprojection from screen space
+
+  // Unproject the NDC to world coordinates
+  ndcVector.unproject(this._entity._entityManager._mc.camera);
+
+  // Create a ray from the camera to the unprojected point
+  let ray = new THREE.Raycaster(
+      this._entity._entityManager._mc.camera.position, 
+      ndcVector.sub(this._entity._entityManager._mc.camera.position).normalize()
+  );
+
+  // Define the plane using its position and rotation
+  let planeY = this._webgpuplane.position.y; // Assuming the plane is horizontal at y = 0
+ 
+  // Calculate the intersection of the ray with the horizontal plane
+  let t = (planeY - ray.ray.origin.y) / ray.ray.direction.y;
+  let intersection = ray.ray.origin.clone().add(ray.ray.direction.clone().multiplyScalar(t));
+
+  return intersection;
+}
+ 
   async typeinelement(element: HTMLElement, text: string, speed: number = 50) {
     await StaticCLI.typeInside(element, "uk-card-title", text, speed, false); 
 }

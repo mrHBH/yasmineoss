@@ -117,6 +117,10 @@ const contacthtml =/*html*/ `
           pos,
  
         ];
+        let lookatFlow = [
+          new THREE.Vector3(0, 0, -1),
+         ];
+        mc.UIManager.lookatPath = lookatFlow;
         mc.UIManager.splinePath.points = contactFlow;   
       
         mc.UIManager.cubePosition = 1;
@@ -128,56 +132,69 @@ const contacthtml =/*html*/ `
 
       projectsButton.onclick = () => {
         mc.initSound();
-        mc.initProjects();
-        mc.UIManager.toggleBirdEyemode();
+       // mc.initProjects();
+      // mc.UIManager.toggleBirdEyemode();
 
-        let contactFlow = [
-          startpos,
-          new THREE.Vector3(0, 10, 0),
-          new THREE.Vector3(0,3, 5),
-          new THREE.Vector3(5,3, 15),
-          new THREE.Vector3(15,3, 20),
-          new THREE.Vector3(25,10, 20),
-        ];
+        // let contactFlow = [
+        //   startpos,
+        //   new THREE.Vector3(0, 10, 0),
+        //   new THREE.Vector3(0,3, 5),
+        //   new THREE.Vector3(5,3, 15),
+        //   new THREE.Vector3(15,3, 20),
+        //   new THREE.Vector3(25,10, 20),
+        // ];
 
-        let lookatFlow = [
-          new THREE.Vector3(0, -1, 0),
-          // new THREE.Vector3(25, -100, 0),
-
+        // let lookatFlow = [
+        //   new THREE.Vector3(0, -1, 0),
+ 
          
-        ];
-        mc.UIManager.splinePath.points = contactFlow;   
-        mc.UIManager.lookatPath = lookatFlow;
+        // ];
+        // mc.UIManager.splinePath.points = contactFlow;   
+        // mc.UIManager.lookatPath = lookatFlow;
       
-        mc.UIManager.cubePosition = 0.0;
-        mc.UIManager.updateScrollbarPosition();
-        mc.UIManager.updateSplineObject();
+        // mc.UIManager.cubePosition = 0.0;
+        // mc.UIManager.updateScrollbarPosition();
+        // mc.UIManager.updateSplineObject();
 
         const p = async () => {
-         let ui=await mc.UIManager.CreateDynamicUI("projectsUIé", "../pages/projects.js", new THREE.Vector3(25,0, 20) , new THREE.Quaternion().setFromAxisAngle( new THREE.Vector3( 1, 0, 0 ), Math.PI / 2 )) 
+         let ui=await mc.UIManager.CreateDynamicUI("projectsUIé", "../pages/projects.js", new THREE.Vector3(25,0.01, 20) , new THREE.Quaternion().setFromAxisAngle( new THREE.Vector3( 1, 0, 0 ), Math.PI / 2 )) 
           let dynauicomponent = ui.getComponent("DynamicuiWorkerComponent");
-          
-        //  await mc.mainEntity.Broadcast({
-        //   topic: "face",
-        //  });
-        //  await mc.mainEntity.Broadcast({
-        //     topic: "walk",
-        //     data : {position: new THREE.Vector3(25, 0, 20)},
-        //   });
+         //  await ui.Broadcast({ topic :"zoom",  data :{value: 8}});
 
-           mc.UIManager.toggleScrollmode();
-           //get 
-           
+              let contactFlow = [
+          startpos,
+          new THREE.Vector3( 25, 0.01, 20),
+          new THREE.Vector3( 25, 0.01,  30),
+        ];
+        let lookatFlow = [
+          new THREE.Vector3(0, 0, -1),
+          new THREE.Vector3(0, -1, 0),
+        ];
+        mc.UIManager.splinePath.points = contactFlow;
+        mc.UIManager.lookatPath = lookatFlow;
+          //add a point to the spline path
+          //tween the cubeposition to the new point 
           
-               
-        // await ui.Broadcast({
-        //           topic: "zoom",
-        //           data: { value: 15 },
-        //         });
+    
+          mc.UIManager.lookatPath.push(new THREE.Vector3(0, -1, 0));
+         mc.UIManager.updateSplineObject();
 
+         mc.UIManager.updateScrollbarPosition();
+         await tween({
+          from: { shape: 0 },
+          to: { shape: 1 },
+          duration: 2000,
+          easing: "easeOutQuad",
+          render: (state) => {
+            mc.UIManager.cubePosition = state.shape;
+            mc.UIManager.updateScrollbarPosition();
+          },
+        });
+        
  
 
-   //    mc.spwancar();
+          //  mc.UIManager.toggleScrollmode();
+  
       };
       p();
       }
