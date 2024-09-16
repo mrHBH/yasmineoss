@@ -18,6 +18,8 @@ jobs:
        
         script: |
           cd /home/dev/Yasmineoss/yasmineoss/
-          git pull
+          git stash --include-untracked         
+          # Stash all changes (including untracked)
+          git pull --rebase                       # Pull with rebase
           docker compose -f dockercomposeCPU.yml down
           docker compose -f dockercomposeCPU.yml up --build -d
