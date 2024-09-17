@@ -51,13 +51,23 @@ websocketclient = None
 # qwen2:7b
 # codestral
 # qwen2:7b
-model = ChatOllama(
-    model="llama3",
-    base_url=bas_url,
-    api_key="ollama",
-    stream=True,
-    verbose=True,
-)
+if os.environ.get("CPU_ENV") == "1":
+    model = ChatOllama(
+        model="phi3:latest",
+        base_url=bas_url,
+        api_key="ollama",
+        stream=True,
+        verbose=True,
+    )
+else:
+
+    model = ChatOllama(
+        model="llama3",
+        base_url=bas_url,
+        api_key="ollama",
+        stream=True,
+        verbose=True,
+    )
 if USE_GROC == "True":
     model = ChatGroq(
         temperature=0,
