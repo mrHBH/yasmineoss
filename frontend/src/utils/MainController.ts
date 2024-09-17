@@ -469,6 +469,11 @@ this.physicsmanager.World.addBody(floorBody);
 
 
     );
+    if (intersects.length  == 0) {
+       //allow default context menu
+       event.stopPropagation();
+        return;
+    }
 
     console.log(intersects[0].point)
     //add an arrow pointing towards the point 

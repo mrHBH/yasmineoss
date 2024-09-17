@@ -143,9 +143,10 @@ let cb = function (e) {
 // Initialize chat interface
 StaticCLI.typeSync(this.uiElement, chatHtml, 5, true);
 
-// Set up WebSocket connection
-let pythonbackend = "ws://localhost:8000/ws/lg/";
-this.websocket = new WebSocket(pythonbackend);
+let hostname = window.location.hostname;
+let pythonbackend =  "https://" + hostname + ":8000/ws/lg/"
+
+
 
 this.websocket.onopen = () => {
   console.log("WebSocket connection established");
