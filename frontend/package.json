@@ -30,6 +30,7 @@
     "pdfjs-dist": "^4.6.82",
     "run": "^1.5.0",
     "shifty": "^3.0.3",
+    "simplebar": "^6.2.7",
     "three": "^0.168.0",
     "three-mesh-bvh": "^0.7.8",
     "tweakpane": "^4.0.4",

@@ -5,6 +5,7 @@ import { CSS2DObject } from "../CSS2D";
 import { tween } from "shifty";
 import { max } from "three/webgpu";
 import { StaticCLI } from "../../SimpleCLI";
+import SimpleBar from "simplebar";
  class twoDUIComponent extends Component {
   private _html: string;
   private _css2dobject: CSS2DObject;
@@ -56,6 +57,9 @@ import { StaticCLI } from "../../SimpleCLI";
     this._css2dobject = new CSS2DObject(this._htmlElement);
     this._css2dgroup.add(this._css2dobject);
 
+    new SimpleBar( this._htmlElement);
+
+
     const planeMaterial = new THREE.MeshLambertMaterial();
     planeMaterial.color.set("black");
     planeMaterial.opacity = 0;
@@ -77,7 +81,7 @@ import { StaticCLI } from "../../SimpleCLI";
 
   async AnimateType(text: string, delay: number = 100) {
       
-      await   StaticCLI.type(this._htmlElement, text, delay, true);
+          StaticCLI.typeSync(this._htmlElement, text, delay, true);
   
   }
 
@@ -208,7 +212,12 @@ import { StaticCLI } from "../../SimpleCLI";
     //apply a transition to the opacity of the html element
     // this._htmlElement.style.transition = "opacity 0.5s";
     // this._htmlElement.style.opacity = "0";
-    this._webgpuplane.material.transparent = true;
+    //check if a scroll bar is present , if yes hide it
+
+      this._htmlElement.style.overflow = "hidden";
+      this._htmlElement.style.overflowY = "hidden";
+      this._htmlElement.style.overflowX = "hidden";
+     this._webgpuplane.material.transparent = true;
      tween({
       from: { x:  1},
       to: { x: 0 },

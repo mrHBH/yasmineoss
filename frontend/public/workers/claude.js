@@ -232,7 +232,7 @@ let cb = function (e) {
   };
 
   
-  this.setupBehaviorControls = function() {
+    this.setupBehaviorControls = function() {
     const objectList = this.uiElement.querySelector('#object-list');
     const setTargetBtn = this.uiElement.querySelector('#set-target');
     const pushObjectBtn = this.uiElement.querySelector('#push-object');

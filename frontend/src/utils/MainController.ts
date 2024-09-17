@@ -1,4 +1,4 @@
-import * as THREE from "three/webgpu"; 
+import * as THREE from "three"; 
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import * as CANNON from "cannon-es";
 import { MeshPhysicalNodeMaterial, WebGPURenderer } from "three/webgpu";
@@ -23,7 +23,7 @@ import { SoundGeneratorAudioListener } from "./Sound_generator_worklet_wasm.js";
 
 // import { CustomCursor } from "./CustomCursor.js";
 // import { StaticCLI } from "../SimpleCLI.js";
-// import { DynamicuiComponent } from "./Components/DynamicuiComponent.js";
+ import { DynamicuiComponent } from "./Components/DynamicuiComponent.js";
 // // import { MeshPhongNodeMaterial,MeshBasicNodeMaterial, MeshPhysicalNodeMaterial, MeshStandardNodeMaterial } from 'three/tsl';
    import Stats from 'three/addons/libs/stats.module.js';
 // // import { t } from "xstate";
@@ -81,7 +81,7 @@ class MainController {
 
    this.webgpu = new THREE.WebGPURenderer({ antialias: false , logarithmicDepthBuffer: false , powerPreference: "high-performance" , }) as THREE.WebGPURenderer;
    
-   this.webgpu.setPixelRatio(     window.devicePixelRatio);
+   this.webgpu.setPixelRatio( window.devicePixelRatio);
     //  this.webgpu.shadowMap.enabled = true;
     // this.webgpu.shadowMap.type = THREE.VSMShadowMap;
 
@@ -257,27 +257,27 @@ class MainController {
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "c") {
-        const car = new Entity();
-        const carcontroller = new CarComponent({});
-        const keyboardinput = new KeyboardInput();
-        this.initSound();
+      // if (event.key === "c") {
+      //   const car = new Entity();
+      //   const carcontroller = new CarComponent({});
+      //   const keyboardinput = new KeyboardInput();
+      //   this.initSound();
 
-        car.Position = new THREE.Vector3(0, 1, 0);
-        car.AddComponent(carcontroller).then(() => {
-          car.AddComponent(keyboardinput);
-          this.entitymanager.AddEntity(car, "Car" + Math.random()).then(() => {
-            this.mainEntity = car;
-          });
+      //   car.Position = new THREE.Vector3(0, 1, 0);
+      //   car.AddComponent(carcontroller).then(() => {
+      //     car.AddComponent(keyboardinput);
+      //     this.entitymanager.AddEntity(car, "Car" + Math.random()).then(() => {
+      //       this.mainEntity = car;
+      //     });
 
-          //create a quaternion that when multiplied by another quaternion it rotates it 90 degrees around the y axsi
-          this.UIManager.fpsquatoffset =
-            new THREE.Quaternion().setFromAxisAngle(
-              new THREE.Vector3(0, 1, 0),
-              Math.PI / 2
-            );
-        });
-      }
+      //     //create a quaternion that when multiplied by another quaternion it rotates it 90 degrees around the y axsi
+      //     this.UIManager.fpsquatoffset =
+      //       new THREE.Quaternion().setFromAxisAngle(
+      //         new THREE.Vector3(0, 1, 0),
+      //         Math.PI / 2
+      //       );
+      //   });
+      // }
     });
 
     document.addEventListener("keydown", (event) => {

@@ -13,6 +13,7 @@ import {   reflector, uv, texture, color , mix } from 'three/tsl';
 
  
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
+import SimpleBar from "simplebar";
 let uva= uv( 0 );
 let vec2a= vec2( 0.0, 0.0 );
 let dist = distance(  vec2a, vec2a );
@@ -1468,10 +1469,13 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     cliContainer.style.minWidth = "20vw";
     cliContainer.style.maxWidth = "60vw";
     cliContainer.style.maxHeight = "40vh";
-    cliContainer.style.overflowY = "auto";
-    cliContainer.style.scrollbarWidth = "none";
-   // cliContainer.style.transition = "opacity 0.3s ease-in-out";
+     cliContainer.style.overflowY = " auto";
+     
+     //create a simple bar
   
+  cliContainer.style.scrollbarWidth = "none";
+   cliContainer.style.transition = "opacity 0.3s ease-in-out";
+ 
    
   
     const inlineContainer = document.createElement("div");

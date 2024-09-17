@@ -234,7 +234,7 @@ postMessage({ type: 'wheelupdate' , wheelOptions : wheelOptions });
  
 let soundoptions = {
     
-    cylinders:1,
+    cylinders:8,
 
     intakeWaveguideLength: 200,
     exhaustWaveguideLength: 50,
