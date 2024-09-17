@@ -62,7 +62,7 @@ if os.environ.get("CPU_ENV") == "1":
 else:
 
     model = ChatOllama(
-        model="llama3",
+        model="phi3:3.8b",
         base_url=bas_url,
         api_key="ollama",
         stream=True,
@@ -171,13 +171,18 @@ class palagent:
                 await websocket.send_json({"command": "jsonpatch", "patch": chunks[-1]})
                
                 if len(chunks) > 1  and (chunks[-2] + chunks[-1] ).find(endtoken) != -1:
-                    break
+                    
+                    await asyncio.sleep(0)
+                    await websocket.send_json({"command": "codeexec"})
 
+                    break
+            await asyncio.sleep(0)
+            
             code = "".join(chunks)
             # Remove the triple backticks
             code =  code.replace("```", "")
             logging.info(code)
-
+            await asyncio.sleep(0)
             result = pe.run_python_code(code)
             logging.info(f"result: {result} ")
 

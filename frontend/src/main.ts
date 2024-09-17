@@ -207,8 +207,23 @@ class Main {
     });
     await environmentbot.AddComponent(environmentcontroller);
     await environmentbot.AddComponent(new AIInput());
-    await environmentbot.AddComponent(new KeyboardInput());
+    //await environmentbot.AddComponent(new KeyboardInput());
    await this.entityManager.AddEntity(environmentbot, "palbob");
+
+     
+   //add script entity environmentbot to the scene
+   const environmentbot2 = new Entity();
+   environmentbot2.Position = new THREE.Vector3(0, 1,6);
+   const environmentcontroller2 = new CharacterComponent({
+     modelpath: "models/gltf/Xbot.glb",
+     animationspathslist: animations,
+     behaviourscriptname: "palbobdesigner.js",
+   });
+   await environmentbot2.AddComponent(environmentcontroller2);
+   await environmentbot2.AddComponent(new AIInput());
+   await environmentbot2.AddComponent(new KeyboardInput());
+  await this.entityManager.AddEntity(environmentbot2, "palsydney");
+
 
   //   // const introui = new Entity();
 

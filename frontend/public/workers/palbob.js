@@ -4,7 +4,7 @@ let cb = function (e) {
   let physicsworld = this._entity._entityManager._mc.physicsmanager.world;
   this.mc = mc;
 
-  // Clear existing objects (keeping this part as it was)
+  // Clear existing objects and chat
   this.clearEnvironment = () => {
     if (this.threedobjects) {
       this.threedobjects.forEach((obj) => {
@@ -18,6 +18,11 @@ let cb = function (e) {
     }
     this.threedobjects = [];
     this.phycisobjects = [];
+
+    // Clear chat messages
+    const chatContainer = this.uiElement.querySelector('#chatContainer');
+    if (chatContainer)
+     chatContainer.innerHTML = '';
   };
 
   this.clearEnvironment();
@@ -53,16 +58,21 @@ let cb = function (e) {
   let chatHtml = /*html*/ `
       <div class="uk-card uk-card-secondary uk-card-body" style="width: 50vw; height: 40vh; overflow-y: scroll;" >
       <h3 class="uk-card-title">Chat with PAL Bot</h3>
-    <div id="chatContainer" style="flex-grow: 1; overflow-y: auto; margin-bottom: 10px;"></div>
-    <div class="uk-margin">
-      <input class="uk-input" type="text" id="userInput" placeholder="Type your message here...">
+      <div id="loadingSpinner" class="uk-flex uk-flex-center">
+        <div uk-spinner></div>
+        <span class="uk-margin-small-left">Initializing agent...</span>
+      </div>
+      <div id="chatContainer" style="flex-grow: 1; overflow-y: auto; margin-bottom: 10px;"></div>
+      <div class="uk-margin" style="display: none;">
+        <input class="uk-input" type="text" id="userInput" placeholder="Type your message here...">
+      </div>
+      <div class="uk-button-group" style="display: none;">
+        <button id="sendMessage" class="uk-button uk-button-primary">Send</button>
+        <button id="clearEnvironment" class="uk-button uk-button-danger">Clear All</button>
+      </div>
     </div>
-    <div class="uk-button-group">
-      <button id="sendMessage" class="uk-button uk-button-primary">Send</button>
-      <button id="clearEnvironment" class="uk-button uk-button-danger">Clear Environment</button>
-    </div>
-  </div>
-`; 
+  `;
+
   // Function to add message to chat
   const addMessageToChat = (message, isUser = false, isStreaming = false, isError = false) => {
     const chatContainer = this.uiElement.querySelector('#chatContainer');
@@ -140,89 +150,134 @@ let cb = function (e) {
       });
     }
   };
-// Initialize chat interface
-StaticCLI.typeSync(this.uiElement, chatHtml, 5, true);
 
-// Set up WebSocket connection
-//if you are running the backend on the same machine as the frontend
-if (location.hostname === "localhost") {
-  let pythonbackend = "ws://localhost:8000/ws/lg/";
-  this.websocket = new WebSocket(pythonbackend);
-}
-else {
-   
-  let pythonbackend =  "wss://llm.ben-hassen.com/ws/lg/"
-  this.websocket = new WebSocket(pythonbackend);
+  // Initialize chat interface
+  StaticCLI.typeSync(this.uiElement, chatHtml, 5, true);
+
+  // Set up WebSocket connection
+  if (location.hostname === "localhost") {
+    let pythonbackend = "ws://localhost:8000/ws/lg/";
+    this.websocket = new WebSocket(pythonbackend);
+  } else {
+    let pythonbackend =  "wss://llm.ben-hassen.com/ws/lg/"
+    this.websocket = new WebSocket(pythonbackend);
   }
- 
 
+  let executionTimer;
+  let executionStartTime;
 
-this.websocket.onopen = () => {
-  console.log("WebSocket connection established");
-  let jsoncmd = JSON.stringify({
-    cmd: "initagent",
-    workername: "environmentbot.js",
-  });
-  this.websocket.send(jsoncmd);
-};
-this.websocket.onmessage = (event) => {
-  let jsondata = JSON.parse(event.data);
-  console.log(jsondata);
-
-  if (jsondata.command === "initres") {
-    this.agentid = jsondata.agentid;
-    this.agentintialized = true;
-    addMessageToChat("Agent initialized and ready to chat!");
-  } else if (jsondata.command === "jsonpatch") {
-    // Handle streaming response
-    addMessageToChat(jsondata.patch, false, true);
-  } else if (jsondata.command === "chatanswer") {
-    // Handle final answer
-    collapseStreamedMessage(jsondata.text);
-  } else if (jsondata.command === "chatfailedanswer") {
-    // Handle failed attempt
-    collapseStreamedMessage("Attempt failed. Retrying...", true, jsondata.text);
-  }
-};
-
-// Set up event listeners
-const userInput = this.uiElement.querySelector('#userInput');
-const sendButton = this.uiElement.querySelector('#sendMessage');
-const clearButton = this.uiElement.querySelector('#clearEnvironment');
-
-const sendMessage = () => {
-  const message = userInput.value.trim();
-  if (message) {
-    addMessageToChat(message, true);
+  this.websocket.onopen = () => {
+    console.log("WebSocket connection established");
     let jsoncmd = JSON.stringify({
-      cmd: "chat",
-      prompt: message,
+      cmd: "initagent",
+      workername: "environmentbot.js",
     });
     this.websocket.send(jsoncmd);
-    userInput.value = '';
-  }
-};
+  };
 
-sendButton.addEventListener('click', sendMessage);
-userInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    sendMessage();
-  }
-});
+  this.websocket.onmessage = (event) => {
+    let jsondata = JSON.parse(event.data);
+    console.log(jsondata);
 
-clearButton.addEventListener('click', this.clearEnvironment);
+    if (jsondata.command === "initres") {
+      this.agentid = jsondata.agentid;
+      this.agentintialized = true;
+      this.uiElement.querySelector('#loadingSpinner').style.display = 'none';
+      this.uiElement.querySelector('.uk-margin').style.display = 'block';
+      this.uiElement.querySelector('.uk-button-group').style.display = 'block';
+      collapseStreamedMessage("Agent initialized and ready to chat!");
+    } else if (jsondata.command === "jsonpatch") {
+      // Handle streaming response
+      addMessageToChat(jsondata.patch, false, true);
+    } else if (jsondata.command === "chatanswer") {
+      
+      clearInterval(this.executionTimer);
+      this.executionSpinner.remove();
+      collapseStreamedMessage(jsondata.text);
 
-// Add some custom CSS for better text selection
-const style = document.createElement('style');
-style.textContent = `
-  .user-select-all {
-    user-select: all;
-    -webkit-user-select: all;
-    -moz-user-select: all;
-    -ms-user-select: all;
-  }
-`;
-document.head.appendChild(style);
+     
+
+      // Start execution timer
+
+      // Handle final answer after a short delay to simulate execution time
+  
+    }
+    else if (jsondata.command === "codeexec") {
+      this.executionStartTime = Date.now();
+        // Show execution spinner
+        this.executionSpinner = document.createElement('div');
+        this.executionSpinner.innerHTML = `
+          <div class="uk-flex uk-flex-center">
+            <div uk-spinner></div>
+            <span style="width: 50px" class="uk-margin-small-left">Executing: <span id="executionTimer">0s</span></span>
+          </div>
+        `;
+        this.uiElement.querySelector('#chatContainer').appendChild(this.executionSpinner);
+      let executiontimerholder = this.uiElement.querySelector('#executionTimer');
+      this.executionTimer = setInterval(() => {
+        
+       const elapsedTime = Math.floor((Date.now() - this.executionStartTime) / 1000);
+        
+       executiontimerholder.innerHTML = `${elapsedTime}s`;
+
+       
+     }, 500);
+
+     
+    }
+    else if (jsondata.command === "chatfailedanswer") {
+      // Handle failed attempt
+     
+        
+      clearInterval(this.executionTimer);
+      this.executionSpinner.remove();
+      collapseStreamedMessage(jsondata.text, true);
+
+      collapseStreamedMessage("Attempt failed. Retrying...", true, jsondata.text);
+    }
+  };
+
+  // Set up event listeners
+  const userInput = this.uiElement.querySelector('#userInput');
+  const sendButton = this.uiElement.querySelector('#sendMessage');
+  const clearButton = this.uiElement.querySelector('#clearEnvironment');
+
+  const sendMessage = () => {
+    const message = userInput.value.trim();
+    if (message) {
+      addMessageToChat(message, true);
+      let jsoncmd = JSON.stringify({
+        cmd: "chat",
+        prompt: message,
+      });
+      this.websocket.send(jsoncmd);
+      userInput.value = '';
+    }
+  };
+
+  sendButton.addEventListener('click', sendMessage);
+  userInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  });
+
+  clearButton.addEventListener('click', () => {
+    this.clearEnvironment();
+    addMessageToChat("Environment and chat cleared.", false);
+  });
+
+  // Add some custom CSS for better text selection
+  const style = document.createElement('style');
+  style.textContent = `
+    .user-select-all {
+      user-select: all;
+      -webkit-user-select: all;
+      -moz-user-select: all;
+      -ms-user-select: all;
+    }
+  `;
+  document.head.appendChild(style);
 };
 
 console.log("worker setup");
@@ -230,7 +285,7 @@ console.log("worker setup");
 self.postMessage({ type: "setupdialogue", js: `(${cb.toString()})` });
 
 self.onmessage = function (e) {
-if (e.data.type == "boot") {
-  console.log("worker" + e.data.key + " " + e.data.value);
-}
+  if (e.data.type == "boot") {
+    console.log("worker" + e.data.key + " " + e.data.value);
+  }
 };
