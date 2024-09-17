@@ -143,9 +143,18 @@ let cb = function (e) {
 // Initialize chat interface
 StaticCLI.typeSync(this.uiElement, chatHtml, 5, true);
 
-let hostname = window.location.hostname;
-let pythonbackend =  "https://" + hostname + ":8000/ws/lg/"
-
+// Set up WebSocket connection
+//if you are running the backend on the same machine as the frontend
+if (location.hostname === "localhost") {
+  let pythonbackend = "ws://localhost:8000/ws/lg/";
+  this.websocket = new WebSocket(pythonbackend);
+}
+else {
+  let hostname = window.location.hostname;
+  let pythonbackend =  "https://" + hostname + ":8000/ws/lg/"
+  this.websocket = new WebSocket(pythonbackend);
+  }
+ 
 
 
 this.websocket.onopen = () => {
