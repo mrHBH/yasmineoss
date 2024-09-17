@@ -114,6 +114,8 @@ async def loadmodel():
     #load the module
  
 if __name__ == "__main__":
-    
+    #check if not local host ; then secure https
+    if os.environ.get("ENV") == "production":
+
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
      
