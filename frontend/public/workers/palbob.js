@@ -151,7 +151,7 @@ if (location.hostname === "localhost") {
 }
 else {
    
-  let pythonbackend =  "https://llm.ben-hasse.com"+ ":8000/ws/lg/"
+  let pythonbackend =  "wss://llm.ben-hassen.com/ws/lg/"
   this.websocket = new WebSocket(pythonbackend);
   }
  
