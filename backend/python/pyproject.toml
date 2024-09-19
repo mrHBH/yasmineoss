@@ -24,6 +24,7 @@ langchain-community = "^0.2.1"
 aiosqlite = "^0.20.0"
 transformers = "^4.41.2"
 autopep8 = "^2.3.1"
+dill = "^0.3.8"
   
 
 [build-system]

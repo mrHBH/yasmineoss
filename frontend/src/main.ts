@@ -133,21 +133,21 @@ class Main {
 
     // this.maincController.MainEntity = bob;
 
-    const bob2 = new Entity();
-    bob2.Position = new THREE.Vector3(0, 1, 0);
+    // const bob2 = new Entity();
+    // bob2.Position = new THREE.Vector3(0, 1, 0);
 
-    const bobcontroller2 = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: animations,
-     behaviourscriptname: "claude.js",
-    });
+    // const bobcontroller2 = new CharacterComponent({
+    //   modelpath: "models/gltf/ybot2.glb",
+    //   animationspathslist: animations,
+    //  behaviourscriptname: "claude.js",
+    // });
 
-     await bob2.AddComponent(bobcontroller2);
-    await bob2.AddComponent(new AIInput());
-    await bob2.AddComponent(new KeyboardInput());
-     await this.entityManager.AddEntity(bob2, "claude");
-    this.maincController.MainEntity = bob2;
-    bobcontroller2.face();
+    //  await bob2.AddComponent(bobcontroller2);
+    // await bob2.AddComponent(new AIInput());
+    // await bob2.AddComponent(new KeyboardInput());
+    //  await this.entityManager.AddEntity(bob2, "claude");
+    // this.maincController.MainEntity = bob2;
+    // bobcontroller2.face();
 
   //   const claude2 = new Entity();
   //   claude2.Position = new THREE.Vector3(0, 1, 9);
@@ -209,6 +209,24 @@ class Main {
     await environmentbot.AddComponent(new AIInput());
     //await environmentbot.AddComponent(new KeyboardInput());
    await this.entityManager.AddEntity(environmentbot, "palbob");
+
+     //add script entity environmentbot to the scene
+     const palbobmem = new Entity();
+     palbobmem.Position = new THREE.Vector3(4, 1,4);
+     const palbobmemcontroller = new CharacterComponent({
+       modelpath: "models/gltf/ybot2.glb",
+       animationspathslist: animations,
+       behaviourscriptname: "palbobmem.js",
+     });
+     await palbobmem.AddComponent(palbobmemcontroller);
+     await palbobmem.AddComponent(new AIInput());
+     //await environmentbot.AddComponent(new KeyboardInput());
+    await this.entityManager.AddEntity(palbobmem, "palbobmem");
+    this.maincController.MainEntity = palbobmem;
+    palbobmemcontroller.face();
+
+
+ 
 
      
    //add script entity environmentbot to the scene

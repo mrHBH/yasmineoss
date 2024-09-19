@@ -69,6 +69,9 @@ let cb = function (e) {
       <div class="uk-button-group" style="display: none;">
         <button id="sendMessage" class="uk-button uk-button-primary">Send</button>
         <button id="clearEnvironment" class="uk-button uk-button-danger">Clear All</button>
+        <button id="saveState" class="uk-button uk-button-secondary">Save State</button>
+      <button id="loadState" class="uk-button uk-button-secondary">Load State</button>
+      <button id="listStates" class="uk-button uk-button-secondary">List States</button>
       </div>
     </div>
   `;
@@ -119,6 +122,7 @@ let cb = function (e) {
         <a href="#" class="uk-margin-small-left explain-link">↓ show code</a>
         <div class="code-container" style="display: none;">
           <pre class="uk-margin-small-top"><code class="user-select-all">${codeElement.textContent}</code></pre>
+          
       `;
       
       if (isError) {
@@ -170,14 +174,14 @@ let cb = function (e) {
     console.log("WebSocket connection established");
     let jsoncmd = JSON.stringify({
       cmd: "initagent",
-      workername: "palbob.js",
+      workername: "palbobmem.js",
     });
     this.websocket.send(jsoncmd);
   };
 
   this.websocket.onmessage = (event) => {
     let jsondata = JSON.parse(event.data);
-    console.log(jsondata);
+    // console.log(jsondata);
 
     if (jsondata.command === "initres") {
       this.agentid = jsondata.agentid;
@@ -191,8 +195,21 @@ let cb = function (e) {
       addMessageToChat(jsondata.patch, false, true);
     } else if (jsondata.command === "chatanswer") {
       
+      if (this.executionTimer  && this.executionSpinner) {
       clearInterval(this.executionTimer);
-      this.executionSpinner.remove();
+      this.executionSpinner.remove();}
+      //if text is a list , we need to display it as a list
+        //check jsondata.text if it is a list 
+        if ( typeof jsondata.text === 'object' && jsondata.text.length > 0) {
+          let list = jsondata.text;
+
+          let listHtml = `<ul>`;
+          for (let i = 0; i < list.length; i++) {
+            listHtml += `<li>${list[i]}</li>`;
+          }
+          listHtml += `</ul>`;
+          addMessageToChat(listHtml, false);
+        }  
       collapseStreamedMessage(jsondata.text);
 
      
@@ -231,7 +248,7 @@ let cb = function (e) {
         
       clearInterval(this.executionTimer);
       this.executionSpinner.remove();
-      collapseStreamedMessage(jsondata.text, false);
+      collapseStreamedMessage(jsondata.text, true);
 
       collapseStreamedMessage("Attempt failed. Retrying...", true, jsondata.text);
     }
@@ -241,6 +258,45 @@ let cb = function (e) {
   const userInput = this.uiElement.querySelector('#userInput');
   const sendButton = this.uiElement.querySelector('#sendMessage');
   const clearButton = this.uiElement.querySelector('#clearEnvironment');
+  // Set up event listeners for the new buttons
+const saveStateButton = this.uiElement.querySelector('#saveState');
+const loadStateButton = this.uiElement.querySelector('#loadState');
+const listStatesButton = this.uiElement.querySelector('#listStates');
+
+// Save State button logic
+saveStateButton.addEventListener('click', () => {
+  const stateName = prompt("Enter a name for the state to save:");
+  if (stateName) {
+    let jsoncmd = JSON.stringify({
+      cmd: "savestate",
+      filename: stateName
+    });
+    this.websocket.send(jsoncmd);
+    addMessageToChat(`Saving state as "${stateName}"`, true);
+  }
+});
+
+// Load State button logic
+loadStateButton.addEventListener('click', () => {
+  const stateName = prompt("Enter the name of the state to load:");
+  if (stateName) {
+    let jsoncmd = JSON.stringify({
+      cmd: "loadstate",
+      filename: stateName
+    });
+    this.websocket.send(jsoncmd);
+    addMessageToChat(`Loading state "${stateName}"`, true);
+  }
+});
+
+// List States button logic
+listStatesButton.addEventListener('click', () => {
+  let jsoncmd = JSON.stringify({
+    cmd: "liststates"
+  });
+  this.websocket.send(jsoncmd);
+  addMessageToChat("Listing saved states...", true);
+});
 
   const sendMessage = () => {
     const message = userInput.value.trim();

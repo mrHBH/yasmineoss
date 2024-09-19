@@ -88,6 +88,9 @@ async def websocket_endpoint(websocket: WebSocket):
 async def loadmodel():
     import modules.basicautogenagent as ba
     importlib.reload(ba)
+    from ais.palbobmemory import PalAgentMemory
+    importlib.reload(PalAgentMemory)
+
     res = await  ba.generate_questions()
     return res
 
