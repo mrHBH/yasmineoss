@@ -3,9 +3,10 @@ import * as THREE from "three";
 import { Entity } from "../Entity";
 import { CSS2DObject } from "../CSS2D";
 import { tween } from "shifty";
-import { max } from "three/webgpu";
+import { abs, max } from "three/webgpu";
 import { StaticCLI } from "../../SimpleCLI";
 import SimpleBar from "simplebar";
+import { mapContext } from "xstate/lib/utils";
  class twoDUIComponent extends Component {
   private _html: string;
   private _css2dobject: CSS2DObject;
@@ -15,13 +16,16 @@ import SimpleBar from "simplebar";
   private _webgpugroup: THREE.Group = new THREE.Group();
   private _size: THREE.Vector2;
   sticky: boolean = false;
-   maximized: boolean;
+   fittoscroll: boolean;
    typed: boolean;
+   lastdistance: number;
+   private cameraheight: number;
 
   constructor(html: string, size?: THREE.Vector2) {
     super();
     this._html = html;
     this._size = size ? size : new THREE.Vector2(500, 500);
+
     
   }
 
@@ -32,12 +36,51 @@ import SimpleBar from "simplebar";
     return this._size;
   }
 
+  set FitToScroll(value: boolean) {
+    
+    if (value) {
+
+      //dispatch resize event with current window size
+      this.makescrollable(new THREE.Vector2(window.innerWidth , window.innerHeight)).then(() => {
+      this.fittoscroll = value;
+      
+      }
+      );
+    }
+    if (!value) {
+       // this.setSizeSmoothly(new THREE.Vector2(window.innerWidth , window.innerHeight*4.5));
+       this.fittoscroll = value;
+       this.setSizeSmoothly(new THREE.Vector2(window.innerWidth , 2.5*window.innerHeight));
+
+    }
+  }
+
+
+  set Quaterion(quaternion: THREE.Quaternion) {
+    this._webgpugroup.quaternion.set(
+      quaternion.x,
+      quaternion.y,
+      quaternion.z,
+      quaternion.w
+    );
+    this._css2dgroup.quaternion.set(
+      quaternion.x,
+      quaternion.y,
+      quaternion.z,
+      quaternion.w
+    );
+  }
+
+
+  
+
+
   set Size(size: THREE.Vector2) {
     this._size = size;
      this._htmlElement.style.height =  this._size.y  + "px"
      this._htmlElement.style.width =    this._size.x  + "px"
-   //   this._webgpuplane?.geometry.scale(2*this._size.x/100, 1.5*this._size.y/100, 1);
-    this._webgpuplane.geometry = new THREE.PlaneGeometry(2*this._size.x/100, 1.5*this._size.y/100);
+   //  this._webgpuplane?.geometry.scale( this._size.x/100, 1.5*this._size.y/100, 1);
+      this._webgpuplane.geometry = new THREE.PlaneGeometry(this._size.x/100,this._size.y/100);
   }
 
   set HtmlElement (htmlElement: HTMLElement) {
@@ -55,27 +98,32 @@ import SimpleBar from "simplebar";
     this._htmlElement.style.width = this._size.x + "px";
 
     this._css2dobject = new CSS2DObject(this._htmlElement);
-    this._css2dgroup.add(this._css2dobject);
+     this._css2dgroup.add(this._css2dobject);
+   //  this._css2dgroup.scale.set(0.1, 0.1, 0.1);
 
     new SimpleBar( this._htmlElement);
 
 
-    const planeMaterial = new THREE.MeshLambertMaterial();
+    const planeMaterial = new THREE.MeshPhysicalMaterial();
     planeMaterial.color.set("black");
+    planeMaterial.reflectivity = 0.5
     planeMaterial.opacity = 0;
     planeMaterial.blending = THREE.NoBlending;
     planeMaterial.transparent = false;
     planeMaterial.side = THREE.DoubleSide;
     this._webgpuplane = new THREE.Mesh(
       new THREE.PlaneGeometry(
-        (1.5 * this._size.x) / 100,
-        (1.5 * this._size.y) / 100
+        (1 * this._size.x) / 100,
+        (1* this._size.y) / 100
       ),
       planeMaterial
     );
-
+    this._webgpuplane.receiveShadow = true;
     this._webgpuplane.userData.component = this;
     this._webgpugroup.add(this._webgpuplane);
+
+    
+    
   }
 
 
@@ -106,14 +154,11 @@ import SimpleBar from "simplebar";
   }
 
   async setSizeSmoothly(size: THREE.Vector2) {
-    console.log("setSizeSmoothly");
-    console.log(size);
-    this._size = size;
-
+    let x= 0;
     tween({
       from: {
         x: this._htmlElement.clientWidth,
-        y: this._htmlElement.clientHeight,
+        y: this._htmlElement. clientHeight,
       },
       to: { x: size.x, y: size.y },
       duration: 1500,
@@ -121,8 +166,56 @@ import SimpleBar from "simplebar";
       render: (state: any) => {
         this._htmlElement.style.height = state.y + "px";
         this._htmlElement.style.width = state.x + "px";
+         //this._htmlElement.style.top =  -x + "px";
+        x+=1;
+         
+       
+      },
+      finish: () => {
+        this.Size = size;
+        this._entity._entityManager._mc.onWindowResize()
+      }
+    });
+      
+  }
+
+  async makescrollable(size: THREE.Vector2) {
+    console.log("setSizeSmoothly");
+    console.log(size);
+    this._size = size; 
+
+    //convert string to number defqult to 0
+     
+    tween({
+      from: {
+        x: this._htmlElement.clientWidth,
+        y: this._htmlElement. clientHeight,
+      },
+      to: { x: size.x, y: size.y },
+      duration: 1500,
+      easing: "easeOutQuad",
+      render: (state: any) => {
+
+        this._htmlElement.style.height = state.y  + "px";
+        this._htmlElement.style.width = state.x   + "px";
+        this._htmlElement.style.top = 0 + "px";
+
+      
+     //   this.Size = size;
+        //translate the element to keep it centered
+       
+
+
         
       },
+      finish: () => {
+        this._htmlElement.scrollIntoView( {block: "center", inline: "center"});
+        //this.Size = size;
+      //  
+      //  this._entity._entityManager._mc.onWindowResize()
+      }
+       
+
     });
 
     // this._htmlElement.style.height = this._size.y + "px";
@@ -133,16 +226,54 @@ import SimpleBar from "simplebar";
     // );
     tween({
       from: { x: this._webgpuplane.scale.x, y: this._webgpuplane.scale.y },
-      to: { x: (1.5 * this._size.x) / 100, y: (1.5 * this._size.y) / 100 },
+      to: { x: 5, y: 5 },
       duration: 1500,
       easing: "easeOutQuad",
       render: (state: any) => {
         this._webgpuplane.scale.set(state.x, state.y, 1);
+
+   
       },
     });
   }
 
+
+  getElementPosition( htmlElement: HTMLElement) {
+    // Find the span element with the data attribute data-cli-cursor
+  
+    //
+     let cursor =  htmlElement
+    let rect = cursor.getBoundingClientRect();
+  
+    // Calculate normalized device coordinates (NDC)
+    let ndcX = (rect.left + rect.width / 2) / window.innerWidth * 2 - 1;
+    let ndcY = -(rect.top + rect.height / 2) / window.innerHeight * 2 + 1;
+  
+    // Create a vector for NDC
+    let ndcVector = new THREE.Vector3(ndcX, ndcY, 0.5); // z = 0.5 for the unprojection from screen space
+  
+    // Unproject the NDC to world coordinates
+    ndcVector.unproject(this._entity._entityManager._mc.camera);
+  
+    // Create a ray from the camera to the unprojected point
+    let ray = new THREE.Raycaster(
+        this._entity._entityManager._mc.camera.position, 
+        ndcVector.sub(this._entity._entityManager._mc.camera.position).normalize()
+    );
+  
+    // Define the plane using its position and rotation
+    let planeY = this._webgpuplane.position.y; // Assuming the plane is horizontal at y = 0
+   
+    // Calculate the intersection of the ray with the horizontal plane
+    let t = (planeY - ray.ray.origin.y) / ray.ray.direction.y;
+    let intersection = ray.ray.origin.clone().add(ray.ray.direction.clone().multiplyScalar(t));
+  
+    return intersection;
+  }
+   
+
   async Update(deltaTime: number): Promise<void> {
+    // Update positions and quaternions
     this._webgpugroup?.position.set(
       this._entity.Position.x,
       this._entity.Position.y,
@@ -166,45 +297,67 @@ import SimpleBar from "simplebar";
       this._entity.Quaternion.w
     );
 
-    const distance = this._entity.Position.distanceTo(
-      this._entity._entityManager._mc.camera.position
-    );
-    //hide the opacity of this._titlebar if the distance is greater than 10
+    const camera = this._entity._entityManager._mc.camera;
+    const distance = this._entity.Position.distanceTo(camera.position);
 
-    if (this.maximized    &&  (this._size.x !== window.innerWidth || this._size.y !== window.innerHeight)) {
-
-      console.log("maximized");
-      this.Size = new THREE.Vector2( window.innerWidth, window.innerHeight);
-    }
-    if (this.sticky) {
-      return;
-    }
-    if (distance > 15) {
-      this._htmlElement.style.opacity = "0";
-      this._htmlElement.style.pointerEvents = "none";
-        tween({
-        from: { x: this._webgpuplane.scale.x, y: this._webgpuplane.scale.y },
-        to: { x: (0.1 ) / 100, y: (0.1 ) / 100 },
-        duration: 500,
-        easing: "easeOutQuad",
-        render: (state: any) => {
-          this._webgpuplane.scale.set(state.x, state.y, 1);
-        },
-      });
+    // Calculate visible plane size based on camera FOV and distance
+    const fov = camera.fov * Math.PI / 180; // Convert FOV to radians
+    const cameraHeight = Math.abs(camera.position.y); // Height above the plane
     
-    } else {
+    // Calculate visible width and height at the plane
+    const visibleHeight = 2.0 * Math.tan(fov / 2) * cameraHeight;
+    const aspectRatio = window.innerWidth / window.innerHeight;
+    const visibleWidth = visibleHeight * aspectRatio;
+
+    // Clamp the visible size to window limits
+    const clampedWidth = Math.min(visibleWidth, window.innerWidth / 100);
+    const clampedHeight = Math.min(visibleHeight, 2 * window.innerHeight / 100);
+
+    // Calculate the scale for the plane
+    const targetScale = new THREE.Vector2(clampedWidth, clampedHeight);
+
+    // Update the plane geometry and HTML element size
+    if (!this.sticky) {
+      if (distance > 15) {
+        this._htmlElement.style.opacity = "0";
+        this._htmlElement.style.pointerEvents = "none";
+        this._webgpuplane.scale.set(0.001, 0.001, 1);
+      } else {
+        // Smoothly transition the plane scale
         tween({
-        from: { x: this._webgpuplane.scale.x, y: this._webgpuplane.scale.y },
-        to: { x: (0.1 * this._size.x) / 100, y: (0.1 * this._size.y ) / 100 },
-        duration: 500,
-        easing: "easeOutQuad",
-        render: (state: any) => {
-          this._webgpuplane.scale.set(state.x, state.y, 1);
-        },
-      });
-      
-      this._htmlElement.style.opacity = "1";
-      this._htmlElement.style.pointerEvents = "auto";
+          from: { 
+            x: this._webgpuplane.scale.x, 
+            y: this._webgpuplane.scale.y 
+          },
+          to: { 
+            x: targetScale.x, 
+            y: targetScale.y 
+          },
+          duration: 500,
+          easing: "easeOutQuad",
+          render: (state: any) => {
+            this._webgpuplane.scale.set(state.x, state.y, 1);
+            
+            // Update HTML element size proportionally
+            const htmlWidth = state.x * 100;
+            const htmlHeight = state.y * 100;
+            this._htmlElement.style.width = `${htmlWidth}px`;
+            this._htmlElement.style.height = `${htmlHeight}px`;
+          }
+        });
+
+        this._htmlElement.style.opacity = "1";
+        this._htmlElement.style.pointerEvents = "auto";
+      }
+    }
+
+    // Update last distance
+    this.lastdistance = distance;
+
+    // Handle fittoscroll case
+    if (this.fittoscroll && (this._size.x !== window.innerWidth || this._size.y !== window.innerHeight)) {
+      this.Size = new THREE.Vector2(window.innerWidth, window.innerHeight);
+      this.setSizeSmoothly(new THREE.Vector2(window.innerWidth, window.innerHeight));
     }
   }
 

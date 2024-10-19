@@ -41,11 +41,15 @@ onmessage = function (data) {
 }
 
 function reload() {
-    worker.terminate();
-    worker = new Worker(filename+"?" + Date.now() );
-    worker.postMessage({ type: 'boot', key: "data", value: "data.value" });
-    worker.onmessage =  onmessage;
-    console.log('reload');
+    if (worker)    worker.terminate();
+    try {
+        worker = new Worker(filename );
+        worker.onmessage = onmessage;
+        worker.postMessage({ type: 'boot', key: "data", filename: filename });
+    }
+   catch(e) {
+       console.log(e);
+   }
     
 }
 function init(data){

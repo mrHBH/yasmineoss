@@ -1,46 +1,16 @@
-from typing import Tuple
-import autopep8
-import io
-import sys
-import ast
-import threading
-import queue
-import time
+from guidance import models, gen , select
 
-def run_python_code(code_str: str) -> Tuple[int, str]:
-    formatted_code = autopep8.fix_code(code_str)
+llama2 = models.(
+    model=f"ollama/qwen2.5-coder:1.5b",
+    api_base="http://localhost:11434", 
+)
+# capture our selection under the name 'answer'
+lm = llama2 + f"Do you want a joke or a poem? A {select(['joke', 'poem'], name='answer')}.\n"
 
-    # Check for syntax errors before running
-    try:
-        ast.parse(formatted_code)
-    except SyntaxError as e:
-        return 1, f"Syntax Error: {e}"
+# make a choice based on the model's previous selection
+if lm["answer"] == "joke":
+    lm += f"Here is a one-line joke about cats: " + gen('output', stop='\n')
+else:
+    lm += f"Here is a one-line poem about dogs: " + gen('output', stop='\n')
 
-    output_capture = io.StringIO()
-    sys.stdout = output_capture
-
-    def exec_code(result_queue):
-        try:
-            exec(formatted_code)
-            result_queue.put((0, output_capture.getvalue() if output_capture.getvalue() else "Code ran successfully with no output."))
-        except Exception as e:
-            result_queue.put((2, f"Execution Error: {e}"))
-
-    result_queue = queue.Queue()
-    thread = threading.Thread(target=exec_code, args=(result_queue,))
-    thread.start()
-
-    # Wait up to 5 seconds for thread to complete
-    thread.join(timeout=5)
-
-    sys.stdout = sys.__stdout__
-
-    if thread.is_alive():
-        # Thread is still running after timeout
-        return 4, "Timeout Error: Code execution exceeded 5 seconds."
-
-    # Get result from the queue
-    if not result_queue.empty():
-        return result_queue.get()
-    
-    return 3, "An unexpected error occurred."
+print(lm)

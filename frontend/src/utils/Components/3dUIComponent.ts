@@ -75,7 +75,7 @@ class threeDUIComponent extends Component {
 
     this._entity._RegisterHandler("setSize", async (data: any) => {
       console.log(data);
-      await this.setSizeSmoothly(data?.size as THREE.Vector2);
+//      await this.setSizeSmoothly(data?.size as THREE.Vector2);
     });
   }
 

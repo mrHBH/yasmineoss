@@ -90,8 +90,8 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
  
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
-    //if (behaviourscriptname !== "")
-      //this.LoadWorker(behaviourscriptname);
+    if (behaviourscriptname !== "")
+      this.LoadWorker(behaviourscriptname);
   }
 
   async InitComponent(entity: Entity): Promise<void> {
@@ -1005,6 +1005,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
       this.AnimationFSMService_.send("STOP");
     }
   }
+  
 
 
   StepToPosition(locationposition: THREE.Vector3) {
@@ -1453,7 +1454,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     status.textContent = "Online";
   
     this._titlebar = document.createElement("div");
-    this._titlebar.style.display = "flex";
+    this._titlebar.style.display = " absolute";
     this._titlebar.style.flexDirection = "column";
     this._titlebar.style.alignItems = "flex-start";
     this._titlebar.appendChild(nameTag);
@@ -1466,15 +1467,18 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     cliContainer.style.bottom = "100%";
     cliContainer.style.left = " 0%";
      //cliContainer.style.transform = "translateX(-50%)";
-    cliContainer.style.minWidth = "20vw";
+    cliContainer.style.minWidth = "250px";
     cliContainer.style.maxWidth = "60vw";
     cliContainer.style.maxHeight = "40vh";
      cliContainer.style.overflowY = " auto";
+
+     //rounder corners
+      cliContainer.style.borderRadius = "5px";
      
      //create a simple bar
   
-  cliContainer.style.scrollbarWidth = "none";
-   cliContainer.style.transition = "opacity 0.3s ease-in-out";
+    cliContainer.style.scrollbarWidth = "none";
+    cliContainer.style.transition = "opacity 0.3s ease-in-out";
  
    
   
@@ -1504,9 +1508,10 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     inlineContainer.appendChild(nameElement);
     this._titlebar.appendChild(cliContainer);
     this._titlebar.appendChild(inlineContainer);
-  
+
     this.uiElement = cliContainer;
-  
+    this.uiElement.addEventListener('update', this.updatePosition.bind(this));
+
  
     const label = new CSS2DObject(this._titlebar);
     label.position.set(0, 2, 0);
@@ -1538,7 +1543,55 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     //   this.uiElement.scrollTop += event.deltaY;
     // });
   }
+  updatePosition() {
+    if (this.uiElement && this._titlebar) {
+     // console.log("updating position");
+      const rect = this._titlebar.getBoundingClientRect();
+      const uiRect = this.uiElement.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+  
+      // Reset transforms and positions
+      this.uiElement.style.transform = '';
+      this.uiElement.style.top = '';
+      this.uiElement.style.bottom = '100%';  // Default position above the name tag
+  
+      // Check if there's enough horizontal space
+      if (rect.left + uiRect.width > viewportWidth) {
+        // Not enough horizontal space, position below the name tag
+        this.uiElement.style.top = '100%';
+        this.uiElement.style.bottom = 'auto';
+      }
+  
+      // After positioning, check for any remaining overflow
+      const updatedRect = this.uiElement.getBoundingClientRect();
+  
+      // Adjust horizontal position if needed
+      if (updatedRect.right > viewportWidth) {
+        const overflowX = updatedRect.right - viewportWidth;
+        this.uiElement.style.transform = `translateX(-${overflowX}px)`;
+      } else if (updatedRect.left < 0) {
+        this.uiElement.style.transform = `translateX(${Math.abs(updatedRect.left)}px)`;
+      }
+  
+      // Adjust vertical position if needed
+      if (updatedRect.top < 0) {
+        this.uiElement.style.top = '0';
+        this.uiElement.style.bottom = 'auto';
+      } else if (updatedRect.bottom > viewportHeight) {
+        const overflowY = updatedRect.bottom - viewportHeight;
+        if (this.uiElement.style.top === '100%') {
+          // If it's below the name tag, move it up
+          this.uiElement.style.top = `calc(100% - ${overflowY}px)`;
+        } else {
+          // If it's above the name tag, move it down
+          this.uiElement.style.bottom = `calc(100% + ${overflowY}px)`;
+        }
+      }
+    }
+  }
   resetConsole(){
+    
     let inithtml = /*html*/ `
     <div class="uk-card uk-card-secondary uk-card-body">
       <h3 class="uk-card-title">Greetings !</h3>
@@ -1547,6 +1600,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
         Load Script
         
     </div>
+
 
     
   `;
@@ -1591,7 +1645,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     }
     this.worker?.postMessage({
       type: "reload",
-      filename: "botbasicbehavior.js",
+      filename: this.behaviourscriptname,
     });
 
     if (this.workerloop){
@@ -1770,6 +1824,8 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
       }
     });
   }
+  
+ 
   async Update(deltaTime: number): Promise<void> {
     
     //update state name in the title bar
@@ -1972,12 +2028,14 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     //hide the opacity of this._titlebar if the distance is greater than 10
     if (this._titlebar){
 
-    if (distance > 15) {
+    if (distance > 20) {
       this._titlebar.style.opacity = "0";
       this._titlebar.style.pointerEvents = "none";
     } else {
       this._titlebar.style.opacity = "1";
       this._titlebar.style.pointerEvents = "auto";
+      this.uiElement.dispatchEvent(new Event('update'));
+
     }
   }}
 

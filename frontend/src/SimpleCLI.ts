@@ -3,6 +3,10 @@ class StaticCLI {
   private static queues: { [key: string]: (() => Promise<void>)[] } = {};
   private static typingInProgress: { [key: string]: boolean } = {};
   static cancelTyping: boolean = false;
+  static isScrolling: boolean = false;
+  private static lastScrollPosition: number = 0;
+  static container: HTMLElement;
+  static isAtBottom: boolean;
 
   private static createPrompt(container: HTMLElement): HTMLElement {
     const prompt = document.createElement('span');
@@ -11,7 +15,30 @@ class StaticCLI {
     container.appendChild(prompt);
     return prompt;
   }
+  private static setupScrollBehavior(container: HTMLElement, cursor: HTMLElement): void {
+    this.container = container;
 
+    const handleScroll = () => {
+      const currentScrollPosition = container.scrollTop;
+      this.isAtBottom = currentScrollPosition + container.clientHeight >= container.scrollHeight - 10;
+
+      if (!this.isAtBottom) {
+        this.isScrolling = true;
+      } else {
+        this.isScrolling = false;
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+
+    // Remove the MutationObserver as it's not necessary for this behavior
+  }
+
+  private static scrollToBottom(cursor: HTMLElement): void {
+   
+      cursor.scrollIntoView({ block: 'end', inline: 'nearest' });
+    
+  }
   public static async typeInside(
     container: HTMLElement,
     textelementtag: string,
@@ -61,9 +88,9 @@ class StaticCLI {
     cursor.setAttribute('data-cli-cursor', '▋');
     cursor.style.visibility = 'visible';
     container.appendChild(cursor);
+    this.setupScrollBehavior(container, cursor);
     return cursor;
   }
-
   public static async type(
     container: HTMLElement,
     text: string,
@@ -144,6 +171,87 @@ class StaticCLI {
     // Remove the cursor after typing is complete
     cursor.remove();
   }
+  public static async typeWithCallbacks(
+    container: HTMLElement,
+    text: string,
+    callbacks: { [id: string]: (element: HTMLElement) => void },
+    delay: number = 100,
+    override: boolean = false
+  ): Promise<void> {
+    if (override) {
+      container.innerHTML = '';
+    }
+  
+    const existingCursor = container.querySelector('span[data-cli-cursor]');
+    if (existingCursor) {
+      existingCursor.remove();
+    }
+  
+    let cursor = this.createCursor(container);
+    let currentContainer = container;
+  
+    let currentIndex = 0;
+  
+    while (currentIndex < text.length) {
+      const remainingText = text.slice(currentIndex);
+      let match = remainingText.match(/^<[^>]+>/);
+  
+      if (match) {
+        const tag = match[0];
+        currentIndex += tag.length;
+  
+        if (tag.startsWith('</')) {
+          currentContainer = currentContainer.parentElement || container;
+        } else {
+          const tempContainer = document.createElement('div');
+          tempContainer.innerHTML = tag;
+          const element = tempContainer.firstChild as HTMLElement;
+  
+          if (element) {
+            currentContainer.insertBefore(element, cursor);
+            
+            const id = element.id;
+            if (id && callbacks[id]) {
+              if (element instanceof HTMLButtonElement || 
+                  element instanceof HTMLAnchorElement || 
+                  element instanceof HTMLInputElement) {
+                element.addEventListener('click', () => callbacks[id](element));
+              }
+              else {
+                
+                 await callbacks[id](element);
+              }
+            }
+  
+            if (!tag.endsWith('/>') && !['input', 'img', 'br', 'hr'].includes(element.tagName.toLowerCase())) {
+              currentContainer = element;
+            }
+          }
+        }
+      } else {
+        const char = text[currentIndex];
+        const charElement = document.createTextNode(char);
+        currentContainer.insertBefore(charElement, cursor);
+        currentIndex++;
+      }
+  
+      cursor.style.visibility = 'visible';
+      currentContainer.appendChild(cursor);
+    //  this.scrollToBottom(cursor);
+  
+      await new Promise<void>((resolve) => setTimeout(resolve, delay));
+  
+      if (this.cancelTyping) {
+        this.cancelTyping = false;
+        break;
+      }
+    }
+  
+    const spaceElement = document.createTextNode(' ');
+    currentContainer.insertBefore(spaceElement, cursor);
+    cursor.remove();
+  }
+
   public static typeSync(
     container: HTMLElement,
     text: string,

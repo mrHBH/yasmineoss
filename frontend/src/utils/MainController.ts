@@ -31,8 +31,7 @@ import { SoundGeneratorAudioListener } from "./Sound_generator_worklet_wasm.js";
 // // import {  VolumeNodeMaterial, vec3, materialReference, smoothstep, If, Break, tslFn } from 'three/tsl';
 // import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
   import { LoadingManager } from "./LoadingManager.js";
-import { stat } from "fs";
- // import { BoxLineGeometry } from "three/examples/jsm/Addons.js";
+  // import { BoxLineGeometry } from "three/examples/jsm/Addons.js";
 // let customcursor = new CustomCursor();
   const stats = new Stats();
  
@@ -80,7 +79,7 @@ class MainController {
  //  this.webgpuscene.fog = new THREE.Fog( 0x202020, 50, 100 );
 
    this.webgpu = new THREE.WebGPURenderer({ antialias: true , logarithmicDepthBuffer: false , powerPreference: "high-performance" , }) as THREE.WebGPURenderer;
-   
+  // this.html2dScene.scale.set(0.1, 0.10, 0.10);
    this.webgpu.setPixelRatio( window.devicePixelRatio);
     //  this.webgpu.shadowMap.enabled = true;
     // this.webgpu.shadowMap.type = THREE.VSMShadowMap;
@@ -144,7 +143,7 @@ class MainController {
       0.005,
       10000
     );
- 
+  
     // this.camera.position.set(2.5, 20, 5);
     // this.camera.position.multiplyScalar(0.8);
     //this.camera.lookAt(0, 5, 0);
@@ -303,16 +302,16 @@ class MainController {
     this.grid = new InfiniteGridHelper(
       this.camera,
       150,
-      100,
+      155,
       new THREE.Color(0x888888),
       new THREE.Color(0x444444)
     );
     this.grid.castShadow = false;
-    this.grid.position.y =  0.01;
-   this.webgpuscene.add(this.grid);
+    this.grid.position.y =  -0.025;
+    this.webgpuscene.add(this.grid);
 
    const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(100, 100),
+    new THREE.PlaneGeometry(50, 50),
      new THREE.MeshPhongNodeMaterial({
       color: new THREE.Color(0x888888),
       side: THREE.FrontSide,
@@ -326,7 +325,7 @@ class MainController {
   ground.castShadow = false;
   ground.position.y = -0.01;
 
-   this.webgpuscene.add(ground);
+  // this.webgpuscene.add(ground);
  
     this.sunLight = new THREE.DirectionalLight(0xeeeeff, 5);
 
@@ -555,13 +554,16 @@ this.physicsmanager.World.addBody(floorBody);
    // stats.end();
   }
 
-  private onWindowResize(): void {
+   onWindowResize(): void {
+    
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.webgpu.setSize(window.innerWidth, window.innerHeight);
     this.annotationRenderer?.setSize(window.innerWidth, window.innerHeight);
     this.html2dRenderer?.setSize(window.innerWidth, window.innerHeight);
     this.html3dRenderer?.setSize(window.innerWidth, window.innerHeight);
+
+    
 
     // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
   }
@@ -623,9 +625,7 @@ this.physicsmanager.World.addBody(floorBody);
       let component = componententities.object.userData.component;
       let quaternion = new THREE.Quaternion();
       if (component) {
-        component.zoom();
-        this.MainEntity = component._entity;
-        return;
+   
 
         quaternion = component._entity.Quaternion;
         if (component instanceof twoDUIComponent) {
@@ -636,6 +636,12 @@ this.physicsmanager.World.addBody(floorBody);
         this.zoomTo(p, 6, quaternion);
         if (!quaternion) {
           quaternion = new THREE.Quaternion();
+        }
+
+        else {
+          component.zoom();
+          this.MainEntity = component._entity;
+          return;
         }
       }
 

@@ -27,6 +27,7 @@ let cb = function (e) {
       </div>
     </div>
   `;
+  
 
   StaticCLI.type(this.uiElement, initialHtml, 5, true).then(() => {
     this.updateSlide();

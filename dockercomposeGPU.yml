@@ -39,6 +39,25 @@ services:
     networks:
       - yasminenet
 
+  
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: code-server
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Africa/Nairobi
+      - PASSWORD=vs
+      - SUDO_PASSWORD=vs
+    volumes:
+      - ./frontend/public/:/public
+      - ./backend:/python/backendpython 
+    ports:
+      - 8443:8443
+    restart: unless-stopped
+    networks:
+      - yasminenet
+
   browserfrontend:
     container_name: browserfrontend
     build:
@@ -80,8 +99,7 @@ services:
                 count: all
                 capabilities: [gpu]
  
-
-
+ 
   # cppbackend:
   #   container_name: cppbackend
   #   build:
@@ -95,20 +113,41 @@ services:
   #     - yasminenet
 
 
-  # rustbackend:
-  #   container_name: rustbackend
-  #   build:      
-  #     context: ./backend/rust/
-  #     dockerfile: Dockerfile
-  #   restart: unless-stopped 
+  # # rustbackend:
+  # #   container_name: rustbackend
+  # #   build:      
+  # #     context: ./backend/rust/
+  # #     dockerfile: Dockerfile
+  # #   restart: unless-stopped 
+  # #   ports:
+  # #     - '8420:8420'
+  # #   networks:
+  # #     - yasminenet
+  # comfyui:
+  #   image: xingren23/comfyui:comfyui-cu121-v1.0.6
+  #   container_name: comfyui
+  #   restart: unless-stopped
   #   ports:
-  #     - '8420:8420'
+  #     - '8888:8188'
+  #   volumes:
+  #     - ./workspace/models/:/workspace/models
+  #     - ./workspace/input:/workspace/ComfyUI/input
+  #     - ./workspace/output:/workspace/ComfyUI/output
   #   networks:
   #     - yasminenet
- 
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+              
 networks:
   yasminenet:
 
 volumes:
   frontend:
+  backend:
   tempdir:
+  workspace:

@@ -8,7 +8,10 @@ import { threeDUIComponent } from "../utils/Components/3dUIComponent";
  import { CarComponent } from "./Components/CarComponent.js";
 // // import { KeyboardInput } from "./Components/KeyboardInput.js";
   import { DynamicuiWorkerComponent } from "./Components/DynamicuiWorkerComponent.js";
-
+import { StaticCLI } from "../SimpleCLI.js";
+import { call } from "three/webgpu";
+import { TogetherAIEmbeddings } from "@langchain/community/embeddings/togetherai";
+ 
 // //const {MediaPresenter, AudioStreamer , VideoStreamer } = require('sfmediastream');
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.mjs";
@@ -21,6 +24,7 @@ class UIManager {
   private touchStartY: number = 0;
   private birdEyeviewOffset = new THREE.Vector3(0, 0, 0);
   private fpsposoffset = new THREE.Vector3(0, 0, 0);
+  private currentUIelement:    twoDUIComponent;
  
   splineObject: THREE.Line<
     THREE.BufferGeometry<THREE.NormalBufferAttributes>,
@@ -47,7 +51,7 @@ class UIManager {
     this.createUIButtons();
     this.addScrollbar();
     this.moveCubeAlongPath(0);
-  //   this.createInitialUI();
+   //  this.createInitialUI();
   }
 
   private async createInitialUI(): Promise<void> {
@@ -90,25 +94,56 @@ class UIManager {
 
     this.mc.webgpuscene.add(this.attentionCursor);
   }
-  adduiElement(name: string, html: string, position: THREE.Vector3 , size: THREE.Vector2 = new THREE.Vector2(500,600)): void {
-    const uicomponent = new twoDUIComponent(html);
+  async adduiElement(name: string, html: string, position: THREE.Vector3 , size: THREE.Vector2 = new THREE.Vector2(2500,6000) , quaternion= new THREE.Quaternion()):  Promise< twoDUIComponent> {
+    
+    if( this.mc.entitymanager.Entities.some((entity) => entity._name === name)) {
+       
+      //return the component
+      return this.mc.entitymanager.Entities.find((entity) => entity._name === name).getComponent("twoDUIComponent") as twoDUIComponent;
+    }
+    const uicomponent = new twoDUIComponent(html , size);
     uicomponent.sticky = true;
-    uicomponent.maximized = true;
+    uicomponent.fittoscroll = false;
     uicomponent.typed = true;
-    const h = async () => {
+    
       let introui = new Entity();
+      introui.Quaternion = quaternion;
+
       introui.Position.set(position.x, position.y, position.z);
       await introui.AddComponent(uicomponent);
-      uicomponent.Size = size;
-      let res = await this.mc.entitymanager.AddEntity(introui, name);
-     uicomponent.AnimateType(html, 1);
+       
 
-      if (res == -1) {
-        return;
-      }
-    };
+       await this.mc.entitymanager.AddEntity(introui, name);
+ 
+       
+  
+      const callbacks = {
+        greeting: (element) => {
+          console.log('Greeting element created:', element);
+        },
+        "back-to-main": (element) => {
+          console.log('Button clicked or created!');
+ 
+            this.mc.UIManager.toggleBirdEyemode();
+            this.mc.UIManager.removeuiElement("chatPage");
+ 
+          element.style.backgroundColor = 'blue';
+          element.style.color = 'white';
+        }
+        
+      };
+  
+       
 
-    h();
+       await StaticCLI.typeWithCallbacks(uicomponent.HtmlElement, html, callbacks, 0 , true);
+       this.currentUIelement =  uicomponent
+    //   uicomponent.fittoscroll = true;
+
+      
+       return uicomponent;
+  
+
+
   }
   removeuiElement(name: string): void {
     this.mc.entitymanager.Entities.forEach((entity) => {
@@ -348,12 +383,22 @@ class UIManager {
   private mousewheelistener = (event: WheelEvent) => {
     if (!this.mc.CameraControls.enableZoom) {
       // event.preventDefault();
-      const delta = Math.sign(event.deltaY) * 0.05;
-      this.cubePosition = Math.max(0, Math.min(1, this.cubePosition + delta));
+      //check if a ui element is present
+      
+        const delta = Math.sign(event.deltaY) * 0.05;
+        //if wheel is scrolling up , the it only allies if the ui element is scrolled to the top
+        
+        this.cubePosition = Math.max(0, Math.min(1, this.cubePosition + delta));
+         this.moveCubeAlongPath(0);
+        this.updateScrollbarPosition();
+      
+        //if we are scrolling down , then we can s
+    
       this.moveCubeAlongPath(0);
       this.updateScrollbarPosition();
     }
-  };
+   
+  }
 
   createUIButtons(): void {
     //check if the buttons already exist
@@ -443,6 +488,8 @@ class UIManager {
 
   toggleScrollmode() {
 
+     
+
     
     if (this.fpsnavigation) {
       this.disableFPSNavigation();
@@ -453,7 +500,7 @@ class UIManager {
     if (this.scrollmodenavigation == false) {
       this.enableScrollModeNavigation();
     } else {
-      this.disableScrollModeNavigation();
+    //  this.disableScrollModeNavigation();
 
     }
   }
@@ -469,7 +516,7 @@ class UIManager {
       this.disableFPSNavigation();
     }
     if (this.birdviewnavigation) {
-      this.disableBirdViewNavigation();
+    //  this.disableBirdViewNavigation();
     } else {
       this.enableBirdViewNavigation();
     }
@@ -495,6 +542,7 @@ class UIManager {
   }
 
   private enableScrollModeNavigation(): void {
+  
     this.mc.CameraControls.enableZoom = false;
     this.mc.CameraControls.enabled = false;
     this.mc.CameraControls.enableRotate = false;
@@ -507,8 +555,13 @@ class UIManager {
       ?.classList.add("uk-text-danger");
     this.scrollmodenavigation = true;
 
-    //show the navigation scrollbar
-    this.scrollbarContainer.style.display = "none";
+    //show the navigation scrollbarq
+    // this.scrollbarContainer.style.display = "none";
+    if (this.currentUIelement) {
+      this.currentUIelement.FitToScroll = true;
+    }
+ 
+    
   }
   private disableScrollModeNavigation(): void {
     this.scrollbarContainer.style.display = "none";
@@ -563,7 +616,18 @@ class UIManager {
 
 
   private enableBirdViewNavigation(): void {
-    // this.mc.CameraControls.enableZoom = false;
+    // this.mc.CameraControls.minDistance =  8;
+    // this.mc.CameraControls.maxDistance =  8.1;
+
+     if (this.currentUIelement) {
+
+      this.currentUIelement.FitToScroll = false;
+       // this.currentUIelement.setSizeSmoothly( new THREE.Vector2(this.currentUIelement.Size.x, this.currentUIelement.Size.y*5));
+      //this.currentUIelement.Size = new THREE.Vector2(this.currentUIelement.Size.x, this.currentUIelement.Size.y*5);
+    }
+ 
+     //this.mc.CameraControls.maxPolarAngle = 1.5;
+   //1   this.mc.CameraControls.minPolarAngle = -2.1;
     // this.mc.CameraControls.enabled = false;
     // this.mc.CameraControls.enableRotate = false;
     // this.mc.CameraControls.enablePan = false;
@@ -668,7 +732,7 @@ class UIManager {
        let normalvec = this.attentionCursor.quaternion.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2));
     this.mc.zoomTo(
       this.attentionCursor.position,
-      5,
+      7.5,
       normalvec
     );
    
@@ -799,7 +863,7 @@ class UIManager {
       //targetoffset.applyQuaternion(this.mc.mainEntity.Quaternion);
       this.mc.zoomTo(
         targetoffset,
-       9,
+       3,
         this.mc.mainEntity.Quaternion . multiply(this.fpsquatoffset)
       );
     } else if (this.birdviewnavigation) {

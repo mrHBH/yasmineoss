@@ -75,9 +75,12 @@ async def websocket_endpoint(websocket: WebSocket):
     import modules.langchainy as lc
     import modules.langchainy2 as lc2
     import modules.palbob as palbob
+    import modules.FIM_Agent as fa
     # importlib.reload(lc)
     # importlib.reload(lc2)
     importlib.reload(palbob)
+    importlib.reload(fa)
+
     # dynamicmodule = lc.BasiclcGen( websocket=websocket)
     # await getattr(dynamicmodule, "run")()
     dynamicmodule = palbob.BasiclcGen( websocket=websocket)

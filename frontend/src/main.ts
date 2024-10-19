@@ -169,17 +169,17 @@ class Main {
   //   this.maincController.MainEntity = bob2;
 
 
-  // //    const syndey2 = new Entity();
-  // //   syndey2.Position = new THREE.Vector3(-8, 1, 0);
-  // //    const sydneycontroller2 = new CharacterComponent({
-  // //     modelpath: "models/gltf/Xbot.glb",
-  // //     animationspathslist: animations,
-  // //     behaviourscriptname: "minienvman.js",
-  // //   });
-  // //   await syndey2.AddComponent(sydneycontroller2);
-  // //   await syndey2.AddComponent(new AIInput());
-  // //   await syndey2.AddComponent(new KeyboardInput());
-  // //  await this.entityManager.AddEntity(syndey2, "minienvman");
+  //    const syndey2 = new Entity();
+  //   syndey2.Position = new THREE.Vector3(-80, 1, 0);
+  //    const sydneycontroller2 = new CharacterComponent({
+  //     modelpath: "models/gltf/Xbot.glb",
+  //     animationspathslist: animations,
+  //     behaviourscriptname: "environmentbot.js",
+  //   });
+  //   await syndey2.AddComponent(sydneycontroller2);
+  //   await syndey2.AddComponent(new AIInput());
+  //   await syndey2.AddComponent(new KeyboardInput());
+  //  await this.entityManager.AddEntity(syndey2, "Site manager");
 
 
   //  //add script entity environmentbot to the scene
@@ -197,51 +197,69 @@ class Main {
 
 
   
-   //add script entity environmentbot to the scene
-    const environmentbot = new Entity();
-    environmentbot.Position = new THREE.Vector3(0, 1,4);
-    const environmentcontroller = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: animations,
-      behaviourscriptname: "palbob.js",
-    });
-    await environmentbot.AddComponent(environmentcontroller);
-    await environmentbot.AddComponent(new AIInput());
-    //await environmentbot.AddComponent(new KeyboardInput());
-   await this.entityManager.AddEntity(environmentbot, "palbob");
+  //  //add script entity environmentbot to the scene
+  //   const environmentbot = new Entity();
+  //   environmentbot.Position = new THREE.Vector3(0, 1,40);
+  //   const environmentcontroller = new CharacterComponent({
+  //     modelpath: "models/gltf/ybot2.glb",
+  //     animationspathslist: animations,
+  //     behaviourscriptname: "palbob.js",
+  //   });
+  //   await environmentbot.AddComponent(environmentcontroller);
+  //   await environmentbot.AddComponent(new AIInput());
+  //   //await environmentbot.AddComponent(new KeyboardInput());
+  //  await this.entityManager.AddEntity(environmentbot, "palbob");
 
-     //add script entity environmentbot to the scene
-     const palbobmem = new Entity();
-     palbobmem.Position = new THREE.Vector3(4, 1,4);
-     const palbobmemcontroller = new CharacterComponent({
-       modelpath: "models/gltf/ybot2.glb",
-       animationspathslist: animations,
-       behaviourscriptname: "palbobmem.js",
-     });
-     await palbobmem.AddComponent(palbobmemcontroller);
-     await palbobmem.AddComponent(new AIInput());
-     //await environmentbot.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(palbobmem, "palbobmem");
-    this.maincController.MainEntity = palbobmem;
-    palbobmemcontroller.face();
+  //    //add script entity environmentbot to the scene
+  //    const palbobmem = new Entity();
+  //    palbobmem.Position = new THREE.Vector3(40, 1,4);
+  //    const palbobmemcontroller = new CharacterComponent({
+  //      modelpath: "models/gltf/ybot2.glb",
+  //      animationspathslist: animations,
+  //      behaviourscriptname: "palbobmem.js",
+  //    });
+  //    await palbobmem.AddComponent(palbobmemcontroller);
+  //    await palbobmem.AddComponent(new AIInput());
+  //    //await environmentbot.AddComponent(new KeyboardInput());
+  //   await this.entityManager.AddEntity(palbobmem, "palbobmem");
+
 
 
  
 
      
    //add script entity environmentbot to the scene
-   const environmentbot2 = new Entity();
-   environmentbot2.Position = new THREE.Vector3(0, 1,6);
+   const hamza = new Entity();
+   hamza.Position = new THREE.Vector3(0, 1,6);
    const environmentcontroller2 = new CharacterComponent({
-     modelpath: "models/gltf/Xbot.glb",
+     modelpath: "models/gltf/ybot2.glb",
      animationspathslist: animations,
-     behaviourscriptname: "palbobdesigner.js",
+     behaviourscriptname: "Hamza.js",
    });
-   await environmentbot2.AddComponent(environmentcontroller2);
-   await environmentbot2.AddComponent(new AIInput());
-   await environmentbot2.AddComponent(new KeyboardInput());
-  await this.entityManager.AddEntity(environmentbot2, "palsydney");
+   await hamza.AddComponent(environmentcontroller2);
+   await hamza.AddComponent(new AIInput());
+  //  await environmentbot2.AddComponent(new KeyboardInput());
+   await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
+   this.maincController.MainEntity = hamza;
+   environmentcontroller2.face();
 
+      //add script entity environmentbot to the scene
+      const uitester = new Entity();
+      uitester.Position = new THREE.Vector3(0, 1,9);
+      const uitestercontroller2 = new CharacterComponent({
+        modelpath: "models/gltf/ybot2.glb",
+        animationspathslist: animations,
+        behaviourscriptname: "uitester.js",
+      });
+      await uitester.AddComponent(uitestercontroller2);
+      await uitester.AddComponent(new KeyboardInput());
+
+      await uitester.AddComponent(new AIInput());
+     //  await environmentbot2.AddComponent(new KeyboardInput());
+      await this.entityManager.AddEntity(uitester, "uitester");
+      this.maincController.MainEntity = uitester;
+      uitestercontroller2.face();
+   
 
   //   // const introui = new Entity();
 
