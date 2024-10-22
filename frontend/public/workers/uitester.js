@@ -1,8 +1,13 @@
 let cb = function (e) {
   let mc = this._entity._entityManager._mc;
   let physicsworld = this._entity._entityManager._mc.physicsmanager.world;
+  let protocol = "wss://";
 
-  this.threedobjects = [];
+  if( this.hostname == "localhost"){
+    protocol = "ws://";
+
+  }
+   this.threedobjects = [];
   this.phycisobjects = [];
   this.currentSlide = 0;
 
@@ -191,7 +196,7 @@ const loadFileContent = async (workspace, filepath) => {
     // Ensure filepath is properly encoded for the URL
     const encodedPath = encodeURIComponent(filepath);
     const websocket = new WebSocket(
-      `ws://${this.hostname}:8000/ws/workspace/${workspace}/file/${encodedPath}`
+      `${protocol}${this.hostname}:8000/ws/workspace/${workspace}/file/${encodedPath}`
     );
 
      websocket.onopen = () => {
@@ -221,7 +226,7 @@ this.saveFileContent = async (workspace, filepath, content) => {
     // Ensure filepath is properly encoded for the URL
     const encodedPath = encodeURIComponent(filepath);
     const websocket = new WebSocket(
-      `ws://${this.hostname}:8000/ws/workspace/${workspace}/file/${encodedPath}`
+      `${protocol}${this.hostname}:8000/ws/workspace/${workspace}/file/${encodedPath}`
     );
 
     websocket.onopen = () => {
@@ -295,7 +300,7 @@ const setupNewFileButton = () => {
     if (!fileTree || !this.currentWorkspace)   return;
 
     const websocket = new WebSocket(
-      `ws://${this.hostname}:8000/ws/workspace/${this.currentWorkspace}/directory/`
+      `${protocol}${this.hostname}:8000/ws/workspace/${this.currentWorkspace}/directory/`
     );
 
     websocket.onopen = () => {
@@ -483,7 +488,7 @@ const setupNewFileButton = () => {
           
             this.currentWorkspace = workspaceName;
             const websocket = new WebSocket(
-              "ws://${this.hostname}:8000/ws/workspace/create/"
+              "${protocol}${this.hostname}:8000/ws/workspace/create/"
             );
             websocket.onopen = () => {
               websocket.send(JSON.stringify({ workspace_name: workspaceName }));
@@ -539,7 +544,7 @@ const setupNewFileButton = () => {
                     const filename = prompt("Enter file name:");
                     if (filename && this.currentWorkspace) {
                       const websocket = new WebSocket(
-                        `ws://${this.hostname}:8000/ws/workspace/${this.currentWorkspace}/file/${filename}`
+                        `${protocol}${this.hostname}:8000/ws/workspace/${this.currentWorkspace}/file/${filename}`
                       );
                       websocket.onopen = () => {
                         websocket.send(
