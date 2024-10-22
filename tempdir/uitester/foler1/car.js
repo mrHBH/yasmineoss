@@ -1,23 +1,29 @@
  
  
-let version ="2.00.10"; 
+let version ="8.90.80"; 
+console.log(version)
 let shiftpedal = 0;
 //parameters :
 let maxSteerVal = 0.8;
 let steerStep = 0.025;
-let maxForce = 1000;
+let maxForce = 2000;
 //input :
 let rpm = 650 ;
-let gear = 1;
-let speed = 0;
+let gear = 2;
+let speed = -2;
 
 //output :
-let engineForce0 = 0;
+let engineForce0 = 0; 
 let engineForce1 = 0;
 let engineForce2 = 0;
 let engineForce3 = 0;
 let steeringValue = 0;
-let brakeForce = 0;
+let brakeForce = 1200;
+let cylinders = 2.5
+
+
+
+//------------------------------>CARSPAWNHERE
 
 
 function Steer(input){
@@ -26,7 +32,7 @@ function Steer(input){
         if ( steeringValue > - maxSteerVal) {
             steeringValue -=  steerStep;
          
-             
+                  
         }
 }
 else if (input.left) {
@@ -234,7 +240,7 @@ postMessage({ type: 'wheelupdate' , wheelOptions : wheelOptions });
  
 let soundoptions = {
     
-    cylinders:3,
+    cylinders:cylinders,
 
     intakeWaveguideLength: 200,
     exhaustWaveguideLength: 50,
@@ -258,9 +264,9 @@ let soundoptions = {
 
 
     let clamp = false;
-    let gain = 0.04;
-    let gainEngineBlockVibrations = 0.02;
-    let gainOutlet = 0.01;
+    let gain = 0.08;
+    let gainEngineBlockVibrations = 0.04;
+    let gainOutlet = 0.02;
 
 
  postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });

@@ -9,7 +9,7 @@ import { threeDUIComponent } from "../utils/Components/3dUIComponent";
 // // import { KeyboardInput } from "./Components/KeyboardInput.js";
   import { DynamicuiWorkerComponent } from "./Components/DynamicuiWorkerComponent.js";
 import { StaticCLI } from "../SimpleCLI.js";
-import { call } from "three/webgpu";
+import { any, call } from "three/webgpu";
 import { TogetherAIEmbeddings } from "@langchain/community/embeddings/togetherai";
  
 // //const {MediaPresenter, AudioStreamer , VideoStreamer } = require('sfmediastream');
@@ -21,6 +21,7 @@ class UIManager {
   attentionCursor: THREE.Mesh | any;
   cubePosition: number = 0;
    scrollmodenavigation: boolean = false;
+    boundarygroup : any;
   private touchStartY: number = 0;
   private birdEyeviewOffset = new THREE.Vector3(0, 0, 0);
   private fpsposoffset = new THREE.Vector3(0, 0, 0);
@@ -542,7 +543,7 @@ class UIManager {
   }
 
   private enableScrollModeNavigation(): void {
-  
+    this.mc.createwall();
     this.mc.CameraControls.enableZoom = false;
     this.mc.CameraControls.enabled = false;
     this.mc.CameraControls.enableRotate = false;
@@ -618,7 +619,7 @@ class UIManager {
   private enableBirdViewNavigation(): void {
     // this.mc.CameraControls.minDistance =  8;
     // this.mc.CameraControls.maxDistance =  8.1;
-
+     this.mc.removewalls();
      if (this.currentUIelement) {
 
       this.currentUIelement.FitToScroll = false;
@@ -732,7 +733,7 @@ class UIManager {
        let normalvec = this.attentionCursor.quaternion.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2));
     this.mc.zoomTo(
       this.attentionCursor.position,
-      7.5,
+      11.5,
       normalvec
     );
    

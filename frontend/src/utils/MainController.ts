@@ -71,9 +71,12 @@ class MainController {
   dirLight: THREE.DirectionalLight;
   sunLight: THREE.DirectionalLight;
   CameraControls: CameraControls;
+  wallmeshes: any;
 
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
+    this.wallmeshes = [];
+
     // this.webgpuscene.backgroundNode = new THREE.Color( 0x202020 );
 
  //  this.webgpuscene.fog = new THREE.Fog( 0x202020, 50, 100 );
@@ -202,9 +205,16 @@ class MainController {
     this.CameraControls = new CameraControls(
       this.camera,
       this.html2dRenderer.domElement
+
     );
     this.CameraControls.saveState()
+this.CameraControls.mouseButtons = {
+  left: CameraControls.ACTION.TRUCK,
+  middle: CameraControls.ACTION.ZOOM,
+  right: CameraControls.ACTION.NONE,
+  wheel: CameraControls.ACTION.DOLLY,
 
+};
 
           // Create a point light
       // const lightz = new THREE.PointLight(0xffffff, 1000, 10000);
@@ -254,7 +264,7 @@ class MainController {
         }
       }
     });
-
+    
     document.addEventListener("keydown", (event) => {
       // if (event.key === "c") {
       //   const car = new Entity();
@@ -317,6 +327,8 @@ class MainController {
       side: THREE.FrontSide,
     })
   );
+
+ 
   
   
 
@@ -440,6 +452,36 @@ this.physicsmanager.World.addBody(floorBody);
 
     this.UIManager = new UIManager(this);
   }
+
+ removewalls () {
+    if (!this.wallmeshes) {
+      return;
+    }
+    for (let wall of this.wallmeshes) {
+      this.webgpuscene.remove(wall);
+    }
+    this.wallmeshes = [];
+}
+
+
+  createwall() {
+    this.removewalls();
+    
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+    );
+    let cameraPosition =  new THREE.Vector3();
+    cameraPosition = this.CameraControls.getTarget( cameraPosition );
+    wall.position.set(  cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    this.webgpuscene.add(wall);
+
+    this.wallmeshes.push(wall);
+    
+  }
+
   onContextMenu(event: MouseEvent): any {
     const raycaster = new THREE.Raycaster();
     //@ts-ignore
@@ -572,6 +614,30 @@ this.physicsmanager.World.addBody(floorBody);
     // Repeat type enforcement for orbit controls target tween
   }
 
+  async spawnCar() {
+      const car = new Entity();
+        const carcontroller = new CarComponent({});
+        const keyboardinput = new KeyboardInput();
+        this.initSound();
+
+        car.Position = new THREE.Vector3(0, 1, 0);
+        await   car.AddComponent(carcontroller) 
+         await  car.AddComponent(keyboardinput);
+          await this.entitymanager.AddEntity(car, "Car" + Math.random()) 
+
+
+
+          //create a quaternion that when multiplied by another quaternion it rotates it 90 degrees around the y axsi
+          this.UIManager.fpsquatoffset =
+            new THREE.Quaternion().setFromAxisAngle(
+              new THREE.Vector3(0, 1, 0),
+              Math.PI / 2
+            );
+      
+        return carcontroller;
+      }
+ 
+
   async LoadScene(){
     await LoadingManager.loadGLTF( "models/gltf/tiny_low_poly_town_-_modular_set.glb" ).then((scene) => {
       // make all childs able to cast shadows and receive shadows
@@ -587,11 +653,7 @@ this.physicsmanager.World.addBody(floorBody);
   );
 
   }
-
-  async typeinelement(container: HTMLElement, classname: string ,  text: string, speed: number = 50) {
-    await StaticCLI.typeInside(container,classname, text, speed, false); 
-  }
-
+ 
   private async onDoubleClick(event: MouseEvent): Promise<void> {
     const raycaster = new THREE.Raycaster();
     //@ts-ignore

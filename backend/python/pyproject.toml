@@ -28,6 +28,7 @@ dill = "^0.3.8"
 guidance = "^0.1.16"
 google-generativeai = "^0.8.2"
 ollama = "^0.3.3"
+python-multipart = "^0.0.12"
   
 
 [build-system]

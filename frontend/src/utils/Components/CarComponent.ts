@@ -79,6 +79,131 @@ class CarComponent extends Component {
       filename: "car.js",
     });
   }
+
+  loadscript(script: string) {
+    this.carWorker?.terminate();
+    let blob = new Blob([script], { type: "application/javascript" });
+    let url = URL.createObjectURL(blob);
+    this.carWorker = new Worker(url);
+        this.carWorker.onmessage = (e) => {
+      //	console.log("Message received from worker", e.data);
+      if (e.data.type === "boot") {
+        this.carWorker.postMessage({
+          type: "init",
+          filename: "car.js",
+        });
+      }
+      if (e.data.type === "tick") {
+        this.rpm = e.data.rpm;
+        this.gear = e.data.gear;
+        //apply forces
+        this.vehicle.applyEngineForce(-e.data.engineForce1, 1);
+        this.vehicle.applyEngineForce(-e.data.engineForce2, 2);
+        this.vehicle.applyEngineForce(-e.data.engineForce3, 3);
+        this.vehicle.applyEngineForce(-e.data.engineForce0, 0);
+
+        //apply steering
+        this.vehicle.setSteeringValue(e.data.steeringValue, 0);
+        this.vehicle.setSteeringValue(e.data.steeringValue, 1);
+
+        //apply brakes
+        this.vehicle.setBrake(e.data.brakeForce, 0);
+        this.vehicle.setBrake(e.data.brakeForce, 1);
+        this.vehicle.setBrake(e.data.brakeForce, 2);
+        this.vehicle.setBrake(e.data.brakeForce, 3);
+
+        //apply suspension
+      }
+      if (e.data.type === "wheelupdate") {
+        console.log(e.data.wheelOptions);
+
+        let wheelOptions = e.data.wheelOptions;
+
+    
+        for (let i = 0; i < this.vehicle.wheelInfos.length; i++) {
+          this.vehicle.wheelInfos[i].radius = wheelOptions.radius;
+          this.vehicle.wheelInfos[i].suspensionStiffness =
+            wheelOptions.suspensionStiffness;
+          this.vehicle.wheelInfos[i].suspensionRestLength =
+            wheelOptions.suspensionRestLength;
+          this.vehicle.wheelInfos[i].frictionSlip = wheelOptions.frictionSlip;
+          this.vehicle.wheelInfos[i].dampingRelaxation =
+            wheelOptions.dampingRelaxation;
+          this.vehicle.wheelInfos[i].dampingCompression =
+            wheelOptions.dampingCompression;
+          this.vehicle.wheelInfos[i].maxSuspensionForce =
+            wheelOptions.maxSuspensionForce;
+          this.vehicle.wheelInfos[i].rollInfluence = wheelOptions.rollInfluence;
+          this.vehicle.wheelInfos[i].maxSuspensionTravel =
+            wheelOptions.maxSuspensionTravel;
+          this.vehicle.wheelInfos[i].customSlidingRotationalSpeed =
+            wheelOptions.customSlidingRotationalSpeed;
+          this.vehicle.wheelInfos[i].useCustomSlidingRotationalSpeed =
+            wheelOptions.useCustomSlidingRotationalSpeed;
+
+          this.wheelBodies.forEach((wheelBody) => {
+            wheelBody.shapes.forEach((shape) => {
+              if (shape instanceof CANNON.Cylinder) {
+                shape.radiusTop = wheelOptions.radius;
+                shape.radiusBottom = wheelOptions.radius;
+                shape.height = wheelOptions.radius / 2;
+                shape.updateBoundingSphereRadius();
+              }
+            });
+          });
+        }
+ 
+      }
+      if (e.data.type === "soundupdate") {
+        console.log("soundupdate", e.data);
+        if (this.soundCarEngine) {
+          this.soundCarEngine?.stop();
+          this._webgpugroup.remove(this.soundCarEngine);
+        }
+        console.log("soundupdate", e.data.mufflerElementsLength);
+
+        this.loadingManager.onLoad = function () {
+          this.soundCarEngine = new EngineSoundGenerator({
+            listener: this.listener,
+
+            //postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });
+
+            parameters: e.data.soundoptions,
+            clamp: e.data.clamp,
+            gain: e.data.gain,
+            gainEngineBlockVibrations: e.data.gainEngineBlockVibrations,
+            gainOutlet: e.data.gainOutlet,
+          });
+          //  let gainNode = this.soundCarEngine.gain;
+          //  gainNode.gain.value = 0.2 ;
+
+          //   this.soundCarEngine.gainEngineBlockVibrations.gain.value =0.2;
+
+          // 	  this.soundCarEngine.gainOutlet.gain.value = 0.2 ;
+
+          //  this._webgpugroup.add(this.soundCarEngine);
+
+          // this.soundCarEngine.gain.value = 0.001 ;
+          // this.soundCarEngine.gainEngineBlockVibrations.gain.value = 0.001
+          // this.soundCarEngine.gainOutlet.gain.value = 0.001
+
+          this.soundCarEngine.play();
+          //remove existing this.soundCarEngine from this._webgpugroup
+
+          this._webgpugroup.add(this.soundCarEngine);
+        }.bind(this);
+
+        EngineSoundGenerator.load(this.loadingManager, this.listener, ".");
+      }
+    };
+
+ 
+
+  
+
+  }
+
+
   openDoor() {
     if (!this.doorOpen) {
       //find mesh child with name : "DriverDoor"
@@ -374,118 +499,119 @@ class CarComponent extends Component {
       this.world.addBody(wheelBody);
     });
 
-    this.carWorker = new Worker("./workers/dynamicloader.js?" + Date.now());
-    this.carWorker.onmessage = (e) => {
-      //	console.log("Message received from worker", e.data);
-      if (e.data.type === "boot") {
-        this.carWorker.postMessage({
-          type: "init",
-          filename: "car.js",
-        });
-      }
-      if (e.data.type === "tick") {
-        this.rpm = e.data.rpm;
-        this.gear = e.data.gear;
-        //apply forces
-        this.vehicle.applyEngineForce(-e.data.engineForce1, 1);
-        this.vehicle.applyEngineForce(-e.data.engineForce2, 2);
-        this.vehicle.applyEngineForce(-e.data.engineForce3, 3);
-        this.vehicle.applyEngineForce(-e.data.engineForce0, 0);
+    //create
+    // this.carWorker = new Worker("./workers/dynamicloader.js?" + Date.now());
+    // this.carWorker.onmessage = (e) => {
+    //   //	console.log("Message received from worker", e.data);
+    //   if (e.data.type === "boot") {
+    //     this.carWorker.postMessage({
+    //       type: "init",
+    //       filename: "car.js",
+    //     });
+    //   }
+    //   if (e.data.type === "tick") {
+    //     this.rpm = e.data.rpm;
+    //     this.gear = e.data.gear;
+    //     //apply forces
+    //     this.vehicle.applyEngineForce(-e.data.engineForce1, 1);
+    //     this.vehicle.applyEngineForce(-e.data.engineForce2, 2);
+    //     this.vehicle.applyEngineForce(-e.data.engineForce3, 3);
+    //     this.vehicle.applyEngineForce(-e.data.engineForce0, 0);
 
-        //apply steering
-        this.vehicle.setSteeringValue(e.data.steeringValue, 0);
-        this.vehicle.setSteeringValue(e.data.steeringValue, 1);
+    //     //apply steering
+    //     this.vehicle.setSteeringValue(e.data.steeringValue, 0);
+    //     this.vehicle.setSteeringValue(e.data.steeringValue, 1);
 
-        //apply brakes
-        this.vehicle.setBrake(e.data.brakeForce, 0);
-        this.vehicle.setBrake(e.data.brakeForce, 1);
-        this.vehicle.setBrake(e.data.brakeForce, 2);
-        this.vehicle.setBrake(e.data.brakeForce, 3);
+    //     //apply brakes
+    //     this.vehicle.setBrake(e.data.brakeForce, 0);
+    //     this.vehicle.setBrake(e.data.brakeForce, 1);
+    //     this.vehicle.setBrake(e.data.brakeForce, 2);
+    //     this.vehicle.setBrake(e.data.brakeForce, 3);
 
-        //apply suspension
-      }
-      if (e.data.type === "wheelupdate") {
-        console.log(e.data.wheelOptions);
+    //     //apply suspension
+    //   }
+    //   if (e.data.type === "wheelupdate") {
+    //     console.log(e.data.wheelOptions);
 
-        let wheelOptions = e.data.wheelOptions;
+    //     let wheelOptions = e.data.wheelOptions;
 
     
-        for (let i = 0; i < this.vehicle.wheelInfos.length; i++) {
-          this.vehicle.wheelInfos[i].radius = wheelOptions.radius;
-          this.vehicle.wheelInfos[i].suspensionStiffness =
-            wheelOptions.suspensionStiffness;
-          this.vehicle.wheelInfos[i].suspensionRestLength =
-            wheelOptions.suspensionRestLength;
-          this.vehicle.wheelInfos[i].frictionSlip = wheelOptions.frictionSlip;
-          this.vehicle.wheelInfos[i].dampingRelaxation =
-            wheelOptions.dampingRelaxation;
-          this.vehicle.wheelInfos[i].dampingCompression =
-            wheelOptions.dampingCompression;
-          this.vehicle.wheelInfos[i].maxSuspensionForce =
-            wheelOptions.maxSuspensionForce;
-          this.vehicle.wheelInfos[i].rollInfluence = wheelOptions.rollInfluence;
-          this.vehicle.wheelInfos[i].maxSuspensionTravel =
-            wheelOptions.maxSuspensionTravel;
-          this.vehicle.wheelInfos[i].customSlidingRotationalSpeed =
-            wheelOptions.customSlidingRotationalSpeed;
-          this.vehicle.wheelInfos[i].useCustomSlidingRotationalSpeed =
-            wheelOptions.useCustomSlidingRotationalSpeed;
+    //     for (let i = 0; i < this.vehicle.wheelInfos.length; i++) {
+    //       this.vehicle.wheelInfos[i].radius = wheelOptions.radius;
+    //       this.vehicle.wheelInfos[i].suspensionStiffness =
+    //         wheelOptions.suspensionStiffness;
+    //       this.vehicle.wheelInfos[i].suspensionRestLength =
+    //         wheelOptions.suspensionRestLength;
+    //       this.vehicle.wheelInfos[i].frictionSlip = wheelOptions.frictionSlip;
+    //       this.vehicle.wheelInfos[i].dampingRelaxation =
+    //         wheelOptions.dampingRelaxation;
+    //       this.vehicle.wheelInfos[i].dampingCompression =
+    //         wheelOptions.dampingCompression;
+    //       this.vehicle.wheelInfos[i].maxSuspensionForce =
+    //         wheelOptions.maxSuspensionForce;
+    //       this.vehicle.wheelInfos[i].rollInfluence = wheelOptions.rollInfluence;
+    //       this.vehicle.wheelInfos[i].maxSuspensionTravel =
+    //         wheelOptions.maxSuspensionTravel;
+    //       this.vehicle.wheelInfos[i].customSlidingRotationalSpeed =
+    //         wheelOptions.customSlidingRotationalSpeed;
+    //       this.vehicle.wheelInfos[i].useCustomSlidingRotationalSpeed =
+    //         wheelOptions.useCustomSlidingRotationalSpeed;
 
-          this.wheelBodies.forEach((wheelBody) => {
-            wheelBody.shapes.forEach((shape) => {
-              if (shape instanceof CANNON.Cylinder) {
-                shape.radiusTop = wheelOptions.radius;
-                shape.radiusBottom = wheelOptions.radius;
-                shape.height = wheelOptions.radius / 2;
-                shape.updateBoundingSphereRadius();
-              }
-            });
-          });
-        }
+    //       this.wheelBodies.forEach((wheelBody) => {
+    //         wheelBody.shapes.forEach((shape) => {
+    //           if (shape instanceof CANNON.Cylinder) {
+    //             shape.radiusTop = wheelOptions.radius;
+    //             shape.radiusBottom = wheelOptions.radius;
+    //             shape.height = wheelOptions.radius / 2;
+    //             shape.updateBoundingSphereRadius();
+    //           }
+    //         });
+    //       });
+    //     }
  
-      }
-      if (e.data.type === "soundupdate") {
-        console.log("soundupdate", e.data);
-        if (this.soundCarEngine) {
-          this.soundCarEngine?.stop();
-          this._webgpugroup.remove(this.soundCarEngine);
-        }
-        console.log("soundupdate", e.data.mufflerElementsLength);
+    //   }
+    //   if (e.data.type === "soundupdate") {
+    //     console.log("soundupdate", e.data);
+    //     if (this.soundCarEngine) {
+    //       this.soundCarEngine?.stop();
+    //       this._webgpugroup.remove(this.soundCarEngine);
+    //     }
+    //     console.log("soundupdate", e.data.mufflerElementsLength);
 
-        this.loadingManager.onLoad = function () {
-          this.soundCarEngine = new EngineSoundGenerator({
-            listener: this.listener,
+    //     this.loadingManager.onLoad = function () {
+    //       this.soundCarEngine = new EngineSoundGenerator({
+    //         listener: this.listener,
 
-            //postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });
+    //         //postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });
 
-            parameters: e.data.soundoptions,
-            clamp: e.data.clamp,
-            gain: e.data.gain,
-            gainEngineBlockVibrations: e.data.gainEngineBlockVibrations,
-            gainOutlet: e.data.gainOutlet,
-          });
-          //  let gainNode = this.soundCarEngine.gain;
-          //  gainNode.gain.value = 0.2 ;
+    //         parameters: e.data.soundoptions,
+    //         clamp: e.data.clamp,
+    //         gain: e.data.gain,
+    //         gainEngineBlockVibrations: e.data.gainEngineBlockVibrations,
+    //         gainOutlet: e.data.gainOutlet,
+    //       });
+    //       //  let gainNode = this.soundCarEngine.gain;
+    //       //  gainNode.gain.value = 0.2 ;
 
-          //   this.soundCarEngine.gainEngineBlockVibrations.gain.value =0.2;
+    //       //   this.soundCarEngine.gainEngineBlockVibrations.gain.value =0.2;
 
-          // 	  this.soundCarEngine.gainOutlet.gain.value = 0.2 ;
+    //       // 	  this.soundCarEngine.gainOutlet.gain.value = 0.2 ;
 
-          //  this._webgpugroup.add(this.soundCarEngine);
+    //       //  this._webgpugroup.add(this.soundCarEngine);
 
-          // this.soundCarEngine.gain.value = 0.001 ;
-          // this.soundCarEngine.gainEngineBlockVibrations.gain.value = 0.001
-          // this.soundCarEngine.gainOutlet.gain.value = 0.001
+    //       // this.soundCarEngine.gain.value = 0.001 ;
+    //       // this.soundCarEngine.gainEngineBlockVibrations.gain.value = 0.001
+    //       // this.soundCarEngine.gainOutlet.gain.value = 0.001
 
-          this.soundCarEngine.play();
-          //remove existing this.soundCarEngine from this._webgpugroup
+    //       this.soundCarEngine.play();
+    //       //remove existing this.soundCarEngine from this._webgpugroup
 
-          this._webgpugroup.add(this.soundCarEngine);
-        }.bind(this);
+    //       this._webgpugroup.add(this.soundCarEngine);
+    //     }.bind(this);
 
-        EngineSoundGenerator.load(this.loadingManager, this.listener, ".");
-      }
-    };
+    //     EngineSoundGenerator.load(this.loadingManager, this.listener, ".");
+    //   }
+    // };
   }
 
   async InitComponent(entity: Entity): Promise<void> {
@@ -654,12 +780,24 @@ class CarComponent extends Component {
     //remove the car mesh
     this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
     if (this.soundCarEngine) {
-      this.soundCarEngine.stop();
+      // this.soundCarEngine.stop();
+      this.soundCarEngine.disconnect();
+      this.soundCarEngine = null;
     }
 
     if (this.carWorker) {
       this.carWorker.terminate();
     }
+
+    for (let i = this._css2dgroup.children.length - 1; i >= 0; i--) {
+      //find all instances of css2dobject and remove them
+      if (this._css2dgroup.children[i] instanceof CSS2DObject) {
+        this._css2dgroup.remove(this._css2dgroup.children[i]);
+      }
+    }
+
+
+    this._entity._entityManager._mc.html2dScene.remove(this._css2dgroup);
 
     return Promise.resolve();
   }

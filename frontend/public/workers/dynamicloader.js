@@ -52,6 +52,18 @@ function reload() {
    }
     
 }
+function reloadfromblob(blob) {
+    if (worker)    worker.terminate();
+    try {
+        worker = new Worker(filename );
+        worker.onmessage = onmessage;
+        worker.postMessage({ type: 'boot', key: "data", filename: filename });
+    }
+   catch(e) {
+       console.log(e);
+   }
+    
+}
 function init(data){
     filename = data.filename; 
     let watch = data.watch;
@@ -87,6 +99,7 @@ function update(data){
 const handlers = {
     stop,
     reload,
+    reloadfromblob,
     init,
     version,
     update,

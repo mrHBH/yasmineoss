@@ -10,7 +10,7 @@ import { StaticCLI } from "../../SimpleCLI";
 import { MeshPhongNodeMaterial,PointsNodeMaterial ,  uniform, skinning , MeshPhysicalNodeMaterial, MeshBasicNodeMaterial ,MeshStandardNodeMaterial , LineBasicNodeMaterial, vec2, distance, NodeMaterial, smoothstep, Break, materialReference, float, sub, VolumeNodeMaterial, vec3, tslFn, all   } from 'three/tsl';
 import {   reflector, uv, texture, color , mix } from 'three/tsl';
  
-
+ 
  
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import SimpleBar from "simplebar";
@@ -70,6 +70,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
   behaviourscriptname: string;
   activationCircle: THREE.Line<THREE.CircleGeometry, THREE.LineBasicMaterial, THREE.Object3DEventMap>;
    arrows: [] = [];
+   hostname: string;
   
 
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
@@ -87,13 +88,21 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     this.isColliding_ = false;
     this.document = { htmltext : ""};
     this.behaviourscriptname = behaviourscriptname;
- 
+    this.hostname = window.location.hostname;
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
     if (behaviourscriptname !== "")
       this.LoadWorker(behaviourscriptname);
   }
-
+  fetch(url: string) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", url);
+      xhr.onload = () => resolve(xhr.responseText);
+      xhr.onerror = () => reject(xhr.statusText);
+      xhr.send();
+    });
+  }
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
     this._model = await LoadingManager.loadGLTF(this._modelpath);
@@ -1500,14 +1509,28 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     resetIcon.setAttribute("uk-icon", "icon: refresh; ratio: 0.8");
     resetIcon.style.marginRight = "5px";
     inlineContainer.appendChild(resetIcon);
+
+    const killicon = document.createElement("span");
+    killicon.id = "killicon";
+    killicon.className = "uk-icon";
+    killicon.setAttribute("uk-icon", "icon: close; ratio: 0.8");
+    killicon.style.marginRight = "5px";
+    killicon.style.cursor = "pointer";
+    killicon.style.color = "red";
+
+    
     const nameElement = document.createElement("div");
     nameElement.id = "name";
     nameElement.style.cursor = "pointer";
     nameElement.style.fontSize = "smaller";
     nameElement.textContent = this._entity.name;
+    inlineContainer.appendChild(killicon);
     inlineContainer.appendChild(nameElement);
-    this._titlebar.appendChild(cliContainer);
     this._titlebar.appendChild(inlineContainer);
+
+    this._titlebar.appendChild(cliContainer);
+ 
+
 
     this.uiElement = cliContainer;
     this.uiElement.addEventListener('update', this.updatePosition.bind(this));
@@ -1530,6 +1553,11 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
   
       dropIcon.addEventListener("click", ()  => {
         this.toggleDropdown();
+      });
+    }
+    if (killicon) {
+      killicon.addEventListener("click", () => {
+        this._entity.kill();
       });
     }
     this.resetConsole();
@@ -2055,12 +2083,12 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
       }
     }
 
-    for (let i = this._css3dgroup.children.length - 1; i >= 0; i--) {
-      //find all instances of css2dobject and remove them
-      if (this._css3dgroup.children[i] instanceof CSS2DObject) {
-        this._css3dgroup.remove(this._css3dgroup.children[i]);
-      }
-    }
+    // for (let i = this._css3dgroup.children.length - 1; i >= 0; i--) {
+    //   //find all instances of css2dobject and remove them
+    //   if (this._css3dgroup.children[i] instanceof CSS2DObject) {
+    //     this._css3dgroup.remove(this._css3dgroup.children[i]);
+    //   }
+    // }
     this._entity._entityManager._mc.annoationsScene.remove(this._css2dgroup);
   }
 

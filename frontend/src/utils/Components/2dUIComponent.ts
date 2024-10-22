@@ -7,6 +7,10 @@ import { abs, max } from "three/webgpu";
 import { StaticCLI } from "../../SimpleCLI";
 import SimpleBar from "simplebar";
 import { mapContext } from "xstate/lib/utils";
+import * as monaco from 'monaco-editor';
+import { init } from "xstate/lib/actionTypes";
+
+
  class twoDUIComponent extends Component {
   private _html: string;
   private _css2dobject: CSS2DObject;
@@ -20,6 +24,7 @@ import { mapContext } from "xstate/lib/utils";
    typed: boolean;
    lastdistance: number;
    private cameraheight: number;
+   editor: monaco.editor.IStandaloneCodeEditor;
 
   constructor(html: string, size?: THREE.Vector2) {
     super();
@@ -86,6 +91,30 @@ import { mapContext } from "xstate/lib/utils";
   set HtmlElement (htmlElement: HTMLElement) {
     this._htmlElement = htmlElement;
   }
+
+  initMonacoEditor(container: HTMLElement) {
+    console.log("initMonacoEditor");
+    console.log(container);
+    this.editor =    monaco.editor.create(  container, {
+      value: 'console.log("Hello, world")',
+      language: 'javascript',
+      theme: 'vs-dark',
+      contextmenu: false,
+      automaticLayout: true,
+    });
+
+ 
+
+    //select line 8 in the editor
+
+
+  }
+  assignsave(   cb) {
+    if (this.editor) {
+      this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, cb);
+    }
+ 
+   }
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
     this._htmlElement = document.createElement("div");
@@ -154,7 +183,7 @@ import { mapContext } from "xstate/lib/utils";
   }
 
   async setSizeSmoothly(size: THREE.Vector2) {
-    let x= 0;
+    let x   =   Number(this._htmlElement.style.top.replace(/\D/g, ""));
     tween({
       from: {
         x: this._htmlElement.clientWidth,
@@ -166,7 +195,8 @@ import { mapContext } from "xstate/lib/utils";
       render: (state: any) => {
         this._htmlElement.style.height = state.y + "px";
         this._htmlElement.style.width = state.x + "px";
-         //this._htmlElement.style.top =  -x + "px";
+       // this._entity._entityManager._mc.onWindowResize()
+        // this._htmlElement.style.top =  +x + "px";
         x+=1;
          
        
@@ -183,6 +213,11 @@ import { mapContext } from "xstate/lib/utils";
     console.log("setSizeSmoothly");
     console.log(size);
     this._size = size; 
+    let x   =   Number(this._htmlElement.style.top.replace(/\D/g, ""));
+    //extract the number from the string
+    x = x
+
+    console.log(x);
 
     //convert string to number defqult to 0
      
@@ -198,7 +233,8 @@ import { mapContext } from "xstate/lib/utils";
 
         this._htmlElement.style.height = state.y  + "px";
         this._htmlElement.style.width = state.x   + "px";
-        this._htmlElement.style.top = 0 + "px";
+        x = Math.min(0, Number(x)-1);
+       // this._htmlElement.style.top =       Math.min(0, Number(this._htmlElement.style.top)) + "px";
 
       
      //   this.Size = size;
@@ -209,7 +245,7 @@ import { mapContext } from "xstate/lib/utils";
         
       },
       finish: () => {
-        this._htmlElement.scrollIntoView( {block: "center", inline: "center"});
+        //this._htmlElement.scrollIntoView( {block: "center", inline: "center"});
         //this.Size = size;
       //  
       //  this._entity._entityManager._mc.onWindowResize()
@@ -236,6 +272,61 @@ import { mapContext } from "xstate/lib/utils";
       },
     });
   }
+
+  getElementPositionByContent( content: string) {
+    // Find the span element with the data attribute data-cli-cursor
+ // Method 2: Using a recursive approach
+          function findElementByInnerHTMLRecursive(rootElement, searchText) {
+            console.log(rootElement.textContent);
+
+            if (rootElement.textContent === searchText) {
+              console.log(rootElement.innerHTML.trim() )
+                return rootElement;
+            }
+            
+            for (const child of rootElement.children) {
+                const result = findElementByInnerHTMLRecursive(child, searchText);
+                if (result) return result;
+            }
+            
+            return null;
+          }
+    let span =   findElementByInnerHTMLRecursive(this.editor.getContainerDomNode(),content);
+   
+    //find child of html element with the content 
+    
+    if (!span) {
+      console.log("span not found");
+      return;
+    }
+    let rect = span.getBoundingClientRect();
+  
+    // Calculate normalized device coordinates (NDC)
+    let ndcX = (rect.left + rect.width / 2) / window.innerWidth * 2 - 1;
+    let ndcY = -(rect.top + rect.height / 2) / window.innerHeight * 2 + 1;
+  
+    // Create a vector for NDC
+    let ndcVector = new THREE.Vector3(ndcX, ndcY, 0.5); // z = 0.5 for the unprojection from screen space
+  
+    // Unproject the NDC to world coordinates
+    ndcVector.unproject(this._entity._entityManager._mc.camera);
+  
+    // Create a ray from the camera to the unprojected point
+    let ray = new THREE.Raycaster(
+        this._entity._entityManager._mc.camera.position, 
+        ndcVector.sub(this._entity._entityManager._mc.camera.position).normalize()
+    );
+  
+    // Define the plane using its position and rotation
+    let planeY = this._webgpuplane.position.y; // Assuming the plane is horizontal at y = 0
+   
+    // Calculate the intersection of the ray with the horizontal plane
+    let t = (planeY - ray.ray.origin.y) / ray.ray.direction.y;
+    let intersection = ray.ray.origin.clone().add(ray.ray.direction.clone().multiplyScalar(t));
+  
+    return intersection;
+  }
+   
 
 
   getElementPosition( htmlElement: HTMLElement) {
@@ -352,6 +443,11 @@ import { mapContext } from "xstate/lib/utils";
     }
 
     // Update last distance
+    if (Math.abs(distance - this.lastdistance) > 0.1){
+      
+       //s this.HtmlElement.scrollIntoView({block: "center", inline: "center"});
+        this._entity._entityManager._mc.onWindowResize();
+    }
     this.lastdistance = distance;
 
     // Handle fittoscroll case

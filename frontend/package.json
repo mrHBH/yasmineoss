@@ -36,6 +36,7 @@
     "tweakpane": "^4.0.4",
     "uikit": "^3.21.13",
     "uuid": "^9.0.1",
+    "vite-plugin-monaco-editor": "^1.1.0",
     "xstate": "^4.38.3"
   }
 }

@@ -40,23 +40,24 @@ services:
       - yasminenet
 
   
-  code-server:
-    image: lscr.io/linuxserver/code-server:latest
-    container_name: code-server
-    environment:
-      - PUID=0
-      - PGID=0
-      - TZ=Africa/Nairobi
-      - PASSWORD=vs
-      - SUDO_PASSWORD=vs
-    volumes:
-      - ./frontend/public/:/public
-      - ./backend:/python/backendpython 
-    ports:
-      - 8443:8443
-    restart: unless-stopped
-    networks:
-      - yasminenet
+  # code-server:
+  #   image: lscr.io/linuxserver/code-server:latest
+  #   container_name: code-server
+  #   environment:
+  #     - PUID=0
+  #     - PGID=0
+  #     - TZ=Africa/Nairobi
+  #     - PASSWORD=vs
+  #     - SUDO_PASSWORD=vs
+  #     - DEFAULT_WORKSPACE=/public
+  #   volumes:
+  #     - ./frontend/public/:/public
+  #     - ./backend:/python/backendpython 
+  #   ports:
+  #     - 8443:8443
+  #   restart: unless-stopped
+  #   networks:
+  #     - yasminenet
 
   browserfrontend:
     container_name: browserfrontend
