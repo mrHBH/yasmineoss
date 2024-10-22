@@ -7,6 +7,10 @@ let cb = function (e) {
     protocol = "ws://";
 
   }
+  else {
+    this.hostname = "llm.ben-hassen.com";
+  }
+  
    this.threedobjects = [];
   this.phycisobjects = [];
   this.currentSlide = 0;
