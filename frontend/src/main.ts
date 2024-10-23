@@ -267,14 +267,14 @@ class Main {
 
 
  
-    const dynamicbaseui = new Entity();
-    const dynamicbaseuicontroller = new DynamicuiComponent("../pages/homepage.js");
-    dynamicbaseui.Position = new THREE.Vector3(0, 0, 0);
-    //rotate to be flat on the ground
-    // dynamicbaseui.Quaternion = new THREE.Quaternion( 0,0 , 0, 1);
-    dynamicbaseui.Quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-    await dynamicbaseui.AddComponent(dynamicbaseuicontroller);
-    await this.entityManager.AddEntity(dynamicbaseui, "DynamicBaseUI");
+    // const dynamicbaseui = new Entity();
+    // const dynamicbaseuicontroller = new DynamicuiComponent("../pages/homepage.js");
+    // dynamicbaseui.Position = new THREE.Vector3(0, 0, 0);
+    // //rotate to be flat on the ground
+    // // dynamicbaseui.Quaternion = new THREE.Quaternion( 0,0 , 0, 1);
+    // dynamicbaseui.Quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    // await dynamicbaseui.AddComponent(dynamicbaseuicontroller);
+    // await this.entityManager.AddEntity(dynamicbaseui, "DynamicBaseUI");
 
  
   //   let sydney = new Entity();
