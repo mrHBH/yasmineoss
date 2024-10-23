@@ -238,12 +238,14 @@ let cb = function (e) {
               component = await mc.UIManager.adduiElement("chatPage", cvContent, pos, availableScreenSize, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
               mc.UIManager.currentUIelement = component;
               mc.UIManager.toggleScrollmode();
+
            //   mc.UIManager.toggleScrollmode();
-              component.setSizeSmoothly( new THREE.Vector2( window.innerWidth, 2*window.innerHeight));
-              component.Size = new THREE.Vector2( window.innerWidth, 2*window.innerHeight);
-               mc.UIManager.toggleBirdEyemode( new THREE.Vector3(0, 4, 0));
-               component.setSizeSmoothly( new THREE.Vector2( window.innerWidth, 2*window.innerHeight));
-               component.Size = new THREE.Vector2( window.innerWidth, 2*window.innerHeight);
+             
+           
+              //  mc.UIManager.toggleScrollmode();
+              //  mc.UIManager.toggleBirdEyemode( new THREE.Vector3(0, 4, 0));
+
+ 
          
 
  

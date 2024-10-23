@@ -262,7 +262,7 @@ import { init } from "xstate/lib/actionTypes";
     // );
     tween({
       from: { x: this._webgpuplane.scale.x, y: this._webgpuplane.scale.y },
-      to: { x: 5, y: 5 },
+      to: { x: 15, y: 15 },
       duration: 1500,
       easing: "easeOutQuad",
       render: (state: any) => {

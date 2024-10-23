@@ -238,7 +238,7 @@ class Main {
    });
    await hamza.AddComponent(environmentcontroller2);
    await hamza.AddComponent(new AIInput());
-  //  await environmentbot2.AddComponent(new KeyboardInput());
+     await hamza.AddComponent(new KeyboardInput());
    await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
    this.maincController.MainEntity = hamza;
    environmentcontroller2.face();

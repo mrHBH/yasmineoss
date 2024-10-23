@@ -19,7 +19,7 @@ let engineForce2 = 0;
 let engineForce3 = 0;
 let steeringValue = 0;
 let brakeForce = 1200;
-let cylinders = 2.5
+let cylinders = 4.5
 
 
 
