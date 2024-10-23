@@ -91,8 +91,8 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     this.hostname = window.location.hostname;
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
-    if (behaviourscriptname !== "")
-      this.LoadWorker(behaviourscriptname);
+    // if (behaviourscriptname !== "")
+    //   this.LoadWorker(behaviourscriptname);
   }
   fetch(url: string) {
     return new Promise((resolve, reject) => {

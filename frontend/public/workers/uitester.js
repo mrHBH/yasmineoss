@@ -5,6 +5,7 @@ let cb = function (e) {
 
   if (this.hostname == "localhost") {
     protocol = "ws://";
+    this.hostname = "localhost:8000";
   } else {
     this.hostname = "llm.ben-hassen.com";
   }
@@ -236,7 +237,7 @@ let cb = function (e) {
       // Ensure filepath is properly encoded for the URL
       const encodedPath = encodeURIComponent(filepath);
       const websocket = new WebSocket(
-        `${protocol}${this.hostname}:8000/ws/workspace/${workspace}/file/${encodedPath}`
+        `${protocol}${this.hostname}/ws/workspace/${workspace}/file/${encodedPath}`
       );
 
       websocket.onopen = () => {
@@ -313,9 +314,9 @@ let cb = function (e) {
   const renderFileTree = async () => {
     const fileTree = component.HtmlElement.querySelector("#file-tree");
     if (!fileTree || !this.currentWorkspace) return;
-
+    console.log(this.hostname);
     const websocket = new WebSocket(
-      `${protocol}${this.hostname}:8000/ws/workspace/${this.currentWorkspace}/directory/`
+      `${protocol}${this.hostname}/ws/workspace/${this.currentWorkspace}/directory/`
     );
 
     websocket.onopen = () => {
@@ -426,7 +427,9 @@ let cb = function (e) {
 
       this.currentWorkspace = workspaceName;
       const websocket = new WebSocket(
-        "${protocol}${this.hostname}:8000/ws/workspace/create/"
+        
+
+        `${protocol}${this.hostname}/ws/workspace/create/ `
       );
       websocket.onopen = () => {
         websocket.send(JSON.stringify({ workspace_name: workspaceName }));
@@ -446,7 +449,7 @@ let cb = function (e) {
       const filename = prompt("Enter file name:");
       if (filename && this.currentWorkspace) {
         const websocket = new WebSocket(
-          `${protocol}${this.hostname}:8000/ws/workspace/${this.currentWorkspace}/file/${filename}`
+          `${protocol}${this.hostname}/ws/workspace/${this.currentWorkspace}/file/${filename}`
         );
         websocket.onopen = () => {
           websocket.send(

@@ -13,6 +13,7 @@ import { Entity } from "./utils/Entity";
   import { MainController } from "./utils/MainController";
 import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
+import { DynamicuiComponent } from "./utils/Components/DynamicuiComponent";
 // // import { CarComponent } from "./utils/Components/CarComponent";
 // // import { StaticCLI } from "./SimpleCLI";
 // // // InfiniteGridHelper class definition ends here
@@ -169,59 +170,59 @@ class Main {
   //   this.maincController.MainEntity = bob2;
 
 
-  //    const syndey2 = new Entity();
-  //   syndey2.Position = new THREE.Vector3(-80, 1, 0);
-  //    const sydneycontroller2 = new CharacterComponent({
-  //     modelpath: "models/gltf/Xbot.glb",
-  //     animationspathslist: animations,
-  //     behaviourscriptname: "environmentbot.js",
-  //   });
-  //   await syndey2.AddComponent(sydneycontroller2);
-  //   await syndey2.AddComponent(new AIInput());
-  //   await syndey2.AddComponent(new KeyboardInput());
-  //  await this.entityManager.AddEntity(syndey2, "Site manager");
+     const syndey2 = new Entity();
+    syndey2.Position = new THREE.Vector3(-80, 1, 0);
+     const sydneycontroller2 = new CharacterComponent({
+      modelpath: "models/gltf/Xbot.glb",
+      animationspathslist: animations,
+      behaviourscriptname: "environmentbot.js",
+    });
+    await syndey2.AddComponent(sydneycontroller2);
+    await syndey2.AddComponent(new AIInput());
+    await syndey2.AddComponent(new KeyboardInput());
+   await this.entityManager.AddEntity(syndey2, "Site manager");
 
 
-  //  //add script entity environmentbot to the scene
-  //   const environmentbot = new Entity();
-  //   environmentbot.Position = new THREE.Vector3(0, 1,4);
-  //   const environmentcontroller = new CharacterComponent({
-  //     modelpath: "models/gltf/Xbot.glb",
-  //     animationspathslist: animations,
-  //     behaviourscriptname: "environmentbot.js",
-  //   });
-  //   await environmentbot.AddComponent(environmentcontroller);
-  //   await environmentbot.AddComponent(new AIInput());
-  //   await environmentbot.AddComponent(new KeyboardInput());
-  //  await this.entityManager.AddEntity(environmentbot, "environmentbot");
+  // //  add script entity environmentbot to the scene
+  // //   const environmentbot = new Entity();
+  // //   environmentbot.Position = new THREE.Vector3(0, 1,4);
+  // //   const environmentcontroller = new CharacterComponent({
+  // //     modelpath: "models/gltf/Xbot.glb",
+  // //     animationspathslist: animations,
+  // //     behaviourscriptname: "environmentbot.js",
+  // //   });
+  // //   await environmentbot.AddComponent(environmentcontroller);
+  // //   await environmentbot.AddComponent(new AIInput());
+  // //   await environmentbot.AddComponent(new KeyboardInput());
+  // //  await this.entityManager.AddEntity(environmentbot, "environmentbot");
 
 
   
-  //  //add script entity environmentbot to the scene
-  //   const environmentbot = new Entity();
-  //   environmentbot.Position = new THREE.Vector3(0, 1,40);
-  //   const environmentcontroller = new CharacterComponent({
-  //     modelpath: "models/gltf/ybot2.glb",
-  //     animationspathslist: animations,
-  //     behaviourscriptname: "palbob.js",
-  //   });
-  //   await environmentbot.AddComponent(environmentcontroller);
-  //   await environmentbot.AddComponent(new AIInput());
-  //   //await environmentbot.AddComponent(new KeyboardInput());
-  //  await this.entityManager.AddEntity(environmentbot, "palbob");
+   //add script entity environmentbot to the scene
+    const environmentbot = new Entity();
+    environmentbot.Position = new THREE.Vector3(60, 1,40);
+    const environmentcontroller = new CharacterComponent({
+      modelpath: "models/gltf/ybot2.glb",
+      animationspathslist: animations,
+      behaviourscriptname: "palbob.js",
+    });
+    await environmentbot.AddComponent(environmentcontroller);
+    await environmentbot.AddComponent(new AIInput());
+    //await environmentbot.AddComponent(new KeyboardInput());
+   await this.entityManager.AddEntity(environmentbot, "palbob");
 
-  //    //add script entity environmentbot to the scene
-  //    const palbobmem = new Entity();
-  //    palbobmem.Position = new THREE.Vector3(40, 1,4);
-  //    const palbobmemcontroller = new CharacterComponent({
-  //      modelpath: "models/gltf/ybot2.glb",
-  //      animationspathslist: animations,
-  //      behaviourscriptname: "palbobmem.js",
-  //    });
-  //    await palbobmem.AddComponent(palbobmemcontroller);
-  //    await palbobmem.AddComponent(new AIInput());
-  //    //await environmentbot.AddComponent(new KeyboardInput());
-  //   await this.entityManager.AddEntity(palbobmem, "palbobmem");
+     //add script entity environmentbot to the scene
+     const palbobmem = new Entity();
+     palbobmem.Position = new THREE.Vector3(40, 1,4);
+     const palbobmemcontroller = new CharacterComponent({
+       modelpath: "models/gltf/ybot2.glb",
+       animationspathslist: animations,
+       behaviourscriptname: "palbobmem.js",
+     });
+     await palbobmem.AddComponent(palbobmemcontroller);
+     await palbobmem.AddComponent(new AIInput());
+     //await environmentbot.AddComponent(new KeyboardInput());
+    await this.entityManager.AddEntity(palbobmem, "palbobmem");
 
 
 
@@ -266,14 +267,14 @@ class Main {
 
 
  
-  //   // const dynamicbaseui = new Entity();
-  //   // const dynamicbaseuicontroller = new DynamicuiComponent("../pages/homepage.js");
-  //   // dynamicbaseui.Position = new THREE.Vector3(0, 0, 0);
-  //   // //rotate to be flat on the ground
-  //   // // dynamicbaseui.Quaternion = new THREE.Quaternion( 0,0 , 0, 1);
-  //   // dynamicbaseui.Quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-  //   // await dynamicbaseui.AddComponent(dynamicbaseuicontroller);
-  //   // await this.entityManager.AddEntity(dynamicbaseui, "DynamicBaseUI");
+    const dynamicbaseui = new Entity();
+    const dynamicbaseuicontroller = new DynamicuiComponent("../pages/homepage.js");
+    dynamicbaseui.Position = new THREE.Vector3(0, 0, 0);
+    //rotate to be flat on the ground
+    // dynamicbaseui.Quaternion = new THREE.Quaternion( 0,0 , 0, 1);
+    dynamicbaseui.Quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    await dynamicbaseui.AddComponent(dynamicbaseuicontroller);
+    await this.entityManager.AddEntity(dynamicbaseui, "DynamicBaseUI");
 
  
   //   let sydney = new Entity();
