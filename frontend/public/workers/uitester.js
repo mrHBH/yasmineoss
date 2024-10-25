@@ -10,10 +10,7 @@ let cb = function (e) {
     this.hostname = "llm.ben-hassen.com";
   }
 
-  this.threedobjects = [];
-  this.phycisobjects = [];
-  this.currentSlide = 0;
-
+ 
   this.threedobjects = [];
   this.phycisobjects = [];
   this.currentSlide = 0;
@@ -24,35 +21,8 @@ let cb = function (e) {
       this.threedobjects[i].quaternion.copy(this.phycisobjects[i].quaternion);
     }
   };
+ 
 
-  // const createWall = (width, height, depth, position) => {
-  //   const geometry = new THREE.BoxGeometry(width, height, depth);
-  //   const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
-  //   const wall = new THREE.Mesh(geometry, material);
-  //   wall.position.copy(position);
-  //   mc.webgpuscene.add(wall);
-  //   this.threedobjects.push(wall);
-  //   return wall;
-  // };
-
-  // const camera = mc.camera
-  // const frustumSize = 10;
-  // const aspect = window.innerWidth / window.innerHeight;
-  // const left = -frustumSize * aspect / 2;
-  // const right = frustumSize * aspect / 2;
-  // const top = frustumSize / 2;
-  // const bottom = -frustumSize / 2;
-  // const near = 0.1;
-  // const far = 1000;
-
-  // const walls = [
-  //   createWall(right - left, 0.1, 0.1, new THREE.Vector3((left + right) / 2, top, -near)),
-  //   createWall(right - left, 0.1, 0.1, new THREE.Vector3((left + right) / 2, bottom, -near)),
-  //   createWall(0.1, top - bottom, 0.1, new THREE.Vector3(left, (top + bottom) / 2, -near)),
-  //   createWall(0.1, top - bottom, 0.1, new THREE.Vector3(right, (top + bottom) / 2, -near))
-  // ];
-
-  // createWall(0.1, 0.1, 0.1, new THREE.Vector3(left, top, -near));
   const testContent = `
       <div class="editor-container" style="display: flex; width: 100%; height: 100%; max-width: 100vw; max-height: 100vh;">
          <div id="sidebar-container" style="position: relative;">  </div>
@@ -269,7 +239,7 @@ let cb = function (e) {
       // Ensure filepath is properly encoded for the URL
       const encodedPath = encodeURIComponent(filepath);
       const websocket = new WebSocket(
-        `${protocol}${this.hostname}:8000/ws/workspace/${workspace}/file/${encodedPath}`
+        `${protocol}${this.hostname}/ws/workspace/${workspace}/file/${encodedPath}`
       );
 
       websocket.onopen = () => {
@@ -351,6 +321,124 @@ let cb = function (e) {
       websocket.close();
     };
   };
+ 
+  
+  const calculateScreenDimensions = (camera, targetDistance) => {
+    // Get camera FOV in radians
+    const fovRad = camera.fov * Math.PI / 180;
+    
+    // Calculate height at target distance using full FOV
+    const height = 2 * Math.tan(fovRad / 2) * targetDistance;
+    
+    // Calculate width using aspect ratio
+    const width = height * camera.aspect;
+    
+    return { width, height };
+};
+
+const createPhysicalWall = (width, height, depth, position, rotation) => {
+    // Create Three.js mesh
+    const geometry = new THREE.BoxGeometry(width, height, depth);
+    const material = new THREE.MeshBasicMaterial({ 
+        color: 0x484040, 
+        transparent: true, 
+        opacity: 0.3,
+        wireframe: true 
+    });
+    const wall = new THREE.Mesh(geometry, material);
+    wall.position.copy(position);
+    if (rotation) {
+        wall.rotation.copy(rotation);
+    }
+    mc.webgpuscene.add(wall);
+    this.threedobjects.push(wall);
+
+    // Create physics body
+    const shape = new CANNON.Box(new CANNON.Vec3(width/2, height/2, depth/2));
+    const body = new CANNON.Body({
+        mass: 0, // Static body
+        position: new CANNON.Vec3(position.x, position.y, position.z),
+        shape: shape
+    });
+    
+    // Apply rotation to physics body if provided
+    if (rotation) {
+        body.quaternion.setFromEuler(rotation.x, rotation.y, rotation.z);
+    }
+    
+    physicsworld.addBody(body);
+    this.phycisobjects.push(body);
+
+    return { mesh: wall, body: body };
+};
+
+const createWallsFromCamera = function() {
+    const camera = mc.camera;
+    const targetDistance = camera.position.y; // Distance to ground plane
+    
+    // Get screen dimensions at target distance
+    const dimensions = calculateScreenDimensions(camera, targetDistance);
+    
+    // Wall parameters
+    const wallThickness = 0.5;
+    const wallHeight = camera.position.y * 2; // Double the camera height
+    
+    // Calculate actual visible width and depth at ground level
+    const visibleWidth = dimensions.width;
+    const visibleDepth = dimensions.height;
+    
+    // Add margin to ensure walls are just outside view but not too far
+    const margin = 0.9; // 10% margin
+    const wallWidth = visibleWidth * margin;
+    const wallDepth = visibleDepth * margin;
+    
+    // Create four walls to form a box
+    // Left wall
+    createPhysicalWall(
+        wallThickness, 
+        wallHeight, 
+        wallDepth,
+        new THREE.Vector3(-wallWidth/2, wallHeight/2, 0),
+        new THREE.Euler(0, 0, 0)
+    );
+    
+    // Right wall
+    createPhysicalWall(
+        wallThickness, 
+        wallHeight, 
+        wallDepth,
+        new THREE.Vector3(wallWidth/2, wallHeight/2, 0),
+        new THREE.Euler(0, 0, 0)
+    );
+    
+    // Front wall
+    createPhysicalWall(
+        wallWidth, 
+        wallHeight, 
+        wallThickness,
+        new THREE.Vector3(0, wallHeight/2, -wallDepth/2),
+        new THREE.Euler(0, 0, 0)
+    );
+    
+    // Back wall
+    createPhysicalWall(
+        wallWidth, 
+        wallHeight, 
+        wallThickness,
+        new THREE.Vector3(0, wallHeight/2, wallDepth/2),
+        new THREE.Euler(0, 0, 0)
+    );
+
+    console.log('Created camera-aligned walls with dimensions:', {
+        visibleWidth,
+        visibleDepth,
+        wallWidth,
+        wallDepth,
+        wallHeight,
+        cameraHeight: camera.position.y,
+        cameraFOV: camera.fov
+    });
+};
 
   const initializeui = async () => {
     let initializeButton = this.uiElement.querySelector("#generate-page");
@@ -379,8 +467,7 @@ let cb = function (e) {
     mc.UIManager.updateSplineObject();
     mc.UIManager.cubePosition = 0.1;
     mc.UIManager.moveCubeAlongPath(0);
-    mc.UIManager.cubePosition = 1;
-    mc.UIManager.moveCubeAlongPath(1);
+    
 
     mc.CameraControls.setPosition(pos.x, pos.y + 9, pos.z, true);
     mc.CameraControls.rotatePolarTo(0, true);
@@ -396,8 +483,26 @@ let cb = function (e) {
         Math.PI / 2
       )
     );
+    let html0 = `<div class="uk-card uk-card-secondary uk-card-body">
+      <h3 class="uk-card-title">Setting up the UI</h3>
+      <p>Setting up the UI for testing...</p>
+      <progress class="uk-progress" value="0" max="100"></progress>
+    </div>`;
+
     this.component = component;
     mc.UIManager.toggleScrollmode();
+    await StaticCLI.typeWithCallbacks(
+      this.uiElement,
+       html0,
+      callbacks,
+      50,
+      true
+    );
+
+       
+    //create walls
+    createWallsFromCamera()
+    
 
     mc.UIManager.currentUIelement = component;
 
@@ -491,6 +596,69 @@ let cb = function (e) {
       component.editor.getModel().setLanguage("javascript");
       setupEditorKeybindings();
     }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      let element0 = document.getElementById("car.js");
+      if (element0) {
+        // Remove existing controls if any
+        const existingControls = element0.querySelector(".car-controls");
+        if (existingControls) {
+          existingControls.remove();
+        }
+
+        // Add new controls
+        const controls = createCarControls(element0);
+
+        // Walk to the controls
+        const elementPosition = component.getElementPosition(element0);
+        if (elementPosition) {
+          // await mc.mainEntity.Broadcast({
+          //   topic: "walk",
+          //   data: { position: elementPosition }
+          // });
+        }
+
+        // Setup control button handlers
+        controls.reload.addEventListener("click", async (event) => {
+          event.stopPropagation(); // Prevent triggering the file click event
+          if (!this.carcomponent) {
+            this.carcomponent = await mc.spawnCar();
+          }
+          let elementlocation = component.getElementPositionByContent(
+            "//------------------------------>CARSPAWNHERE"
+          );
+        
+          if (!elementlocation) {
+          elementlocation =  this._entity.Position
+          }
+          this.carcomponent.body.position.set(
+            elementlocation.x,
+            elementlocation.y + 1,
+            elementlocation.z
+          );
+          this.carcomponent.body.quaternion.set(0, 0, 0, 1);
+          this.carcomponent.body.velocity.set(0, 0, 0);
+          this.carcomponent.body.angularVelocity.set(0, 0, 0);
+
+          this.carcomponent.loadscript(component.editor.getValue());
+        });
+
+        controls.stop.addEventListener("click", async (event) => {
+          event.stopPropagation(); // Prevent triggering the file click event
+          if (this.carcomponent) {
+            this.carcomponent._entity.kill();
+  
+          }
+          this.carcomponent = null;
+
+          
+        });
+
+        element0.click();
+      } 
+   
+   
+
     this.currentSlide = 2;
     await this.updateSlide();
   };
@@ -523,87 +691,12 @@ let cb = function (e) {
         break;
  
       case 2:
-        h = async () => {
-          let element0 = document.getElementById("car.js");
-          if (element0) {
-            // Remove existing controls if any
-            const existingControls = element0.querySelector(".car-controls");
-            if (existingControls) {
-              existingControls.remove();
-            }
-
-            // Add new controls
-            const controls = createCarControls(element0);
-
-            // Walk to the controls
-            const elementPosition = component.getElementPosition(element0);
-            if (elementPosition) {
-              // await mc.mainEntity.Broadcast({
-              //   topic: "walk",
-              //   data: { position: elementPosition }
-              // });
-            }
-
-            // Setup control button handlers
-            controls.reload.addEventListener("click", async (event) => {
-              event.stopPropagation(); // Prevent triggering the file click event
-              if (!this.carcomponent) {
-                this.carcomponent = await mc.spawnCar();
-              }
-              let elementlocation = component.getElementPositionByContent(
-                "//------------------------------>CARSPAWNHERE"
-              );
-            
-              if (!elementlocation) {
-              elementlocation =  this._entity.Position
-              }
-              this.carcomponent.body.position.set(
-                elementlocation.x,
-                elementlocation.y + 1,
-                elementlocation.z
-              );
-              this.carcomponent.body.quaternion.set(0, 0, 0, 1);
-              this.carcomponent.body.velocity.set(0, 0, 0);
-              this.carcomponent.body.angularVelocity.set(0, 0, 0);
-
-              this.carcomponent.loadscript(component.editor.getValue());
-
-              // Walk to the reload button
-              const btnPosition = component.getElementPosition(controls.reload);
-              if (btnPosition) {
-                await mc.mainEntity.Broadcast({
-                  topic: "walk",
-                  data: { position: btnPosition }
-                });
-              }
-            });
-
-            controls.stop.addEventListener("click", async (event) => {
-              event.stopPropagation(); // Prevent triggering the file click event
-              if (this.carcomponent) {
-                this.carcomponent._entity.kill();
-                //this.carcomponent.Destroy();
-              }
-              this.carcomponent = null;
-
-              // Walk to the stop button
-              const btnPosition = component.getElementPosition(controls.stop);
-              // if (btnPosition) {
-              //   await mc.mainEntity.Broadcast({
-              //     topic: "walk",
-              //     data: { position: btnPosition }
-              //   });
-              // }
-            });
-
-            element0.click();
-          }
+   
 
           this.currentSlide++;
           this.updateSlide();
-        };
-
-        callbacks["create-car"] = h.bind(this);
+        
+ 
 
         html0 = `
             <div class="uk-container uk-container-small" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; padding: 20px;">

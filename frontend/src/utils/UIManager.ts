@@ -617,9 +617,8 @@ class UIManager {
 
 
   private enableBirdViewNavigation(): void {
-    // this.mc.CameraControls.minDistance =  8;
-    // this.mc.CameraControls.maxDistance =  8.1;
-     this.mc.removewalls();
+    this.mc.CameraControls.minDistance = 12;
+    this.mc.CameraControls.maxDistance =  13;
      if (this.currentUIelement) {
 
       this.currentUIelement.FitToScroll = false;

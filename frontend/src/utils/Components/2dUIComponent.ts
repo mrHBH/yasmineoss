@@ -55,7 +55,7 @@ import { init } from "xstate/lib/actionTypes";
     if (!value) {
        // this.setSizeSmoothly(new THREE.Vector2(window.innerWidth , window.innerHeight*4.5));
        this.fittoscroll = value;
-       this.setSizeSmoothly(new THREE.Vector2(window.innerWidth , 2.5*window.innerHeight));
+       this.setSizeSmoothly(new THREE.Vector2(window.innerWidth , window.innerHeight));
 
     }
   }

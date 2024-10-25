@@ -8,18 +8,18 @@ let maxSteerVal = 0.8;
 let steerStep = 0.025;
 let maxForce = 2000;
 //input :
-let rpm = 650 ;
+let rpm = 8650 ;
 let gear = 2;
 let speed = -2;
 
 //output :
-let engineForce0 = 0; 
+let engineForce0 = 10; 
 let engineForce1 = 0;
 let engineForce2 = 0;
 let engineForce3 = 0;
 let steeringValue = 0;
 let brakeForce = 1200;
-let cylinders = 4.5
+let cylinders = 1
 
 
 
@@ -113,7 +113,7 @@ function Shift(input){
 }
  
 function calculateRPM(speed , throttleInput , currentRPM , gear ){
-     let rpmIncreaseFactor =   50 /  Math.pow(gear + 1,2);
+     let rpmIncreaseFactor =   150 /  Math.pow(gear + 1,2);
      let rpmDecreaseFactor = 25.5;
 
     if (gear == 0) {
@@ -125,7 +125,7 @@ function calculateRPM(speed , throttleInput , currentRPM , gear ){
     }
     else {
         currentRPM -=  rpmDecreaseFactor 
-        currentRPM = Math.max(currentRPM, 650 -(gear * 50));  // Limit rpm to a minimum value
+        currentRPM = Math.max(currentRPM, 750 -(gear * 50));  // Limit rpm to a minimum value
         return currentRPM; 
     }
     }
@@ -137,7 +137,7 @@ function calculateRPM(speed , throttleInput , currentRPM , gear ){
         currentRPM +=  rpmIncreaseFactor  ;
  
          currentRPM = Math.min(currentRPM, speed * 1000 + 750);  // Limit rpm to a maximum value
-        currentRPM = Math.min(currentRPM, 350 + (2*(gear + 1) * 2500));  // Limit rpm to a minimum value
+        currentRPM = Math.min(currentRPM, 1350 + (2*(gear + 1) * 2500));  // Limit rpm to a minimum value
             return currentRPM;
     }
         else {
