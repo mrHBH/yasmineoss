@@ -1,7 +1,7 @@
 import * as THREE from "three"; 
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import * as CANNON from "cannon-es";
-import { MeshPhysicalNodeMaterial, WebGPURenderer } from "three/webgpu";
+import { MeshPhysicalNodeMaterial, mod, WebGPURenderer } from "three/webgpu";
 
 // import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
 import { InfiniteGridHelper } from "./InfiniteGridHelper";
@@ -31,6 +31,7 @@ import { SoundGeneratorAudioListener } from "./Sound_generator_worklet_wasm.js";
 // // import {  VolumeNodeMaterial, vec3, materialReference, smoothstep, If, Break, tslFn } from 'three/tsl';
 // import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
   import { LoadingManager } from "./LoadingManager.js";
+import { AIInput } from "./Components/AIInput.js";
   // import { BoxLineGeometry } from "three/examples/jsm/Addons.js";
 // let customcursor = new CustomCursor();
   const stats = new Stats();
@@ -72,6 +73,39 @@ class MainController {
   sunLight: THREE.DirectionalLight;
   CameraControls: CameraControls;
   wallmeshes: any;
+  animations:   { url: string, skipTracks?: number[] }[] = [
+     
+    { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
+    //s { url: "animations/gltf/ybot2@BackwardWalkingM.glb", skipTracks: [1] },
+    // { url: "animations/gltf/ybot2@bigjump.glb", skipTracks: [1] },
+    // { url: "animations/gltf/ybot2@Driving.glb", skipTracks: [1] },
+    // { url: "animations/gltf/ybot2@Drumming.glb", skipTracks: [1] },
+    { url: "animations/gltf/ybot2@DyingForward.glb", skipTracks: [1] },
+    { url: "animations/gltf/ybot2@DyingForward2.glb", skipTracks: [1] },
+    // { url: "animations/gltf/ybot2@EnteringCar.glb",  },
+    // { url: "animations/gltf/ybot2@ExitingCar.glb", skipTracks: [0, 2] },
+    { url: "animations/gltf/ybot2@Falling.glb", skipTracks: [0] },
+    { url: "animations/gltf/ybot2@Ideling.glb" },
+    { url: "animations/gltf/ybot2@JumpingFromStill.glb" },
+    { url: "animations/gltf/ybot2@JumpingFromWalk.glb", skipTracks: [1, 0] },
+    // { url: "animations/gltf/ybot2@Jumping.glb" },
+    { url: "animations/gltf/ybot2@JumpingFromRun.glb", skipTracks: [0] },
+    // { url: "animations/gltf/ybot2@Kickedfall.glb", skipTracks: [1] },
+    { url: "animations/gltf/ybot2@Landing.glb", skipTracks: [1] },
+    // { url: "animations/gltf/ybot2@Pain.glb", skipTracks: [1] },
+    // { url: "animations/gltf/ybot2@PlayingGuitar.glb", skipTracks: [1] },
+    // { url: "animations/gltf/ybot2@PlayingPiano.glb", skipTracks: [0] },
+    // { url: "animations/gltf/ybot2@Praying.glb" },
+     { url: "animations/gltf/ybot2@Pushing.glb" },
+    { url: "animations/gltf/ybot2@Running.glb" },
+    { url: "animations/gltf/ybot2@StoppingRunning.glb", skipTracks: [1] },
+    // { url: "animations/gltf/ybot2@Salute.glb" },
+    { url: "animations/gltf/ybot2@SlowWalking.glb" },
+    { url: "animations/gltf/ybot2@UndyingForward.glb" },
+    { url: "animations/gltf/ybot2@Walking.glb" },
+    { url: "animations/gltf/ybot2@TurningLeft.glb" },
+    { url: "animations/gltf/ybot2@TurningRight.glb" },
+  ];
 
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
@@ -211,7 +245,7 @@ class MainController {
 this.CameraControls.mouseButtons = {
   left: CameraControls.ACTION.TRUCK,
   middle: CameraControls.ACTION.ZOOM,
-  right: CameraControls.ACTION.NONE,
+  right: CameraControls.ACTION.ROTATE,
   wheel: CameraControls.ACTION.DOLLY,
 
 };
@@ -343,11 +377,11 @@ this.CameraControls.mouseButtons = {
 
     this.sunLight.castShadow = true;
     this.sunLight.shadow.camera.near = 0.0001;
-    this.sunLight.shadow.camera.far = 40;
-    this.sunLight.shadow.camera.right = 16;
-    this.sunLight.shadow.camera.left = -16;
-    this.sunLight.shadow.camera.top = 16;
-    this.sunLight.shadow.camera.bottom = -16;
+    this.sunLight.shadow.camera.far = 80;
+    this.sunLight.shadow.camera.right = 32;
+    this.sunLight.shadow.camera.left = -32;
+    this.sunLight.shadow.camera.top = 32;
+    this.sunLight.shadow.camera.bottom = -32;
     this.sunLight.shadow.mapSize.width = 4048;
     this.sunLight.shadow.mapSize.height = 4048;
     this.sunLight.shadow.bias = -0.001;
@@ -637,6 +671,29 @@ this.physicsmanager.World.addBody(floorBody);
         return carcontroller;
       }
  
+//name and class (xbot ,ybot)
+  async spawnchar(  name: string,   classname: string) {
+    let modelpath = "models/gltf/ybot2.glb";
+    if (classname === "xbot") {
+      modelpath = "models/gltf/Xbot.glb";
+      //add script entity environmentbot to the scene
+      
+    }
+    //add script entity environmentbot to the scene
+      const hamza = new Entity();
+      hamza.Position = new THREE.Vector3(0, 1,6);
+      const environmentcontroller2 = new CharacterComponent({
+        modelpath:modelpath,
+        animationspathslist: this.animations,
+     
+      });
+      await hamza.AddComponent(environmentcontroller2);
+      await hamza.AddComponent(new AIInput());
+        await hamza.AddComponent(new KeyboardInput());
+      await this.entitymanager.AddEntity(hamza, name);
+      return environmentcontroller2;
+   
+  }
 
   async LoadScene(){
     await LoadingManager.loadGLTF( "models/gltf/tiny_low_poly_town_-_modular_set.glb" ).then((scene) => {

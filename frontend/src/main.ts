@@ -14,6 +14,7 @@ import { Entity } from "./utils/Entity";
 import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
 import { DynamicuiComponent } from "./utils/Components/DynamicuiComponent";
+import { HelicopterComponent } from "./utils/Components/HelicopterComponent";
 // // import { CarComponent } from "./utils/Components/CarComponent";
 // // import { StaticCLI } from "./SimpleCLI";
 // // // InfiniteGridHelper class definition ends here
@@ -86,44 +87,13 @@ class Main {
     //   }
     //   //check if json
     // }
-    const animations = [
-      { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
-      //s { url: "animations/gltf/ybot2@BackwardWalkingM.glb", skipTracks: [1] },
-      // { url: "animations/gltf/ybot2@bigjump.glb", skipTracks: [1] },
-      // { url: "animations/gltf/ybot2@Driving.glb", skipTracks: [1] },
-      // { url: "animations/gltf/ybot2@Drumming.glb", skipTracks: [1] },
-      { url: "animations/gltf/ybot2@DyingForward.glb", skipTracks: [1] },
-      { url: "animations/gltf/ybot2@DyingForward2.glb", skipTracks: [1] },
-      // { url: "animations/gltf/ybot2@EnteringCar.glb",  },
-      // { url: "animations/gltf/ybot2@ExitingCar.glb", skipTracks: [0, 2] },
-      { url: "animations/gltf/ybot2@Falling.glb", skipTracks: [0] },
-      { url: "animations/gltf/ybot2@Ideling.glb" },
-      { url: "animations/gltf/ybot2@JumpingFromStill.glb" },
-      { url: "animations/gltf/ybot2@JumpingFromWalk.glb", skipTracks: [1, 0] },
-      // { url: "animations/gltf/ybot2@Jumping.glb" },
-      { url: "animations/gltf/ybot2@JumpingFromRun.glb", skipTracks: [0] },
-      // { url: "animations/gltf/ybot2@Kickedfall.glb", skipTracks: [1] },
-      { url: "animations/gltf/ybot2@Landing.glb", skipTracks: [1] },
-      // { url: "animations/gltf/ybot2@Pain.glb", skipTracks: [1] },
-      // { url: "animations/gltf/ybot2@PlayingGuitar.glb", skipTracks: [1] },
-      // { url: "animations/gltf/ybot2@PlayingPiano.glb", skipTracks: [0] },
-      // { url: "animations/gltf/ybot2@Praying.glb" },
-       { url: "animations/gltf/ybot2@Pushing.glb" },
-      { url: "animations/gltf/ybot2@Running.glb" },
-      { url: "animations/gltf/ybot2@StoppingRunning.glb", skipTracks: [1] },
-      // { url: "animations/gltf/ybot2@Salute.glb" },
-      { url: "animations/gltf/ybot2@SlowWalking.glb" },
-      { url: "animations/gltf/ybot2@UndyingForward.glb" },
-      { url: "animations/gltf/ybot2@Walking.glb" },
-      { url: "animations/gltf/ybot2@TurningLeft.glb" },
-      { url: "animations/gltf/ybot2@TurningRight.glb" },
-    ];
+
     // const bob = new Entity();
     // bob.Position = new THREE.Vector3(0, 1, 9);
 
     // const bobcontroller = new CharacterComponent({
     //   modelpath: "models/gltf/ybot2.glb",
-    //   animationspathslist: animations,
+    //   animationspathslist: this.maincController.animations,
     //   //  behaviourscriptname: "botbasicbehavior.js",
     // });
 
@@ -139,7 +109,7 @@ class Main {
 
     // const bobcontroller2 = new CharacterComponent({
     //   modelpath: "models/gltf/ybot2.glb",
-    //   animationspathslist: animations,
+    //   animationspathslist: this.maincController.animations,
     //  behaviourscriptname: "claude.js",
     // });
 
@@ -155,7 +125,7 @@ class Main {
 
   //   const claude2controller = new CharacterComponent({
   //     modelpath: "models/gltf/ybot2.glb",
-  //     animationspathslist: animations,
+  //     animationspathslist: this.maincController.animations,
   //    behaviourscriptname: "claude2.js",
   //   });
 
@@ -174,7 +144,7 @@ class Main {
     syndey2.Position = new THREE.Vector3(-80, 1, 0);
      const sydneycontroller2 = new CharacterComponent({
       modelpath: "models/gltf/Xbot.glb",
-      animationspathslist: animations,
+      animationspathslist: this.maincController.animations,
       behaviourscriptname: "environmentbot.js",
     });
     await syndey2.AddComponent(sydneycontroller2);
@@ -188,7 +158,7 @@ class Main {
   // //   environmentbot.Position = new THREE.Vector3(0, 1,4);
   // //   const environmentcontroller = new CharacterComponent({
   // //     modelpath: "models/gltf/Xbot.glb",
-  // //     animationspathslist: animations,
+  // //     animationspathslist: this.maincController.animations,
   // //     behaviourscriptname: "environmentbot.js",
   // //   });
   // //   await environmentbot.AddComponent(environmentcontroller);
@@ -203,7 +173,7 @@ class Main {
     environmentbot.Position = new THREE.Vector3(60, 1,40);
     const environmentcontroller = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: animations,
+      animationspathslist: this.maincController.animations,
       behaviourscriptname: "palbob.js",
     });
     await environmentbot.AddComponent(environmentcontroller);
@@ -216,7 +186,7 @@ class Main {
      palbobmem.Position = new THREE.Vector3(40, 1,4);
      const palbobmemcontroller = new CharacterComponent({
        modelpath: "models/gltf/ybot2.glb",
-       animationspathslist: animations,
+       animationspathslist: this.maincController.animations,
        behaviourscriptname: "palbobmem.js",
      });
      await palbobmem.AddComponent(palbobmemcontroller);
@@ -234,7 +204,7 @@ class Main {
    hamza.Position = new THREE.Vector3(0, 1,6);
    const environmentcontroller2 = new CharacterComponent({
      modelpath: "models/gltf/ybot2.glb",
-     animationspathslist: animations,
+     animationspathslist: this.maincController.animations,
      behaviourscriptname: "Hamza.js",
    });
    await hamza.AddComponent(environmentcontroller2);
@@ -242,6 +212,7 @@ class Main {
      await hamza.AddComponent(new KeyboardInput());
    await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
    this.maincController.MainEntity = hamza;
+ 
    environmentcontroller2.face();
 
       //add script entity environmentbot to the scene
@@ -249,7 +220,7 @@ class Main {
       uitester.Position = new THREE.Vector3(0, 1,9);
       const uitestercontroller2 = new CharacterComponent({
         modelpath: "models/gltf/ybot2.glb",
-        animationspathslist: animations,
+        animationspathslist: this.maincController.animations,
         behaviourscriptname: "uitester.js",
       });
       await uitester.AddComponent(uitestercontroller2);
@@ -283,7 +254,7 @@ class Main {
   //   sydney.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
   //   const sydneycontroller = new CharacterComponent({
   //     modelpath: "models/gltf/Xbot.glb",
-  //     animationspathslist: animations,
+  //     animationspathslist: this.maincController.animations,
   //     behaviourscriptname: "sydney.js",
   //   });
   //    const keyboardinput = new KeyboardInput();
@@ -300,7 +271,7 @@ class Main {
   //   sydney2.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
   //   const sydneycontroller2 = new CharacterComponent({
   //     modelpath: "models/gltf/Xbot.glb",
-  //     animationspathslist: animations,
+  //     animationspathslist: this.maincController.animations,
   //     behaviourscriptname: "sydney.js",
   //   });
   //    const keyboardinput2 = new KeyboardInput();
@@ -337,14 +308,14 @@ class Main {
     // await this.entityManager.AddEntity(car, "Car");
 
      
-    // const heli = new Entity();
+    const heli = new Entity();
 
-    // const helicontroller = new HelicopterComponent ({});
-    // heli.Position = new THREE.Vector3(10 , 2.5,10);
-    // heli.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
-    // await heli.AddComponent(helicontroller);
-    // await heli.AddComponent(keyboardinput);
-    // await this.entityManager.AddEntity(heli, "Heli");
+    const helicontroller = new HelicopterComponent ({});
+    heli.Position = new THREE.Vector3(0 , 2.5,0);
+    heli.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
+    await heli.AddComponent(helicontroller);
+    await heli.AddComponent( new KeyboardInput() );
+    await this.entityManager.AddEntity(heli, "Heli");
 
     // setTimeout(() => {
 
@@ -364,7 +335,7 @@ class Main {
     //     //   );
     //     //   let randomcontroller = new CharacterComponent({
     //     //     modelpath: randoemclass,
-    //     //     animationspathslist: animations,
+    //     //     animationspathslist: this.maincController.animations,
     //     //   });
     //     //   entity.position.set(randomposition.x, randomposition.y, randomposition.z);
     //     //   entity.AddComponent(randomcontroller).then(() => {
@@ -388,7 +359,7 @@ class Main {
     //     );
     //     let randomcontroller = new CharacterComponent({
     //       modelpath: randoemclass,
-    //       animationspathslist: animations,
+    //       animationspathslist: this.maincController.animations,
     //     });
     //     entity.position.set(
     //       randomposition.x,
@@ -421,7 +392,7 @@ class Main {
  
     //   let randomcontroller = new CharacterComponent({
     //     modelpath: randoemclass,
-    //     animationspathslist: animations,
+    //     animationspathslist: this.maincController.animations,
     //     //behaviourscriptname: "botbasicbehavior.js",
 
     //   });

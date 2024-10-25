@@ -501,7 +501,7 @@ class UIManager {
     if (this.scrollmodenavigation == false) {
       this.enableScrollModeNavigation();
     } else {
-    //  this.disableScrollModeNavigation();
+       this.disableScrollModeNavigation();
 
     }
   }
@@ -517,7 +517,7 @@ class UIManager {
       this.disableFPSNavigation();
     }
     if (this.birdviewnavigation) {
-    //  this.disableBirdViewNavigation();
+     this.disableBirdViewNavigation();
     } else {
       this.enableBirdViewNavigation();
     }
@@ -543,7 +543,6 @@ class UIManager {
   }
 
   private enableScrollModeNavigation(): void {
-    this.mc.createwall();
     this.mc.CameraControls.enableZoom = false;
     this.mc.CameraControls.enabled = false;
     this.mc.CameraControls.enableRotate = false;
@@ -554,14 +553,14 @@ class UIManager {
     document
       .getElementById("togglemousecontrolsbutton")
       ?.classList.add("uk-text-danger");
-    this.scrollmodenavigation = true;
-
+   
     //show the navigation scrollbarq
     // this.scrollbarContainer.style.display = "none";
     if (this.currentUIelement) {
       this.currentUIelement.FitToScroll = true;
     }
- 
+    this.scrollmodenavigation = true;
+
     
   }
   private disableScrollModeNavigation(): void {

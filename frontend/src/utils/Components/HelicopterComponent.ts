@@ -2,18 +2,15 @@ import { Entity } from "../Entity.js";
 import { Component } from "../Component.js";
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
-import { LoadingManager } from "../LoadingManager";
-
+ 
 import {
   SoundGeneratorAudioListener,
   SineWaveSoundGenerator,
   EngineSoundGenerator,
   AudioSoundGenerator,
 } from "../Sound_generator_worklet_wasm.js";
-import Engine from "../Engine.js";
-import UIkit from "uikit";
-import Icons from "uikit/dist/js/uikit-icons";
-import { SkeletonUtils } from "three/examples/jsm/Addons.js";
+import Engine from "../Engine.js"; 
+import { MeshPhongNodeMaterial,PointsNodeMaterial ,  uniform, skinning , MeshPhysicalNodeMaterial, MeshBasicNodeMaterial ,MeshStandardNodeMaterial , LineBasicNodeMaterial, vec2, distance, NodeMaterial, smoothstep, Break, materialReference, float, sub, VolumeNodeMaterial, vec3, tslFn, all   } from 'three/tsl';
 class HelicopterComponent extends Component {
   body: CANNON.Body;
   vehicle: CANNON.RaycastVehicle;
@@ -28,7 +25,6 @@ class HelicopterComponent extends Component {
   joystick: boolean;
   gear: number;
   heliWorker: Worker;
-  loadingManager: THREE.LoadingManager;
   carChassis: any;
   doorOpen: boolean;
   initialPositionSet: boolean;
@@ -54,7 +50,7 @@ class HelicopterComponent extends Component {
   rotorConstraint: CANNON.PointToPointConstraint;
   heliBodyMesh: THREE.Mesh<
     THREE.SphereGeometry,
-    THREE.MeshLambertMaterial,
+    any,
     THREE.Object3DEventMap
   >;
     thrust: any;
@@ -73,61 +69,7 @@ class HelicopterComponent extends Component {
       filename: "car.js",
     });
   }
-  openDoor() {
-    if (!this.doorOpen) {
-      //find mesh child with name : "DriverDoor"
-      const door = this.carChassis.getObjectByName("DriverDoor");
-      const window = this.carChassis.getObjectByName("glass001");
-      let temp = { x: 0, y: 0 };
-      if (door && window) {
-        // let tween = new TWEEN.Tween(temp ).to(
-        // 	{
-        // 		x:50 ,
-        // 		y : 140
 
-        // 	}
-        // ).onUpdate(
-        // 	door.translateX( 50)
-
-        // ).start()
-        // 				{ x: 100 }, 500 ).start()
-        // 				}
-
-        // 			else {
-
-        door.rotateZ(-Math.PI / 3);
-        door.translateZ(0);
-        door.translateY(140);
-        door.translateX(50);
-
-        window.rotateZ(-Math.PI / 3);
-        window.translateZ(0);
-        window.translateY(140);
-        window.translateX(50);
-        this.doorOpen = true;
-        //door.position.set(0, 0, 2);
-      }
-    }
-  }
-  closeDoor() {
-    if (this.doorOpen) {
-      const door = this.carChassis.getObjectByName("DriverDoor");
-      const window = this.carChassis.getObjectByName("glass001");
-      if (door && window) {
-        door.translateZ(0);
-        door.translateY(-140);
-        door.translateX(-50);
-        door.rotateZ(Math.PI / 3);
-
-        window.translateZ(0);
-        window.translateY(-140);
-        window.translateX(-50);
-        window.rotateZ(Math.PI / 3);
-        this.doorOpen = false;
-        //door.position.set(0, 0, 2);
-      }
-    }
-  }
   soundReady() {
     this.soundCarEngine = new EngineSoundGenerator({
       listener: this.listener,
@@ -168,9 +110,9 @@ class HelicopterComponent extends Component {
   }
 
   async CreateHeli() {
-    let defaultmaterial = new THREE.MeshLambertMaterial({
+    let defaultmaterial = new   MeshStandardNodeMaterial({
       color: "#949494",
-      flatShading: true,
+     
       side: THREE.DoubleSide,
       wireframe: true,
     });
@@ -178,7 +120,7 @@ class HelicopterComponent extends Component {
     const heliBodyGeometry = new THREE.SphereGeometry(0.66);
     this.heliBodyMesh = new THREE.Mesh(heliBodyGeometry, defaultmaterial);
     this.heliBodyMesh.position.y = 1;
-    this.heliBodyMesh.castShadow = true;
+    this.heliBodyMesh.castShadow = false;
 
     const heliTailGeometry = new THREE.BoxGeometry(0.1, 0.1, 2);
     const heliTailMesh = new THREE.Mesh(heliTailGeometry, defaultmaterial);
@@ -313,7 +255,7 @@ class HelicopterComponent extends Component {
     this.gear = 0;
     this.joystick = false;
     //
-    this.loadingManager = new THREE.LoadingManager();
+ 
     this.initialPositionSet = false;
     this._entity._RegisterHandler(
       "inputinitialized",

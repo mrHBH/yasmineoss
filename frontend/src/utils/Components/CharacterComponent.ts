@@ -1140,6 +1140,45 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     //console.log(distance);
   }
 
+  
+  loadscript(script: string) {
+    this.worker?.terminate();
+    let blob = new Blob([script], { type: "application/javascript" });
+    let url = URL.createObjectURL(blob);
+    this.worker = new Worker(url);
+    this.worker.onmessage = (e) => {
+      //	//console.log("Message received from worker", e.data);
+
+ 
+  
+
+      if (e.data.type === "input") {
+        this.Input = { _keys: e.data.input };
+        this.UpdateFSM(this.Input);
+      }
+      if (e.data.type === "jssetup") {
+        try {
+          let res = eval(e.data.js).bind(this)();
+          console.log(res);
+          this.worker.postMessage({
+            type: "feedback",
+            data: res,
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+ 
+    };
+ 
+
+  
+
+  }
+
+
+
   LoadWorker(scriptname: string) {
     //send stop command to worker if it is running
     if (this.worker) {
@@ -1746,6 +1785,8 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     this._entity._RegisterHandler("position", (data: any) => {
       let p = data as THREE.Vector3;
 
+      this.body.position.set(p.x, p.y, p.z);
+
       this._webgpugroup?.position.set(p.x, p.y, p.z);
 
       this._css2dgroup?.position.set(p.x, p.y, p.z);
@@ -2056,7 +2097,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     //hide the opacity of this._titlebar if the distance is greater than 10
     if (this._titlebar){
 
-    if (distance > 20) {
+    if (distance > 35) {
       this._titlebar.style.opacity = "0";
       this._titlebar.style.pointerEvents = "none";
     } else {
@@ -2066,6 +2107,9 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
 
     }
   }}
+
+
+
 
   async Destroy() {
     for (let i = this._webgpugroup.children.length - 1; i >= 0; i--) {

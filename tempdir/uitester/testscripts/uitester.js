@@ -10,8 +10,8 @@ let cb = function (e) {
     this.hostname = "llm.ben-hassen.com";
   }
 
-  //----------------------------------->UITESERDYNHERE
-  this.threedobjects = [];
+//------------------------------>CARSPAWNHERE
+this.threedobjects = [];
   this.phycisobjects = [];
   this.currentSlide = 0;
 
@@ -684,15 +684,14 @@ const createWallsFromCamera = function() {
             this.charcompoent = await mc.spawnchar("uitesterdyn" , "xbot");
           }   
 
-          let elementlocation = component.getElementPositionByContent(
-            "//------------------------------>CARSPAWNHERE"
+          let buttonpos = component.getElementPositionByContent(
+            "//------------------------------>UITESERDYNHERE"
           );
-        
-          if (!elementlocation) {
-            elementlocation =  component.getElementPosition(  controls.reload );
+          if (!buttonpos) {
+            buttonpos =  component.getElementPosition(  controls.reload );
           }
 
-          this.charcompoent._entity.Position = elementlocation;
+          this.charcompoent._entity.Position = buttonpos;
  
 
 
