@@ -78,12 +78,12 @@ class MainController {
     { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
     //s { url: "animations/gltf/ybot2@BackwardWalkingM.glb", skipTracks: [1] },
     // { url: "animations/gltf/ybot2@bigjump.glb", skipTracks: [1] },
-    // { url: "animations/gltf/ybot2@Driving.glb", skipTracks: [1] },
+    { url: "animations/gltf/ybot2@Driving.glb", skipTracks: [1] },
     // { url: "animations/gltf/ybot2@Drumming.glb", skipTracks: [1] },
     { url: "animations/gltf/ybot2@DyingForward.glb", skipTracks: [1] },
     { url: "animations/gltf/ybot2@DyingForward2.glb", skipTracks: [1] },
-    // { url: "animations/gltf/ybot2@EnteringCar.glb",  },
-    // { url: "animations/gltf/ybot2@ExitingCar.glb", skipTracks: [0, 2] },
+    { url: "animations/gltf/ybot2@Mounting.glb",  },
+    { url: "animations/gltf/ybot2@Unmounting.glb", skipTracks: [0, 2] },
     { url: "animations/gltf/ybot2@Falling.glb", skipTracks: [0] },
     { url: "animations/gltf/ybot2@Ideling.glb" },
     { url: "animations/gltf/ybot2@JumpingFromStill.glb" },
@@ -553,6 +553,14 @@ this.physicsmanager.World.addBody(floorBody);
     console.log(intersects[0].point)
     //add an arrow pointing towards the point 
     if (intersects[0].point && this.mainEntity) {
+
+ 
+        if (   event.altKey) {
+                  console.log("Alt + Double Click detected!");
+
+          this.mainEntity.Position = intersects[0].point;
+          return;
+        } 
       this.mainEntity.Broadcast({
         topic: "walk",
         data: {
@@ -670,6 +678,31 @@ this.physicsmanager.World.addBody(floorBody);
       
         return carcontroller;
       }
+
+      
+  async spawnHeli() {
+    const car = new Entity();
+      const carcontroller = new HelicopterComponent({});
+      const keyboardinput = new KeyboardInput();
+      this.initSound();
+
+      car.Position = new THREE.Vector3(0, 1, 0);
+      await   car.AddComponent(carcontroller) 
+       await  car.AddComponent(keyboardinput);
+        await this.entitymanager.AddEntity(car, "Heli" + Math.random()) 
+
+
+
+        //create a quaternion that when multiplied by another quaternion it rotates it 90 degrees around the y axsi
+        this.UIManager.fpsquatoffset =
+          new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            Math.PI / 2
+          );
+    
+      return carcontroller;
+    }
+
  
 //name and class (xbot ,ybot)
   async spawnchar(  name: string,   classname: string) {
@@ -724,28 +757,17 @@ this.physicsmanager.World.addBody(floorBody);
       this.camera
     );
 
-    //recursively get a list of all objects that have a component as userdata , break as soon as the first one is found for every object
-
-    // for (let i = 0; i < intersectionObjects.length; i++) {
-    //     intersectionObjects[i].traverse((child) => {
-    //         if (child instanceof THREE.Mesh) {
-    //             child.geometry.computeBoundsTree();
-    //         }
-    //     });
-    // }
     const intersects = raycaster.intersectObjects(
       this.webgpuscene.children,
       true
     );
-    //get the first object that has a component as userdata
+
     let componententities = intersects.find((i) => i.object.userData.component);
     if (componententities) {
       const p = componententities.point;
       let component = componententities.object.userData.component;
       let quaternion = new THREE.Quaternion();
       if (component) {
-   
-
         quaternion = component._entity.Quaternion;
         if (component instanceof twoDUIComponent) {
           component.zoom();
@@ -755,29 +777,22 @@ this.physicsmanager.World.addBody(floorBody);
         this.zoomTo(p, 6, quaternion);
         if (!quaternion) {
           quaternion = new THREE.Quaternion();
-        }
-
-        else {
+        } else {
           component.zoom();
           this.MainEntity = component._entity;
           return;
         }
       }
-
-    }
-
- 
-
-    else if (intersects.length > 0) {
+    } else if (intersects.length > 0) {
       const p = intersects[0].point;
- 
       let quaternion = new THREE.Quaternion();
-   
-      this.zoomTo(p, 5 );
-      // tween the orbit controls phi and theta to face the new target
-      //
-
+      this.zoomTo(p, 5);
     }
+
+    if (intersects.length == 0) {
+      return;
+    }
+
   }
 
   updateLight() {

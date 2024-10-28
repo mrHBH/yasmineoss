@@ -94,3 +94,6 @@ self.onmessage = function (e) {
     animate(delta, input);
   }
 };
+
+
+postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });

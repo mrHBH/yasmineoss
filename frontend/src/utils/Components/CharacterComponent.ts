@@ -71,6 +71,9 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
   activationCircle: THREE.Line<THREE.CircleGeometry, THREE.LineBasicMaterial, THREE.Object3DEventMap>;
    arrows: [] = [];
    hostname: string;
+   isDriving: any;
+   vehicle: any;
+   carcomponent: any;
   
 
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
@@ -844,6 +847,182 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
             curAction.setEffectiveWeight(1.0);
             curAction.crossFadeFrom(prevAction, 0.65, true);
             curAction.play();
+          },
+
+          StartMounting: (context, event) => {
+            this._entity._entityManager._mc.physicsmanager.world.removeBody(this.body);
+       
+
+            // Get the door and its position
+            let door = this.vehicle.carChassis.getObjectByName("DriverDoor");
+            let doorPosition = new THREE.Vector3();
+            door.updateMatrixWorld(true); // Ensure world matrix is updated
+            door.getWorldPosition(doorPosition);
+        
+            // Calculate the direction vector from door to car center
+            let carCenter = new THREE.Vector3();
+            this.vehicle.carChassis.getWorldPosition(carCenter);
+            let doorToCar = new THREE.Vector3().subVectors(carCenter, doorPosition).normalize();
+        
+            // Calculate the position where the character should stand
+            // Move slightly away from the door
+            let characterPosition = doorPosition.clone();
+            let offsetDistance = -20.5; // Adjust this value as needed
+            characterPosition.add(doorToCar.multiplyScalar(-offsetDistance));
+        
+            // Calculate the rotation to face the door
+            let characterRotation = new THREE.Quaternion();
+            let lookAtPosition = doorPosition.clone();
+            // Ensure consistent height for look-at calculation
+            lookAtPosition.y = characterPosition.y;
+            
+            // Create a temporary matrix to calculate the rotation
+            let matrix = new THREE.Matrix4();
+            matrix.lookAt(characterPosition, lookAtPosition, new THREE.Vector3(0, 1, 0));
+            characterRotation.setFromRotationMatrix(matrix);
+            // Set the character's position and rotation
+            this._entity.Position = characterPosition;
+            this._entity.Quaternion = characterRotation;
+            this._webgpugroup.position.copy(characterPosition);
+            this._webgpugroup.quaternion.copy(characterRotation);
+        
+            console.log("mounting");
+            console.log("current state", this.AnimationFSMService_.state.value);
+        
+            // Animation handling
+            let ac1 = this.animations_[this.AnimationFSMService_.state.value];
+            let ac2 = this.animations_[this.AnimationFSMService_._state.history.value];
+            
+            const curAction = this._mixer.clipAction(ac1);
+            const prevAction = this._mixer.clipAction(ac2);
+        
+            curAction.reset();
+            curAction.setLoop(THREE.LoopOnce, 1);
+            curAction.clampWhenFinished = true;
+            curAction.time = 0.0;
+            curAction.enabled = true;
+            curAction.setEffectiveWeight(1.0);
+            curAction.crossFadeFrom(prevAction, 0.25, true);
+            curAction.play();
+        
+            // Set up timers for door and state management
+            setTimeout(() => {
+                this.AnimationFSMService_.send("MOUNTED");
+                this.isDriving = true;
+            }, curAction.getClip().duration * 1000);
+        
+            setTimeout(() => {
+                this.vehicle.closeDoor();
+            }, curAction.getClip().duration * 1000 - 800);
+        
+            setTimeout(() => {
+                this.vehicle.openDoor();
+            }, 400);
+        } ,
+          StartDriving: (context, event) => {
+
+            let ac1 = this.animations_[this.AnimationFSMService_.state.value];
+            let ac2 = this.animations_[this.AnimationFSMService_._state.history.value];
+             
+            const curAction = this._mixer.clipAction(ac1);
+            const prevAction = this._mixer.clipAction(ac2);
+
+            curAction.time = 0.0;
+            curAction.enabled = true;
+            curAction.clampWhenFinished = true;
+            //playonce :
+            curAction.setEffectiveTimeScale(1.0);
+            curAction.setEffectiveWeight(1.0);
+            curAction.crossFadeFrom(prevAction, 0.25, true);
+            curAction.play();
+          },
+          StartUnmounting: (context, event) => {
+            //stop the driving animation
+            //	let idleAction = this.animations_["DrivingIdle"];
+            //idleAction.stop();
+            const ac1 =
+              this.animations_[this.AnimationFSMService_.state.value];
+
+            const ac2 =
+              this.animations_[
+                this.AnimationFSMService_._state.history.value
+              ];
+
+            const curAction = this._mixer.clipAction(ac1);
+            const prevAction = this._mixer.clipAction(ac2);
+
+            curAction.reset();
+            curAction.setLoop(THREE.LoopOnce, 1);
+            curAction.clampWhenFinished = true;
+            curAction.time = 0.0;
+            curAction.enabled = true;
+            // curAction.setEffectiveTimeScale(1.0);
+            curAction.setEffectiveWeight(1.0);
+            curAction.crossFadeFrom(prevAction, 0.25, true);
+
+            curAction.play();
+
+            setTimeout(() => {
+              //  get the current position of tthis.bones_["mixamorigLeftToe_End"]
+              //  and set the position of the body to it
+
+              //  get the current position of tthis.bones_["mixamorigLeftToe_End"]
+
+              //get
+              //	 this.spineCollider.updateMatrixWorld();
+
+              const door =
+                this.vehicle.carChassis.getObjectByName("DriverDoor");
+              if (door) {
+                //get the position of the door
+
+                const doorQuaternion = door.getWorldQuaternion(
+                  new THREE.Quaternion()
+                );
+                doorQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), doorQuaternion.y - Math.PI / 2);
+                let doorPosition = new THREE.Vector3();
+                door.updateMatrixWorld(true);
+                door.getWorldPosition(doorPosition);
+
+                doorPosition.add(
+                  new THREE.Vector3(2, 0, 0).applyQuaternion(doorQuaternion)
+                );
+
+               
+                this._entity.Position = new THREE.Vector3(
+                  doorPosition.x  ,
+                  doorPosition.y,
+                  doorPosition.z
+                );
+                this.body.position.copy(
+                  new CANNON.Vec3(
+                    doorPosition.x,
+                    doorPosition.y,
+                    doorPosition.z
+                  )
+                );
+                this._webgpugroup.position.copy(
+                  new THREE.Vector3(
+                    doorPosition.x,
+                    doorPosition.y,
+                    doorPosition.z
+                  )
+                );
+                this._entity._entityManager._mc.physicsmanager.world.addBody(this.body);
+                this.isDriving = false;
+              }
+            
+
+              this.AnimationFSMService_.send("UNMOUNTED");
+            }, curAction.getClip().duration * 1000);
+
+            setTimeout(() => {
+              this.vehicle.closeDoor();
+            }, curAction.getClip().duration * 1000 - 1700);
+
+            setTimeout(() => {
+              this.vehicle.openDoor();
+            }, 900);
           },
         },
         guards: {
@@ -1893,6 +2072,20 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
       }
     });
   }
+
+  async mountvehicle(vehicle: any)  
+  {
+    this.vehicle = vehicle;   
+
+     this.AnimationFSMService_.send("DRIVE");
+    
+
+ 
+  }
+
+  async unmountvehicle() {
+    this.AnimationFSMService_.send("STOPDRIVING");
+  }
   
  
   async Update(deltaTime: number): Promise<void> {
@@ -1900,6 +2093,69 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     //update state name in the title bar
     // this._titlebar.querySelector(".status").textContent =
     //   this.state + " " + this.task;
+
+		if (this.isDriving) {
+      if (this.Input._keys.attack1 ) {
+         
+        //check if an entity is in front of the player
+        if ( this.carcomponent){
+
+          this.unmountvehicle();          
+          
+         } 
+       }
+
+			if (
+				this.AnimationFSMService_.state.value == "Driving" ||
+				this.AnimationFSMService_.state.value == "Unmounting"
+			) {
+				//position the player on the vehicle , lower the player a bit so it looks like he is sitting and rotate 90 degrees to the right
+				let offset = new THREE.Vector3(0.1, -0.75, 0.5);
+				this._webgpugroup.position.copy(this.vehicle._entity.Position);
+				this._webgpugroup.quaternion.copy(this.vehicle._entity.Quaternion);
+				//apply offset considering the rotation of the vehicle
+				offset.applyQuaternion(this.vehicle._entity.Quaternion);
+
+				this._webgpugroup.position.add(offset);
+				this._webgpugroup.rotateY(-Math.PI / 2);
+
+				this._entity.Position = this._webgpugroup.position;
+				this._entity.Quaternion = this._webgpugroup.quaternion;
+			}
+			if (this.AnimationFSMService_.state.value == "Mounting") {
+				//position the player on the vehicle , lower the player a bit so it looks like he is sitting and rotate 90 degrees to the right
+				let offset = new THREE.Vector3(0.1, -1.25, 0.9);
+				this._webgpugroup.position.copy(this. vehicle._entity.Position);
+				this._webgpugroup.quaternion.copy(this.vehicle._entity.Quaternion);
+				//apply offset considering the rotation of the vehicle
+				offset.applyQuaternion(this.vehicle._entity.Quaternion);
+
+				this._webgpugroup.position.add(offset);
+				this._webgpugroup.rotateY(Math.PI);
+
+        this._entity.Position = this._webgpugroup.position;
+        this._entity.Quaternion = this._webgpugroup.quaternion;
+				//	this.Parent.SetQuaternion(this.group_.quaternion);
+			}
+
+			// this.group_.position.copy(this.vehicle.Parent.Position);
+			// this.group_.quaternion.copy(this.vehicle.Parent.Quaternion);
+			// this.Parent.SetPosition(this.group_.position);
+			// this.Parent.SetQuaternion(this.group_.quaternion);
+			if (this._mixer) {
+				this._mixer.update(deltaTime);
+			}
+      if (this.workerloop ){
+        this.workerloop();
+      }
+      if (this.Input)
+			this.UpdateFSM(this.Input);
+
+			return;
+		}
+
+
+
     if (this.workerloop ){
       this.workerloop();
   }
@@ -2010,27 +2266,12 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
 
           this.canJump = true;
         }
-        // if (contactNormal.dot(frontAxis) > 0.5) {
-        // 	//console.log(contact);
-
-        // 	this.isColliding_ = true;
-
-        // 	//move the player back a bit in the negative forward direction
-        // 	//controlObject.position.addScaledVector(forward, -3);
-        // 	// forward.multiplyScalar(-3);
-        // 		//this.body.position.z -= 0.1;
-        // 	////console.log("colliding with a wall");
-        // }
-        // else{
-        // 	this.isColliding_ = false;
-
-        // }
-
-        //check if colliding with a wall
+      
       });
 
+    
  
-      //check if body is colliding with a wall
+     
       
 
       if (this.body.velocity.y > 0.1 && this.canJump == true) {
@@ -2071,6 +2312,17 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
       this._entity.Position = controlObject.position;
 
       this._entity.Quaternion = controlObject.quaternion;
+
+      if (this.Input._keys.attack1 ) {
+         
+        //check if an entity is in front of the player
+        if ( this.carcomponent){
+
+          this.mountvehicle (this.carcomponent);          
+          
+         } 
+  }
+    
     }
 
     //calculate the distance between the entity and the camera

@@ -76,7 +76,7 @@ class KeyboardInput extends Component {
         shift: "shift",
         e: "action",
         x: "attack1",
-        r: "attack2",
+        c: "attack2",
       },
       "fr-FR": {
         a: "forward",
@@ -87,7 +87,7 @@ class KeyboardInput extends Component {
         shift: "shift",
         e: "action",
         x: "attack1",
-        r: "attack2",
+        c: "attack2",
       },
     };
 

@@ -259,44 +259,7 @@ class CarComponent extends Component {
       }
     }
   }
-  soundReady() {
-    this.soundCarEngine = new EngineSoundGenerator({
-      listener: this.listener,
-      parameters: {
-        cylinders: 2,
-
-        intakeWaveguideLength: 100,
-        exhaustWaveguideLength: 100,
-        extractorWaveguideLength: 100,
-
-        intakeOpenReflectionFactor: 0.01,
-        intakeClosedReflectionFactor: 0.95,
-
-        exhaustOpenReflectionFactor: 0.01,
-        exhaustClosedReflectionFactor: 0.95,
-        ignitionTime: 0.216,
-
-        straightPipeWaveguideLength: 128,
-        straightPipeReflectionFactor: 0.01,
-
-        mufflerElementsLength: [10, 300, 20, 25],
-        action: 0.1,
-
-        outletWaveguideLength: 15,
-        outletReflectionFactor: 0.02,
-      },
-      clamp: true,
-      gain: 0.02,
-      gainEngineBlockVibrations: 0.02,
-      gainOutlet: 0.02,
-    });
-    // let gainNode = this.soundCarEngine.gain;
-    // gainNode.gain.value = 0.02 ;
-    // this.soundCarEngine.gainEngineBlockVibrations.gain.value =0.02;
-    // this.soundCarEngine.gainOutlet.gain.value = 0.02 ;
-
-    this._webgpugroup.add(this.soundCarEngine);
-  }
+ 
   createnameTag() {
    
     const nameTag = document.createElement('div');

@@ -277,11 +277,9 @@ import { init } from "xstate/lib/actionTypes";
     // Find the span element with the data attribute data-cli-cursor
  // Method 2: Using a recursive approach
           function findElementByInnerHTMLRecursive(rootElement, searchText) {
-            console.log(rootElement.textContent);
-
+ 
             if (rootElement.textContent === searchText) {
-              console.log(rootElement.innerHTML.trim() )
-                return rootElement;
+                 return rootElement;
             }
             
             for (const child of rootElement.children) {

@@ -179,41 +179,41 @@ class Main {
     await environmentbot.AddComponent(environmentcontroller);
     await environmentbot.AddComponent(new AIInput());
     //await environmentbot.AddComponent(new KeyboardInput());
-   await this.entityManager.AddEntity(environmentbot, "palbob");
+   await this.entityManager.AddEntity(environmentbot, "environmentbot");
 
-     //add script entity environmentbot to the scene
-     const palbobmem = new Entity();
-     palbobmem.Position = new THREE.Vector3(40, 1,4);
-     const palbobmemcontroller = new CharacterComponent({
-       modelpath: "models/gltf/ybot2.glb",
-       animationspathslist: this.maincController.animations,
-       behaviourscriptname: "palbobmem.js",
-     });
-     await palbobmem.AddComponent(palbobmemcontroller);
-     await palbobmem.AddComponent(new AIInput());
-     //await environmentbot.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(palbobmem, "palbobmem");
+    //  //add script entity environmentbot to the scene
+    //  const palbobmem = new Entity();
+    //  palbobmem.Position = new THREE.Vector3(40, 1,4);
+    //  const palbobmemcontroller = new CharacterComponent({
+    //    modelpath: "models/gltf/ybot2.glb",
+    //    animationspathslist: this.maincController.animations,
+    //    behaviourscriptname: "palbobmem.js",
+    //  });
+    //  await palbobmem.AddComponent(palbobmemcontroller);
+    //  await palbobmem.AddComponent(new AIInput());
+    //  //await environmentbot.AddComponent(new KeyboardInput());
+    // await this.entityManager.AddEntity(palbobmem, "palbobmem");
 
 
 
  
 
      
-   //add script entity environmentbot to the scene
-   const hamza = new Entity();
-   hamza.Position = new THREE.Vector3(0, 1,6);
-   const environmentcontroller2 = new CharacterComponent({
-     modelpath: "models/gltf/ybot2.glb",
-     animationspathslist: this.maincController.animations,
-     behaviourscriptname: "Hamza.js",
-   });
-   await hamza.AddComponent(environmentcontroller2);
-   await hamza.AddComponent(new AIInput());
-     await hamza.AddComponent(new KeyboardInput());
-   await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
-   this.maincController.MainEntity = hamza;
+  //  //add script entity environmentbot to the scene
+  //  const hamza = new Entity();
+  //  hamza.Position = new THREE.Vector3(0, 1,6);
+  //  const environmentcontroller2 = new CharacterComponent({
+  //    modelpath: "models/gltf/ybot2.glb",
+  //    animationspathslist: this.maincController.animations,
+  //    behaviourscriptname: "Hamza.js",
+  //  });
+  //  await hamza.AddComponent(environmentcontroller2);
+  //  await hamza.AddComponent(new AIInput());
+  //    await hamza.AddComponent(new KeyboardInput());
+  //  await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
+  //  this.maincController.MainEntity = hamza;
  
-   environmentcontroller2.face();
+  // environmentcontroller2.face();
 
       //add script entity environmentbot to the scene
       const uitester = new Entity();
@@ -224,9 +224,10 @@ class Main {
         behaviourscriptname: "uitester.js",
       });
       await uitester.AddComponent(uitestercontroller2);
-      await uitester.AddComponent(new KeyboardInput());
 
       await uitester.AddComponent(new AIInput());
+      await uitester.AddComponent(new KeyboardInput());
+
      //  await environmentbot2.AddComponent(new KeyboardInput());
       await this.entityManager.AddEntity(uitester, "uitester");
       this.maincController.MainEntity = uitester;
@@ -294,28 +295,28 @@ class Main {
 
 
    
-   this.maincController.UIManager.toggleBirdEyemode();
+  //  this.maincController.UIManager.toggleBirdEyemode();
 
-    // const car = new Entity();
-    // const carcontroller = new CarComponent({
+  //   const car = new Entity();
+  //   const carcontroller = new CarComponent({
 
-    // });
-    // car.Position = new THREE.Vector3(0, 1, 0);
-    // await car.AddComponent(carcontroller);
-    // // const keyboardinput = new KeyboardInput();
-    // await car.AddComponent(keyboardinput);
+  //   });
+  //   car.Position = new THREE.Vector3(0, 1, 0);
+  //   await car.AddComponent(carcontroller);
+  //   // const keyboardinput = new KeyboardInput();
+  //   await car.AddComponent( new KeyboardInput());
 
-    // await this.entityManager.AddEntity(car, "Car");
+  //   await this.entityManager.AddEntity(car, "Car");
 
      
-    const heli = new Entity();
+    // const heli = new Entity();
 
-    const helicontroller = new HelicopterComponent ({});
-    heli.Position = new THREE.Vector3(0 , 2.5,0);
-    heli.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
-    await heli.AddComponent(helicontroller);
-    await heli.AddComponent( new KeyboardInput() );
-    await this.entityManager.AddEntity(heli, "Heli");
+    // const helicontroller = new HelicopterComponent ({});
+    // heli.Position = new THREE.Vector3(0 , 2.5,0);
+    // heli.Quaternion = new THREE.Quaternion(0, 0, 0, 1);
+    // await heli.AddComponent(helicontroller);
+    // await heli.AddComponent( new KeyboardInput() );
+    // await this.entityManager.AddEntity(heli, "Heli");
 
     // setTimeout(() => {
 

@@ -45,6 +45,8 @@ class HelicopterComponent extends Component {
   Manager: any;
   Parent: any;
   Input: any;
+  loadingManager: THREE.LoadingManager;
+ 
   _webgpugroup: any;
   rotorBody: CANNON.Body;
   rotorConstraint: CANNON.PointToPointConstraint;
@@ -63,52 +65,8 @@ class HelicopterComponent extends Component {
     this.wheelMeshes = [];
   }
 
-  ReloadEngine() {
-    this.heliWorker?.postMessage({
-      type: "reload",
-      filename: "car.js",
-    });
-  }
-
-  soundReady() {
-    this.soundCarEngine = new EngineSoundGenerator({
-      listener: this.listener,
-      parameters: {
-        cylinders: 2,
-
-        intakeWaveguideLength: 100,
-        exhaustWaveguideLength: 100,
-        extractorWaveguideLength: 100,
-
-        intakeOpenReflectionFactor: 0.01,
-        intakeClosedReflectionFactor: 0.95,
-
-        exhaustOpenReflectionFactor: 0.01,
-        exhaustClosedReflectionFactor: 0.95,
-        ignitionTime: 0.216,
-
-        straightPipeWaveguideLength: 128,
-        straightPipeReflectionFactor: 0.01,
-
-        mufflerElementsLength: [10, 300, 20, 25],
-        action: 0.1,
-
-        outletWaveguideLength: 15,
-        outletReflectionFactor: 0.02,
-      },
-      clamp: true,
-      gain: 0.02,
-      gainEngineBlockVibrations: 0.02,
-      gainOutlet: 0.02,
-    });
-    // let gainNode = this.soundCarEngine.gain;
-    // gainNode.gain.value = 0.02 ;
-    // this.soundCarEngine.gainEngineBlockVibrations.gain.value =0.02;
-    // this.soundCarEngine.gainOutlet.gain.value = 0.02 ;
-
-    this._webgpugroup.add(this.soundCarEngine);
-  }
-
+ 
+ 
   async CreateHeli() {
     let defaultmaterial = new   MeshStandardNodeMaterial({
       color: "#949494",
@@ -196,35 +154,7 @@ class HelicopterComponent extends Component {
     );
     this.body.angularVelocity.set(0, 0, 0);
 
-    //  this.heliBodyMesh.position.set( this._entity.Position.x, this._entity.Position.y, this._entity.Position.z);
-
-    this.heliWorker = new Worker("./workers/dynamicloader.js?" + Date.now());
-    this.heliWorker.onmessage = (e) => {
-      //	console.log("Message received from worker", e.data);
-      if (e.data.type === "boot") {
-        this.heliWorker.postMessage({
-          type: "init",
-          filename: "heli.js",
-        });
-      }
-      if (e.data.type === "tick") {
-                this.rpm = e.data.rpm;
-            this.thrust = e.data.thrust;
-            this.rotorAngularVelocity = e.data.rotorAngularVelocity;
-
-            // Apply forces
-            this.rotorBody.applyLocalForce(new CANNON.Vec3(...this.thrust), new CANNON.Vec3());
-            this.rotorBody.angularVelocity.y = this.rotorAngularVelocity;
-            this.body.angularVelocity.y = this.rotorAngularVelocity;
-
-            // Update positions and rotations
-            this.heliBodyMesh.position.copy(this.body.position);
-            this.heliBodyMesh.quaternion.copy(this.body.quaternion);
-            this.rotorMesh.position.copy(this.rotorBody.position);
-    this.rotorMesh.rotateY(this.thrust[1]/100 * e.data.delta );
-      }
- 
-    };
+    
   }
 
   async InitComponent(entity: Entity): Promise<void> {
@@ -238,6 +168,7 @@ class HelicopterComponent extends Component {
     this.listener = this._entity._entityManager._mc.listener;
 
      //this.input = params.input;
+     this.loadingManager = new THREE.LoadingManager();
 
     this._webgpugroup = new THREE.Group();
     this.steeringValue = 0;
@@ -285,14 +216,7 @@ class HelicopterComponent extends Component {
   }
 
   interact(data: any) {
-    console.log("interact");
-    if (this.doorOpen) this.closeDoor();
-    else this.openDoor();
-    // let random = Math.random()*10
-    // if (random>5) this.openDoor()
-    // else this.closeDoor()
-    //	this.Broadcast( { topic: "setTargetEntity", data: data });
-    //	this.Parent.Manager.MainController.SetTargetEntity(this.Parent);
+   
   }
 
   Reset() {
@@ -309,7 +233,10 @@ class HelicopterComponent extends Component {
   Update(dt: number) {
     if (this.soundCarEngine) {
       let rpmParam = this.soundCarEngine.worklet.parameters.get("rpm");
-      rpmParam.value = this.rpm;
+      console.log("rpmParam", rpmParam.value);
+
+      console.log("this.rpm", this.rpm);
+      rpmParam.value = Math.max(this.rpm/10, 155);
     }
 
     let speed = this.body.velocity.length();
@@ -336,29 +263,105 @@ class HelicopterComponent extends Component {
       this.body.quaternion.z,
       this.body.quaternion.w
     );
+
+    this._webgpugroup.position.copy(this._entity.Position);
+    this._webgpugroup.quaternion.copy(this._entity.Quaternion);
+
+    //this._webgpugroup.position.set(this.body.position.x, this.body.position.y, this.body.position.z);
+    
+
+
+  }
+  loadscript(script: string) {
+    this.heliWorker?.terminate();
+    let blob = new Blob([script], { type: "application/javascript" });
+    let url = URL.createObjectURL(blob);
+    this.heliWorker = new Worker(url);
+        this.heliWorker.onmessage = (e) => {
+
+          if (e.data.type === "tick") {
+            this.rpm = e.data.rpm;
+        this.thrust = e.data.thrust;
+        this.rotorAngularVelocity = e.data.rotorAngularVelocity;
+
+        // Apply forces
+        this.rotorBody.applyLocalForce(new CANNON.Vec3(...this.thrust), new CANNON.Vec3());
+        this.rotorBody.angularVelocity.y = this.rotorAngularVelocity;
+        this.body.angularVelocity.y = this.rotorAngularVelocity;
+
+        // Update positions and rotations
+        this.heliBodyMesh.position.copy(this.body.position);
+        this.heliBodyMesh.quaternion.copy(this.body.quaternion);
+        this.rotorMesh.position.copy(this.rotorBody.position);
+this.rotorMesh.rotateY(this.thrust[1]/100 * e.data.delta );
+  }
+ 
+      if (e.data.type === "soundupdate") {
+        console.log("soundupdate", e.data);
+        if (this.soundCarEngine) {
+          this.soundCarEngine?.stop();
+          this._webgpugroup.remove(this.soundCarEngine);
+        }
+        console.log("soundupdate", e.data.mufflerElementsLength);
+
+        this.loadingManager.onLoad = function () {
+          this.soundCarEngine = new EngineSoundGenerator({
+            listener: this.listener,
+
+            //postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });
+
+            parameters: e.data.soundoptions,
+            clamp: e.data.clamp,
+            gain: e.data.gain,
+            gainEngineBlockVibrations: e.data.gainEngineBlockVibrations,
+            gainOutlet: e.data.gainOutlet,
+          });
+          //  let gainNode = this.soundCarEngine.gain;
+          //  gainNode.gain.value = 0.2 ;
+
+          //   this.soundCarEngine.gainEngineBlockVibrations.gain.value =0.2;
+
+          // 	  this.soundCarEngine.gainOutlet.gain.value = 0.2 ;
+
+          //  this._webgpugroup.add(this.soundCarEngine);
+
+          // this.soundCarEngine.gain.value = 0.001 ;
+          // this.soundCarEngine.gainEngineBlockVibrations.gain.value = 0.001
+          // this.soundCarEngine.gainOutlet.gain.value = 0.001
+
+          this._webgpugroup.attach(this.soundCarEngine);
+          
+          this.soundCarEngine.play();
+          //remove existing this.soundCarEngine from this._webgpugroup
+
+        }.bind(this);
+
+        EngineSoundGenerator.load(this.loadingManager, this.listener, ".");
+      }
+    };
+
+ 
+
+  
+
   }
 
   Destroy() {
+  
+    this.world.removeConstraint(this.rotorConstraint);
+    this.world.removeBody(this.rotorBody);
     this.world.removeBody(this.body);
-    this.world.removeBody(this.vehicle);
-    this.vehicle.removeFromWorld(this.world);
-    //remove wheels from world
-    for (let i = 0; i < this.wheelBodies.length; i++) {
-      this.world.removeBody(this.wheelBodies[i]);
-    }
 
-    //remove the wheel meshes
-    this.wheelMeshes.forEach((wheel) => {
-      this._entity._entityManager._mc.webgpuscene.remove(wheel);
-    });
+    this._entity._entityManager._mc.webgpuscene.remove(this.heliBodyMesh);
+    this._entity._entityManager._mc.webgpuscene.remove(this.rotorMesh);
 
-    //remove the car mesh
-    this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+
     if (this.soundCarEngine) {
-      this.soundCarEngine.stop();
-      //dispose of the listener
+      // this.soundCarEngine.stop();
+      this.soundCarEngine.disconnect();
+      this.soundCarEngine = null;
     }
-
+ 
     if (this.heliWorker) {
       this.heliWorker.terminate();
     }

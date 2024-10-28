@@ -1,16 +1,22 @@
- 
- 
-let version ="8.90.80"; 
+let version ="8.90.84"; 
 console.log(version)
 let shiftpedal = 0;
 //parameters :
 let maxSteerVal = 0.8;
 let steerStep = 0.025;
 let maxForce = 2000;
+//------------------------------>CARSPAWNHERE
+
+// Speed threshold for auto-reverse (units depend on your speed measurement)
+const REVERSE_SPEED_THRESHOLD = 2;
+const MAX_REVERSE_RPM = 2500;
+const REVERSE_IDLE_RPM = 1200;
+const REVERSE_RPM_SPEED_FACTOR = 700;
+
 //input :
-let rpm = 8650 ;
-let gear = 2;
-let speed = -2;
+let rpm = 4650;
+let gear =2;
+let speed = -200;
 
 //output :
 let engineForce0 = 10; 
@@ -19,260 +25,208 @@ let engineForce2 = 0;
 let engineForce3 = 0;
 let steeringValue = 0;
 let brakeForce = 1200;
-let cylinders =4
-
-
-
-//------------------------------>CARSPAWNHERE
-
+let cylinders = 1;
 
 function Steer(input){
     if (input.right) {
-	
-        if ( steeringValue > - maxSteerVal) {
-            steeringValue -=  steerStep;
-         
-                  
+        if (steeringValue > -maxSteerVal) {
+            steeringValue -= steerStep;
         }
-}
-else if (input.left) {
-
-        if ( steeringValue < maxSteerVal) {
-            steeringValue +=  steerStep;
+    }
+    else if (input.left) {
+        if (steeringValue < maxSteerVal) {
+            steeringValue += steerStep;
         }
-}
-else
-{
-    if (steeringValue > 0) {
-         steeringValue -=  steerStep;
-     
-
-        // snap to 0
-        if ( steeringValue < steerStep) {
-            steeringValue = 0;
-             
+    }
+    else {
+        if (steeringValue > 0) {
+            steeringValue -= steerStep;
+            if (steeringValue < steerStep) {
+                steeringValue = 0;
+            }
+        } else if (steeringValue < 0) {
+            steeringValue += steerStep;
+            if (steeringValue > steerStep) {
+                if (steeringValue < steerStep) {
+                    steeringValue = 0;
+                }
+            }
         }
-    } else if ( steeringValue < 0) {
-         steeringValue += steerStep;
-     
-
-        if ( steeringValue > steerStep) {
-            if ( steeringValue <  steerStep) {
-                 steeringValue = 0;
-     
-            }}
-    }}
-
-
-
+    }
 }
+
 function Brake(input){
     if (input.space) {
         brakeForce = 500;
     } else {
- 
-            if (input.backward) {
-                brakeForce = 20;
-            }
-            else if (gear == 0) {
-                brakeForce = 40;
-            }
-            else {
-                brakeForce = 0;
-            }
-        }
-     
-     }
- 
-function Shift(input){
-     
-
-    if (!input.geardown &&  shiftpedal == -1) {
-        if (gear > -1){
-        gear--;
-        rpm = rpm * 2;
-        }
-        shiftpedal = 0;
-    }
-    if (!input.gearup &&  shiftpedal == 1) {
-        if (gear < 5)  {gear++;
-        rpm =  rpm / 2;
-        }
-    
-
-        shiftpedal = 0; 
-    }
-    if (input.geardown) {
-        shiftpedal = -1;
-        
-    }
-
-    if (input.gearup) {
-        shiftpedal = 1;
+        brakeForce = 0;
     }
 }
- 
-function calculateRPM(speed , throttleInput , currentRPM , gear ){
-     let rpmIncreaseFactor =   150 /  Math.pow(gear + 1,2);
-     let rpmDecreaseFactor = 25.5;
 
+function handleAutoReverse(input, currentSpeed) {
+    let absSpeed = Math.abs(currentSpeed);
+    
+    // Auto-engage reverse when pressing backward at low speed
+    if (input.backward && absSpeed < REVERSE_SPEED_THRESHOLD) {
+        if (gear >= 0) { // Only switch to reverse if we're not already in reverse
+            gear = -1;
+            rpm = REVERSE_IDLE_RPM;
+        }
+    }
+    // Auto-switch back to first gear when pressing forward
+    else if (input.forward && gear === -1) {
+        gear = 1;
+        rpm = 800; // Set to normal idle RPM
+    }
+}
+
+function calculateRPM(speed, input, currentRPM, gear){
+    let absSpeed = Math.abs(speed);
+    
+    // Handle reverse gear
+    if (gear === -1) {
+        let targetRPM;
+        if (input.backward) {
+            // Calculate target RPM based on speed when in reverse
+            let speedBasedRPM = REVERSE_IDLE_RPM + (absSpeed * REVERSE_RPM_SPEED_FACTOR);
+            targetRPM = Math.min(speedBasedRPM, MAX_REVERSE_RPM);
+            
+            // Smooth RPM increase
+            currentRPM += (targetRPM - currentRPM) * 0.1;
+        } else {
+            // Return to idle when not accelerating
+            targetRPM = REVERSE_IDLE_RPM;
+            currentRPM += (targetRPM - currentRPM) * 0.05;
+        }
+        return Math.max(Math.min(currentRPM, MAX_REVERSE_RPM), REVERSE_IDLE_RPM);
+    }
+    
+    // Forward gear calculations
+    let rpmIncreaseFactor = 150 / Math.pow(gear + 1, 2);
+    let rpmDecreaseFactor = 25.5;
+    
     if (gear == 0) {
-    if (throttleInput){
-        currentRPM +=  rpmIncreaseFactor  ;
-      currentRPM = Math.min(currentRPM,9950);  // Limit rpm to a maximum value
-     
-        return currentRPM;
-    }
-    else {
-        currentRPM -=  rpmDecreaseFactor 
-        currentRPM = Math.max(currentRPM, 750 -(gear * 50));  // Limit rpm to a minimum value
-        return currentRPM; 
-    }
-    }
-    else {
-
-        if (throttleInput)
-        {
- 
-        currentRPM +=  rpmIncreaseFactor  ;
- 
-         currentRPM = Math.min(currentRPM, speed * 1000 + 750);  // Limit rpm to a maximum value
-        currentRPM = Math.min(currentRPM, 1350 + (2*(gear + 1) * 2500));  // Limit rpm to a minimum value
+        if (input.forward){
+            currentRPM += rpmIncreaseFactor;
+            currentRPM = Math.min(currentRPM, 7950);
             return currentRPM;
-    }
+        }
         else {
-            currentRPM -=  rpmDecreaseFactor 
-            currentRPM = Math.max(currentRPM, 650 -(gear * 110));  // Limit rpm to a minimum value
-            currentRPM = Math.min(currentRPM, gear * 3500 + 6000);  // Limit rpm to a maximum value
-
+            currentRPM -= rpmDecreaseFactor;
+            currentRPM = Math.max(currentRPM, 350 -(gear * 50));
+            return currentRPM; 
+        }
+    }
+    else {
+        if (input.forward) {
+            currentRPM += rpmIncreaseFactor;
+            currentRPM = Math.min(currentRPM, absSpeed * 1000 + 750);
+            currentRPM = Math.min(currentRPM, 1350 + (2*(gear + 1) * 2500));
+            return currentRPM;
+        }
+        else {
+            currentRPM -= rpmDecreaseFactor;
+            currentRPM = Math.max(currentRPM, 650 -(gear * 110));
+            currentRPM = Math.min(currentRPM, gear * 3500 + 6000);
             return currentRPM;
         }
     }
-  
-  
-
-    // if (gear < 0) {s
-     
-    //     rpm +=  rpmIncreaseFactor;
-    //     rpm = Math.min(rpm, 600)
-    //     return rpm;
-    // }
-    // if(gear == 0) {
-    //     let rpmIncreaseFactor = 60.5;
-    //     rpm +=   rpmIncreaseFactor;
-    //     rpm = Math.min(rpm, 16500)
-    //     return rpm;
-    // }
-    // else {
-
-    // //   let rpmDecreaseFactor =1+  0.8 * gear; // Higher gears mean a more pronounced reduction
-    // // //s  rpm /= rpmDecreaseFactor; // RPM is inversely proportional to gear value
-
-    
-
-   
 }
 
-function calculateEngineForce(rpm , throttleInput   , gear )   {
+function calculateEngineForce(rpm, input, gear) {
     let force = 0;
-    if (throttleInput && gear > 0 ) {
-       // force = 320 + 2* rpm * (gear*1.2)
-       let maxForce = gear == 0 ? 0 : 1000 + 1500 * gear * 0.8;
- 
-       let optimalRPM =(  gear + 1 ) * 2000  
-   
-       // If speed is low and gear is high, force will drop significantly
-     
-       if (gear > 4 && rpm < 1000) {
-           force = 0;
-       } else {
-           force = 1550/(gear+1)+ (rpm *10 / optimalRPM) * maxForce   
-       }
-      
+    
+    if (gear === -1) {
+        if (input.backward) {
+            // Calculate reverse force with a more gradual curve
+            let rpmFactor = (rpm - REVERSE_IDLE_RPM) / (MAX_REVERSE_RPM - REVERSE_IDLE_RPM);
+            rpmFactor = Math.max(0, Math.min(1, rpmFactor));
+            
+            // Reverse force curve: starts strong but tapers off
+            let maxReverseForce = -3250;
+            force = maxReverseForce * (1 - Math.pow(1 - rpmFactor, 2));
+        }
     }
-    else if (throttleInput && gear == -1) {
-        force = -6500;
+    else if (input.forward && gear >  0) {
+        let maxForce = gear == 0 ? 0 : 1000 + 1500 * gear * 0.8;
+        let optimalRPM = (gear + 1) * 2000;
+        
+        if (gear > 4 && rpm < 1000) {
+            force = 0;
+        } else {
+            force = 1550/(gear+1) + (rpm * 10 / optimalRPM) * maxForce;
+        }
     }
 
     engineForce0 = force;
     engineForce3 = force;
     return force;
 }
-self.onmessage = function (e) {
- //   console.log("CARJS worker  received message", e.data);
-    if (e.data.type == "update") {
 
-        let input =  e.data.input;
+self.onmessage = function (e) {
+    if (e.data.type == "update") {
+        let input = e.data.input;
         let dt = e.data.dt;
         let speed = e.data.speed;
+        
         Steer(input);
         Brake(input);
-        Shift(input);
- 
-         rpm = calculateRPM(speed, input.forward, rpm , gear?gear:0);
-      
-        force = calculateEngineForce(rpm, input.forward, gear?gear:0); 
- 
-        postMessage({ type: 'tick', rpm: rpm,   gear: gear, engineForce0:  engineForce0, engineForce1:  engineForce1, engineForce2:  engineForce2, engineForce3:  engineForce3, steeringValue:  steeringValue, brakeForce:  brakeForce });
-       
+        handleAutoReverse(input, speed);  // New auto-reverse handling
+        
+        rpm = calculateRPM(speed, input, rpm, gear?gear:0);
+        force = calculateEngineForce(rpm, input, gear?gear:0); 
+        
+        postMessage({ 
+            type: 'tick', 
+            rpm: rpm, 
+            gear: gear, 
+            engineForce0: engineForce0, 
+            engineForce1: engineForce1, 
+            engineForce2: engineForce2, 
+            engineForce3: engineForce3, 
+            steeringValue: steeringValue, 
+            brakeForce: brakeForce 
+        });
     } 
 }
- 
+
 let wheelOptions = {
     radius: 0.6,
-     suspensionStiffness: 40,
+    suspensionStiffness: 40,
     suspensionRestLength: 0.4,
     frictionSlip: 0.98,
     dampingRelaxation: 0.3,
     dampingCompression: 1.1,
     maxSuspensionForce: 150000,
     rollInfluence: 0.3,
-    
     maxSuspensionTravel: 0.3,
     customSlidingRotationalSpeed: 30,
     useCustomSlidingRotationalSpeed: false,
-//	material : this.wheelMaterial,
 };
 
+postMessage({ type: 'wheelupdate', wheelOptions: wheelOptions });
 
-
-postMessage({ type: 'wheelupdate' , wheelOptions : wheelOptions });
- 
 let soundoptions = {
-    
-    cylinders:cylinders,
-
+    cylinders: cylinders,
     intakeWaveguideLength: 200,
     exhaustWaveguideLength: 50,
     extractorWaveguideLength: 100,
-
     intakeOpenReflectionFactor: 0.01,
     intakeClosedReflectionFactor: 0.95,
-
     exhaustOpenReflectionFactor: 0.01,
     exhaustClosedReflectionFactor: 0.95,
     ignitionTime: 2.036,
-
     straightPipeWaveguideLength: 1280,
     straightPipeReflectionFactor: 0.01,
-
     mufflerElementsLength: [10, 35, 20, 25],
     action: 0.01,
-
     outletWaveguideLength: 115,
-    outletReflectionFactor: 0.02};
+    outletReflectionFactor: 0.02
+};
 
+let clamp = false;
+let gain = 0.08;
+let gainEngineBlockVibrations = 0.04;
+let gainOutlet = 0.02;
 
-    let clamp = false;
-    let gain = 0.08;
-    let gainEngineBlockVibrations = 0.04;
-    let gainOutlet = 0.02;
-
-
- postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });
-
-
-
-    
-
- 
+postMessage({ type: 'soundupdate', soundoptions: soundoptions, clamp: clamp, gain: gain, gainEngineBlockVibrations: gainEngineBlockVibrations, gainOutlet: gainOutlet });

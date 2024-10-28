@@ -495,7 +495,7 @@ const createWallsFromCamera = function() {
       this.uiElement,
        html0,
       callbacks,
-      2,
+      20,
       true
     );
 
@@ -713,7 +713,62 @@ const createWallsFromCamera = function() {
         });
 
       } 
-   
+
+
+      let element2 = document.getElementById("heli.js");
+      if (element2) {
+        // Remove existing controls if any
+        const existingControls = element2.querySelector(".car-controls");
+        if (existingControls) {
+          existingControls.remove();
+        }
+
+        // Add new controls
+        const controls = createCarControls(element2);
+
+ 
+        
+
+        // Setup control button handlers
+        controls.reload.addEventListener("click", async (event) => {
+          event.stopPropagation(); // Prevent triggering the file click event
+          element2.click();
+          await new Promise((resolve) => setTimeout(resolve, 500));
+            
+            if (!this.helicomponent) {
+              this.helicomponent = await mc.spawnHeli();
+              this.carcomponent =  this.helicomponent;
+            }   
+  
+            let elementlocation = component.getElementPositionByContent(
+              "//------------------------------>CARSPAWNHERE"
+            );
+          
+            if (!elementlocation) {
+              elementlocation =  component.getElementPosition(  controls.reload );
+            }
+  
+            this.helicomponent._entity.Position = elementlocation;
+
+            this.helicomponent.loadscript(component.editor.getValue());
+        } );
+
+        controls.stop.addEventListener("click", async (event) => {
+          event.stopPropagation(); // Prevent triggering the file click event
+          if ( this.helicomponent) {
+            this.helicomponent._entity.kill();
+  
+          }
+          this.helicomponent = null;
+
+          
+        }
+        );
+
+      }
+
+
+       
    
    
 
@@ -798,7 +853,20 @@ const createWallsFromCamera = function() {
         break;
     }
   };
+  mc.spawnCar().then((helicomponent) => {
 
+
+  this.carcomponent =   helicomponent
+  helicomponent._entity.Position = new THREE.Vector3(3, 0, 0);
+  
+  });
+
+  mc.spawnHeli().then((helicomponent) => {
+
+    this.helicomponent =   helicomponent
+    helicomponent._entity.Position = new THREE.Vector3(15, 0, 0);
+    
+    });
   this.updateSlide();
 
   this.clearEnvironment = () => {
