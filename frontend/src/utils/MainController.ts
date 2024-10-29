@@ -82,8 +82,8 @@ class MainController {
     // { url: "animations/gltf/ybot2@Drumming.glb", skipTracks: [1] },
     { url: "animations/gltf/ybot2@DyingForward.glb", skipTracks: [1] },
     { url: "animations/gltf/ybot2@DyingForward2.glb", skipTracks: [1] },
-    { url: "animations/gltf/ybot2@Mounting.glb",  },
-    { url: "animations/gltf/ybot2@Unmounting.glb", skipTracks: [0, 2] },
+    { url: "animations/gltf/ybot2@Mounting.glb", skipTracks: [1]  },
+    { url: "animations/gltf/ybot2@Unmounting.glb", skipTracks: [1] },
     { url: "animations/gltf/ybot2@Falling.glb", skipTracks: [0] },
     { url: "animations/gltf/ybot2@Ideling.glb" },
     { url: "animations/gltf/ybot2@JumpingFromStill.glb" },
@@ -567,6 +567,7 @@ this.physicsmanager.World.addBody(floorBody);
           position: intersects[0].point,
         },
       });
+
     }
 
   }

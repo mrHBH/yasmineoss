@@ -851,43 +851,32 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
 
           StartMounting: (context, event) => {
             this._entity._entityManager._mc.physicsmanager.world.removeBody(this.body);
-       
+            this.isDriving = true;
+
 
             // Get the door and its position
             let door = this.vehicle.carChassis.getObjectByName("DriverDoor");
             let doorPosition = new THREE.Vector3();
             door.updateMatrixWorld(true); // Ensure world matrix is updated
             door.getWorldPosition(doorPosition);
+
+            // Set the position of the character to the door
+            this._entity.Position = new THREE.Vector3(
+              doorPosition.x,
+              doorPosition.y  ,
+              doorPosition.z
+            );
+
+            this.body.position.copy(
+              new CANNON.Vec3(
+                doorPosition.x,
+                doorPosition.y + 20,
+                doorPosition.z
+              )
+            );
+  
+       
         
-            // Calculate the direction vector from door to car center
-            let carCenter = new THREE.Vector3();
-            this.vehicle.carChassis.getWorldPosition(carCenter);
-            let doorToCar = new THREE.Vector3().subVectors(carCenter, doorPosition).normalize();
-        
-            // Calculate the position where the character should stand
-            // Move slightly away from the door
-            let characterPosition = doorPosition.clone();
-            let offsetDistance = -20.5; // Adjust this value as needed
-            characterPosition.add(doorToCar.multiplyScalar(-offsetDistance));
-        
-            // Calculate the rotation to face the door
-            let characterRotation = new THREE.Quaternion();
-            let lookAtPosition = doorPosition.clone();
-            // Ensure consistent height for look-at calculation
-            lookAtPosition.y = characterPosition.y;
-            
-            // Create a temporary matrix to calculate the rotation
-            let matrix = new THREE.Matrix4();
-            matrix.lookAt(characterPosition, lookAtPosition, new THREE.Vector3(0, 1, 0));
-            characterRotation.setFromRotationMatrix(matrix);
-            // Set the character's position and rotation
-            this._entity.Position = characterPosition;
-            this._entity.Quaternion = characterRotation;
-            this._webgpugroup.position.copy(characterPosition);
-            this._webgpugroup.quaternion.copy(characterRotation);
-        
-            console.log("mounting");
-            console.log("current state", this.AnimationFSMService_.state.value);
         
             // Animation handling
             let ac1 = this.animations_[this.AnimationFSMService_.state.value];
@@ -908,7 +897,6 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
             // Set up timers for door and state management
             setTimeout(() => {
                 this.AnimationFSMService_.send("MOUNTED");
-                this.isDriving = true;
             }, curAction.getClip().duration * 1000);
         
             setTimeout(() => {
