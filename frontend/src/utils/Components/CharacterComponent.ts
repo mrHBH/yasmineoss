@@ -10,10 +10,11 @@ import { StaticCLI } from "../../SimpleCLI";
 import { MeshPhongNodeMaterial,PointsNodeMaterial ,  uniform, skinning , MeshPhysicalNodeMaterial, MeshBasicNodeMaterial ,MeshStandardNodeMaterial , LineBasicNodeMaterial, vec2, distance, NodeMaterial, smoothstep, Break, materialReference, float, sub, VolumeNodeMaterial, vec3, tslFn, all   } from 'three/tsl';
 import {   reflector, uv, texture, color , mix } from 'three/tsl';
  
- 
+import { CodeEditor } from "./CodeEditor";
  
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import SimpleBar from "simplebar";
+let CE = new CodeEditor();
 let uva= uv( 0 );
 let vec2a= vec2( 0.0, 0.0 );
 let dist = distance(  vec2a, vec2a );
@@ -1669,7 +1670,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     status.textContent = "Online";
   
     this._titlebar = document.createElement("div");
-    this._titlebar.style.display = " absolute";
+    this._titlebar.style.display = "flex";
     this._titlebar.style.flexDirection = "column";
     this._titlebar.style.alignItems = "flex-start";
     this._titlebar.appendChild(nameTag);
@@ -1701,6 +1702,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     inlineContainer.className = "uk-inline";
     inlineContainer.style.display = "flex";
     inlineContainer.style.alignItems = "left";
+
   
     const dropIcon = document.createElement("span");
     dropIcon.id = "dropIcon";
@@ -1743,7 +1745,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
 
  
     const label = new CSS2DObject(this._titlebar);
-    label.position.set(0, 2, 0);
+    label.position.set(0, 2,-1.5);
     this._css2dgroup.add(label);
   
     if (nameElement && dropIcon && resetIcon) {
@@ -1779,7 +1781,6 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
   }
   updatePosition() {
     if (this.uiElement && this._titlebar) {
-     // console.log("updating position");
       const rect = this._titlebar.getBoundingClientRect();
       const uiRect = this.uiElement.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
@@ -1821,6 +1822,13 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
           // If it's above the name tag, move it down
           this.uiElement.style.bottom = `calc(100% + ${overflowY}px)`;
         }
+      }
+
+      // Ensure the icons container is always on top of the CLI container
+      const inlineContainer = this._titlebar.querySelector('.uk-inline');
+      if (inlineContainer) {
+        inlineContainer.style.position = 'relative';
+        inlineContainer.style.zIndex = '10'; // High z-index to keep it above the CLI container
       }
     }
   }
@@ -2414,125 +2422,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
         return 0;
     }
   }
-
-  // async Walk(point : THREE.Vector3 , chain = true) {
-  // 	//check if parent has an input component
-
-  // 	const walkTask2: ITask = {
-  // 		name: "Walk Task",
-  // 		topic: "Walking",
-  // 		updateFrequency: 5, // Update every 100 milliseconds
-
-  // 		completionCriterion: function () {
-  // 			const controlObject = new THREE.Object3D();
-  // 			controlObject.position.copy(this._entity.position);
-  // 			controlObject.quaternion.copy( this._entity.quaternion);
-  // 			controlObject.lookAt( point);
-  // 			const distance = controlObject.position.distanceTo(
-  // 				this.context.location
-  // 			);
-
-  // 			if (distance < 1) {
-
-  // 				return true;
-  // 			}
-  // 		}, // Complete when the current number is 17
-  // 		stopCondition: function () {
-  // 			return false;
-  // 		}, // Never stop unless completed
-  // 		update: function () {
-  // 			//red
-  // 			const mat = new THREE.MeshStandardMaterial({
-  // 				color: 0xff0000,
-  // 				side: THREE.DoubleSide,
-  // 			});
-
-  // 			const controlObject = new THREE.Object3D();
-  // 			controlObject.position.copy(this.context.parent.group_.position);
-  // 			controlObject.quaternion.copy(this.context.parent.group_.quaternion);
-  // 			controlObject.lookAt(this.context.location);
-
-  // 			const targetDirection = new THREE.Vector3()
-  // 				.subVectors(
-  // 					this.context.location,
-  // 					this.context.parent.group_.position
-  // 				)
-  // 				.normalize();
-  // 			const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(
-  // 				this.context.parent.group_.quaternion
-  // 			);
-  // 			const crossProduct = new THREE.Vector3().crossVectors(
-  // 				currentDirection,
-  // 				targetDirection
-  // 			);
-  // 			const deadZone = 0.05; // Change this value according to required dead zone size.
-  //       this.Input._keys.right = true;
-  // 			// try {
-  // 			// 	if (crossProduct.y < -deadZone) {
-  // 			// 		// Needs to turn right
-  // 			// 		input._keys.right = true;
-  // 			// 		input._keys.left = false;
-  // 			// 	} else if (crossProduct.y > deadZone) {
-  // 			// 		// Needs to turn left
-  // 			// 		input._keys.right = false;
-  // 			// 		input._keys.left = true;
-  // 			// 	} else {
-  // 			// 		// Within the dead zone, maintain current direction
-  // 			// 		//we might be facing the wrong direction , so we need to check the deviation of the target position from the current position and press either left or right
-  // 			// 		const deviation = controlObject.quaternion.angleTo(
-  // 			// 			this.context.parent.group_.quaternion
-  // 			// 		);
-  // 			// 		if (Math.abs(deviation) > 1) {
-  // 			// 			input._keys.left = true;
-  // 			// 			input._keys.right = false;
-  // 			// 		} else {
-  // 			// 			input._keys.left = false;
-  // 			// 			input._keys.right = false;
-  // 			// 		}
-  // 			// 	}
-  // 			// 	input._keys.forward = true;
-  // 			// } catch (error) {
-  // 			// 	//console.log(error);
-  // 			// }
-
-  // 		},
-  // 		stop: function () {
-  // 			try {
-  // 				this.context.parent.input._keys.forward = false;
-  // 				this.context.parent.input._keys.left = false;
-  // 				this.context.parent.input._keys.right = false;
-  // 			} catch (error) {}
-
-  // 			if (removelater) {
-  // 				this.context.parent.Parent.RemoveComponent("CharacterInput");
-  // 			}
-
-  // 			this.context.parent.AnimationFSMService_.send("STOP");
-
-  // 			//console.log(`The random task is done.`);
-  // 			//remove the waypoint
-  // 			this.context.parent.params_.scene.remove(this.context.waypoint);
-  // 			//remove bezier and text
-  // 			this.context.parent.params_.scene.remove(this.context.bezier);
-  // 			this.context.parent.params_.scene.remove(this.context.myText);
-  // 		},
-  // 		lastUpdate: 0, // The last time the task was updated
-  // 		context: {
-  // 			location: point, // A property to store the target point to walk to
-  // 			parent: this,
-  // 			waypoint: waypoint,
-  // 			bezier: this.bezier,
-  // 			myText: myText,
-  // 			callback: this.tm.Queue,
-  // 		},
-  // 	};
-  // 	if (chain) this.tm.Clear();
-  // 	this.tm.enqueueTask(walkTask2);
-  // }
-
-  async walkTo(point: THREE.Vector3) {
-    //add component to entity
-  }
+ 
 }
 
 export { CharacterComponent };

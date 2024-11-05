@@ -25,7 +25,7 @@ class UIManager {
   private touchStartY: number = 0;
   private birdEyeviewOffset = new THREE.Vector3(0, 0, 0);
   private fpsposoffset = new THREE.Vector3(0, 0, 0);
-  private currentUIelement:    twoDUIComponent;
+  currentUIelement:    twoDUIComponent;
  
   splineObject: THREE.Line<
     THREE.BufferGeometry<THREE.NormalBufferAttributes>,
@@ -211,7 +211,7 @@ class UIManager {
     });
   }
 
-  private moveCubeAlongPath(delta: number): void {
+    moveCubeAlongPath(delta: number): void {
     if (!this.splinePath || !this.attentionCursor) return;
 
     // Calculate the arc lengths of the spline curve
@@ -643,6 +643,8 @@ class UIManager {
     this.mc.CameraControls.enableRotate = true;
     this.mc.CameraControls.enablePan = true;
     this.mc.CameraControls.enableKeys = true;
+    this.mc.CameraControls.minDistance =3;
+    this.mc.CameraControls.maxDistance =  130;
     this.birdviewnavigation = false;
     document
     .getElementById("birdeyemode")

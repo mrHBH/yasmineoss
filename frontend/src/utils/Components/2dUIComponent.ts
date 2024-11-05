@@ -92,7 +92,8 @@ import { init } from "xstate/lib/actionTypes";
     this._htmlElement = htmlElement;
   }
 
-  initMonacoEditor(container: HTMLElement) {
+ async initMonacoEditor(container: HTMLElement) {
+   await StaticCLI.typeSync(container,  "//loading monaco editor " , 500, true); 
     console.log("initMonacoEditor");
     console.log(container);
     this.editor =    monaco.editor.create(  container, {
