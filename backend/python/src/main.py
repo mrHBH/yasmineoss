@@ -20,7 +20,7 @@ import datetime
 from datetime import datetime as dt
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
-from openai import OpenAI
+# from openai import OpenAI
    
 
 

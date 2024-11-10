@@ -4,7 +4,7 @@ services:
     container_name: pythonbackend
     build:
       context: ./backend/python/
-      dockerfile: dockerfile.CPU
+      dockerfile: dockerfile.GPU
     restart: unless-stopped
     volumes:
       - ./backend/python/models/:/app/models
@@ -28,16 +28,16 @@ services:
               count: all
               capabilities: [gpu]
 
-  tsbackend:
-    container_name: tsbackend
-    build:
-      context: ./backend/typescript/
-      dockerfile: dockerfile 
-    restart: unless-stopped    
-    ports:
-      - '8089:8089'
-    networks:
-      - yasminenet
+  # tsbackend:
+  #   container_name: tsbackend
+  #   build:
+  #     context: ./backend/typescript/
+  #     dockerfile: dockerfile 
+  #   restart: unless-stopped    
+  #   ports:
+  #     - '8089:8089'
+  #   networks:
+  #     - yasminenet
 
   
   # code-server:
@@ -74,31 +74,31 @@ services:
       - yasminenet
 
   
-  ollamabackend:
-    image: ollama/ollama:latest
-    tty: true
+  # ollamabackend:
+  #   image: ollama/ollama:latest
+  #   tty: true
 
-    container_name: ollamabackend
-    volumes:
-      - ./ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
-    # entrypoint: 
-    #       - bash
-    #       - -c
-    #       - |
-    #         sleep 5           
-    #       - ollama pull phi3:3.8b     
-    networks:
-      - yasminenet
+  #   container_name: ollamabackend
+  #   volumes:
+  #     - ./ollama_data:/root/.ollama
+  #   ports:
+  #     - "11434:11434"
+  #   # entrypoint: 
+  #   #       - bash
+  #   #       - -c
+  #   #       - |
+  #   #         sleep 5           
+  #   #       - ollama pull phi3:3.8b     
+  #   networks:
+  #     - yasminenet
      
-    deploy:
-        resources:
-          reservations:
-            devices:
-              - driver: nvidia
-                count: all
-                capabilities: [gpu]
+  #   deploy:
+  #       resources:
+  #         reservations:
+  #           devices:
+  #             - driver: nvidia
+  #               count: all
+  #               capabilities: [gpu]
  
  
   # cppbackend:

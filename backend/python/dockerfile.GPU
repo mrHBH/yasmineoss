@@ -1,42 +1,37 @@
-# Use a multi-stage build for smaller image size
 ARG CUDA_VERSION=12.2.2 
 # Build stage
-FROM pytorch/pytorch:2.1.1-cuda12.1-cudnn8-devel as build
-ARG DEBIAN_FRONTEND=noninteractive
-# Install any additional system dependencies required for building if necessary
-RUN apt-get update
 
-RUN apt-get  --allow-releaseinfo-change  update && apt-get install git -y --no-install-recommends \
-    build-essential \
-    cmake \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-# Set build arguments for the pip install
-ENV CMAKE_ARGS="-DLLAMA_OPENBLAS=on -DLLAMA_CUBLAS=on"
-ENV FORCE_CMAKE="1"
-# Install llama-cpp-python with the specified CMake options
-RUN pip   install llama-cpp-python
-# Install runtime dependencies if necessary (not applicable if all done in build stage)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt --upgrade  
-# Runtime stage
-FROM pytorch/pytorch:2.1.1-cuda12.1-cudnn8-runtime as runtime 
-# Copy installed python packages from build stage (using Python site-packages directory)
-COPY --from=build /opt/conda/lib/python3.10/site-packages/ /opt/conda/lib/python3.10/site-packages/
-# Set environment variables
-ENV TRANSFORMERS_CACHE="/app/cache" \
-    HF_HOME="/app/cache/hf/" \
-    SUNO_USE_SMALL_MODELS="True" \
-    SUNO_OFFLOAD_CPU="True" \
-    TORCH_HOME="/app/cache/torch/" \
-    HF_HUB_CACHE="/app/cache/hfhub/" \
-    LC_ALL=C.UTF-8 \
-    LANG=C.UTF-8    
-RUN pip install --force-reinstall charset-normalizer==3.1.0
-EXPOSE 8000
-RUN conda install -c conda-forge typing-extensions
-# RUN pip install lmql[hf]
+
+FROM nvidia/cuda:12.2.2-devel-ubuntu22.04 as build
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y git build-essential \
+    python3 python3-pip gcc wget \
+    ocl-icd-opencl-dev opencl-headers clinfo \
+    libclblast-dev libopenblas-dev \
+    && mkdir -p /etc/OpenCL/vendors && echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
+
+# setting build related env vars
+ENV CUDA_DOCKER_ARCH=all
+ENV GGML_CUDA=1
+# Install depencencies
+RUN python3 -m pip install --upgrade pip pytest cmake scikit-build setuptools  sse-starlette pydantic-settings starlette-context
+
+# Install llama-cpp-python (build with cuda)
+RUN CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python   --no-cache-dir -vvv --upgrade
+
+RUN python3 -m pip install --upgrade guidance
+#install poetry and dependencies without creating a virtualenv
+RUN python3 -m pip install poetry
+COPY pyproject.toml  ./
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-ansi
+
+
+
+
 WORKDIR /app 
- 
-CMD ["python", "src/main.py"]
- 
+
+
+
+CMD ["python3", "src/main.py"]

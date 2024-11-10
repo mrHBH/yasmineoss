@@ -1,9 +1,0 @@
-# guidance
-pydantic
-langchain
-python-dotenv
-asyncio
-pylint
-fastapi-cors 
-uvicorn[standard]
-pyautogen
