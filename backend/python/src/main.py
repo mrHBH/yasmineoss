@@ -20,6 +20,8 @@ import datetime
 from datetime import datetime as dt
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from guidance import models
+
 # from openai import OpenAI
    
 
@@ -28,7 +30,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 app = FastAPI()
-
+llm_lock = asyncio.Lock()
+llm = None
 
 
 
@@ -205,6 +208,8 @@ async def load_file(websocket: WebSocket, workspace_name: str):
 
 
 
+
+
 @app.websocket("/ws/lg/")
 async def websocket_endpoint(websocket: WebSocket):
     """This function is a websocket endpoint that sends log messages to connected clients."""
@@ -239,6 +244,82 @@ async def loadmodel():
 
  
 
+@app.websocket("/ws/agent/")
+async def websocket_endpoint(websocket: WebSocket):
+    """This function is a websocket endpoint that sends log messages to connected clients."""
+    
+    await websocket.accept()
+    global llm , dynamicmodule
+
+    if llm  is None:
+        from fastapi import WebSocketDisconnect
+        from fastapi import status   
+        llm = models.LlamaCpp("models/Phi-3-mini-128k-instruct.Q5_0.gguf", n_gpu_layers=-1, n_ctx=1024  , verbose=True , echo= False  )
+         # append text or generations to the model
+        import modules.basicguidancegen as bg
+        importlib.reload(bg) 
+        dynamicmodule = bg.BasicGuidanceGen(  llm = llm , websocket = websocket , llm_lock = llm_lock)  
+
+        await getattr(dynamicmodule, "run")() 
+        
+    else:
+        import modules.basicguidancegen as bg
+        importlib.reload(bg) 
+        dynamicmodule = bg.BasicGuidanceGen(  llm = llm , websocket = websocket , llm_lock = llm_lock)     
+        await getattr(dynamicmodule, "run")()  
+  
+         
+
+      
+
+    # else:
+    #     callback_manager.set_handlers(  [  StreamingStdOutCallbackHandler()   , custom_async_handler      ] )
+  
+    # # import modules.micguidance as micguidance
+    # # importlib.reload(micguidance) 
+    # import modules.customExecutor as customExecutor
+    # importlib.reload(customExecutor) 
+
+    # dynamicmodule = customExecutor.Guidance(  llm = llm , websocket = websocket)
+    # task = asyncio.create_task(
+    # getattr(dynamicmodule, "listen")() )
+    # await task
+
+
+    #     # result = await getattr(dynamicmodule, "generate")(data)  
+
+        # dictres= {"command": "output" , "text": result["output"] , "scratchpad": result["intermediate_steps"]  }
+        # jsonz = dumps(dictres)
+        
+        # await websocket.send_text( jsonz)
+        
+
+   
+    # #check if micguidance includes a function called prompt
+    # if not hasattr(micguidance, "generate"):
+    #     raise HTTPException(status_code=503, detail="Guidance not loaded. Please load a model first.")
+    # startt = time.time()  
+    
+    # result = await getattr(micguidance,  "generate")( "generate", llm , callback_manager , memory)
+    # #to string
+    # result = str(result)
+    # await getattr(micguidance,  "startlistening")()
+    # while True:
+    #     try:
+    #         text_data = await websocket.receive_text()
+    #         # Process the data
+    #        # result = getattr(micguidance, "generate")(text_data, llm, callback_manager, memory)
+    #         print("received text: " + text_data)
+    #     except WebSocketDisconnect:
+    #         print("WebSocket disconnected.")
+    #         break
+    #     except Exception as e:
+    #         print(f"An error occurred: {e}")
+    #         await websocket.close(code=status.WSCloseCode.PROTOCOL_ERROR)
+    #         break
+
+
+   
 
 # @app.post("/loadguidance/")
 # async def loadguidance():
@@ -260,5 +341,5 @@ async def loadmodel():
  
 if __name__ == "__main__":
     #check if not local host ; then secure https
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
      

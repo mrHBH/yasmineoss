@@ -29,6 +29,7 @@ guidance = "^0.1.16"
 google-generativeai = "^0.8.2"
 ollama = "^0.3.3"
 python-multipart = "^0.0.12"
+outlines = "^0.1.3"
   
 
 [build-system]

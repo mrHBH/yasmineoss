@@ -18,7 +18,7 @@ RUN poetry config virtualenvs.create false \
 RUN apk add  --no-cache  gcc g++ cmake
 
 # Install llama-cpp-python
-RUN poetry run pip install llama-cpp-python
+RUN poetry run pip install llama-cpp-python outlines
 
 # Copy the application code into the container
 COPY src/ ./src

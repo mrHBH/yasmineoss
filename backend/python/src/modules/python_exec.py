@@ -23,7 +23,7 @@ class LetterCounter:
         """
         self.model_path = model_path
         self.model = models.LlamaCpp(
-            model_path, n_gpu_layers=-1, n_ctx=2048, verbose=True
+            model_path, n_gpu_layers=-1, n_ctx=1024, verbose=True
         )
         self.model._html = lambda: None
         self.model._update_display = lambda: None
@@ -66,11 +66,26 @@ class LetterCounter:
             {"word": "psychoneuroimmunology", "letter": "n"},
             {"word": "hepaticocholangiocholecystenterostomies", "letter": "c"},
         ]
+
+        # dynaöically add  50 random test cases
+        import random
+        import string
+
+        for i in range(50):
+            word = "".join(
+                random.choices(string.ascii_lowercase, k=random.randint(10, 50))
+            )
+            letter = random.choice(string.ascii_lowercase)
+            self.additional_test_cases.append({"word": word, "letter": letter})
         self.default_test_cases.extend(self.additional_test_cases)
 
-        # Statistics
+        # # Statistics
         self.total_attempts = 0
         self.successful_extractions = 0
+        self.successful_recalls = 0  # New: Track successful word+letter recalls
+        self.failed_code_executions = (
+            0  # New: Track failed code executions after successful recall
+        )
         self.start_time = None
 
     def _run_python_code(self, code_obj: str, interpreter: dict) -> Tuple[int, str]:
@@ -124,11 +139,16 @@ class LetterCounter:
                 "letter",
                 max_tokens=10,
                 regex=r"[a-z]",
-                stop=["\n", "."],
-                temperature=0.0,
+                stop=["\n", ".", "<|endoftext|>", "<|end|>", " "],
+                temperature=0.1,
             )
             + "' in the word: '"
-            + gen("word", max_tokens=50, temperature=0.1, stop=["\n", "."])
+            + gen(
+                "word",
+                max_tokens=50,
+                temperature=0.1,
+                stop=["\n", ".", "<|endoftext|>", "<|end|>", " "],
+            )
             + "\n"
         )
 
@@ -144,6 +164,7 @@ class LetterCounter:
 
         if extracted_word == word and extracted_letter == letter:
             print(f"✓ Correctly recalled word '{word}' and letter '{letter}'")
+            self.successful_recalls += 1  # Increment successful recalls
 
             python_code_prompt = (
                 f"#print how many times the word contains the letter\n"
@@ -165,13 +186,18 @@ class LetterCounter:
                 python_code_prompt + python_code["code"], {}
             )
             print(f"Code output: {res}")
-
-            if status == 0 and int(res.strip()) == real_count:
-                print("✓ Correctly counted letters!")
-                self.successful_extractions += 1
-                return True, res
-            else:
+            try:
+                if status == 0 and (res != "") and int(res.strip()) == real_count:
+                    print("✓ Correctly counted letters!")
+                    self.successful_extractions += 1
+                    return True, res
+                else:
+                    print("✗ Failed to count correctly")
+                    self.failed_code_executions += 1  # Increment failed code executions
+                    return False, res
+            except ValueError:
                 print("✗ Failed to count correctly")
+                self.failed_code_executions += 1  # Increment failed code executions
                 return False, res
         else:
             print(f"✗ Failed to recall the word or letter correctly")
@@ -200,34 +226,66 @@ class LetterCounter:
     def _print_current_stats(self) -> None:
         """Print current success rate."""
         success_rate = self.successful_extractions / self.total_attempts * 100
-        print(f"\nCurrent success rate: {success_rate:.2f}%")
+        recall_success_rate = self.successful_recalls / self.total_attempts * 100
+
+        if self.successful_recalls > 0:
+            code_failure_rate = (
+                self.failed_code_executions / self.successful_recalls
+            ) * 100
+        else:
+            code_failure_rate = 0
+
+        print(f"\nCurrent success rates:")
+        print(f"Overall success rate: {success_rate:.2f}%")
+        print(f"Word+letter recall rate: {recall_success_rate:.2f}%")
+        print(f"Code failure rate after successful recall: {code_failure_rate:.2f}%")
 
     def _print_final_stats(self) -> None:
         """Print final statistics."""
         elapsed_time = time.time() - self.start_time
         success_rate = self.successful_extractions / self.total_attempts * 100
+        recall_success_rate = self.successful_recalls / self.total_attempts * 100
+
+        if self.successful_recalls > 0:
+            code_failure_rate = (
+                self.failed_code_executions / self.successful_recalls
+            ) * 100
+        else:
+            code_failure_rate = 0
 
         print("\n" + "=" * 50)
         print("Final Results:")
         print(f"Total tests: {self.total_attempts}")
-        print(f"Successful: {self.successful_extractions}")
-        print(f"Success rate: {success_rate:.2f}%")
+        print(f"Successful word+letter recalls: {self.successful_recalls}")
+        print(f"Successful complete executions: {self.successful_extractions}")
+        print(
+            f"Failed code executions after successful recall: {self.failed_code_executions}"
+        )
+        print(f"Overall success rate: {success_rate:.2f}%")
+        print(f"Word+letter recall rate: {recall_success_rate:.2f}%")
+        print(f"Code failure rate after successful recall: {code_failure_rate:.2f}%")
         print(f"Time elapsed: {elapsed_time:.2f} seconds")
         print("=" * 50 + "\n")
 
 
 if __name__ == "__main__":
     # Select your model path here
-    MODEL_PATH = "models/SmolLM-360M-Instruct.Q4_0.gguf"
-    # Uncomment to use other models:
-    MODEL_PATH = "models/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
-    MODEL_PATH = "models/Phi-3-mini-4k-instruct-v0.3.Q4_K_M.gguf"
-    #MODEL_PATH = "models/mistral-7b-instruct-v0.2.Q8_0.gguf"
+    # MODEL_PATH = "models/SmolLM-360M-Instruct.Q4_0.gguf"
+    # # Uncomment to use other models:
+    #MODEL_PATH = "models/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
+    #MODEL_PATH = "models/Phi-3-mini-4k-instruct-v0.3.Q4_K_M.gguf"
+    # MODEL_PATH = "models/mistral-7b-instruct-v0.2.Q8_0.gguf"
     # MODEL_PATH = "models/Llama-3.2-1B.Q4_0.gguf"
     # MODEL_PATH = "models/Llama-3.2-1B-Instruct-Q4_0.gguf"
     # MODEL_PATH = "models/SmolLM2-360M-Instruct-Q4_0.gguf"
-    MODEL_PATH = "models/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
+    # MODEL_PATH = "models/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
+    # MODEL_PATH = "models/SmolLM-135M.Q8_0.gguf"
+    MODEL_PATH = "models/Qwen2.5-Coder-7B.Q4_0.gguf"
+    MODEL_PATH = "models/tinystories-gpt-0.1-3m.fp16.gguf"
+    #MODEL_PATH = "models/Phi-3-mini-128k-instruct.Q5_0.gguf"
+   # MODEL_PATH = "models/SmolLM2-135M-Instruct-Q3_K_L.gguf"
 
+ 
     # MODEL_PATH = "models/OpenCoder-1.5B-Instruct.Q4_0.gguf"
 
     # Initialize and run tests

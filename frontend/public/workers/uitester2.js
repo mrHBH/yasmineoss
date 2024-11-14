@@ -2,7 +2,7 @@ let cb = function (e) {
   let mc = this._entity._entityManager._mc;
   let physicsworld = this._entity._entityManager._mc.physicsmanager.world;
   let protocol = "wss://";
-
+  this.hostname = window.location.hostname;
   if (this.hostname == "localhost") {
     protocol = "ws://";
     this.hostname = "localhost:8000";
@@ -65,8 +65,11 @@ let cb = function (e) {
           console.log(res)
    
       await this.editor.laodfiletree()
- 
-      });
+
+     
+      }
+      )
+  
 
 
     mc.createWallsFromCamera()

@@ -221,7 +221,7 @@ class Main {
       const uitestercontroller2 = new CharacterComponent({
         modelpath: "models/gltf/ybot2.glb",
         animationspathslist: this.maincController.animations,
-        behaviourscriptname: "uitester2.js",
+        behaviourscriptname: "uitester3.js",
       });
       await uitester.AddComponent(uitestercontroller2);
 

@@ -1,5 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import time
 from types import MethodType
 import uuid
 from typing import Dict
@@ -14,10 +15,7 @@ import logging
 
 
 queuez = Queue()
-
-
 last_event = ""
-
 
 async def send_to_ws(text, websocket):
     dictres = {"command": "token", "text": text}
@@ -47,47 +45,6 @@ def make_send_to_event_queue(loop, websocket):
 
     return _send_to_event_queue
 
-class CodeInterpreterAgent:
-    def __init__(self, llm: models.LlamaCpp) -> None:
-        self.llm = llm
-        self.llm.max_display_rate = 0.001
-        self.task= ""
-        self.runningtask = None
-        self.loop = asyncio.get_event_loop()
-        asyncio.set_event_loop(self.loop)
-        self.ThreadPoolExecutor = ThreadPoolExecutor(max_workers=4)
-          
-    
-
- 
-    def initcodeinterpreter(self, prompt):
-            
-        res = (
-                self.llm
-                + " <|im_start|> user\n you will generate a short paragraph about  AI"
-                
-                + " <|im_end|> \n"
-            )
-        res += gen("result", max_tokens=100, stop=["<|im_end|>"])
-        return res["result"]
-    
-            
-        
- 
-    async def run(self, prompt):
-        try:          
-            self.task = self.loop.run_in_executor(self.ThreadPoolExecutor, self.initcodeinterpreter, prompt)
-            self.runningtask = asyncio.ensure_future(self.task)
-            res = await self.runningtask
-            logging.info(res)
-            return res
-
-        except Exception as e:
-            print(e)
-            return str(e)
-         
-
-
 class BasicGuidanceGen:
     def __init__(
         self, llm: models.LlamaCpp, llm_lock: asyncio.Lock, websocket: WebSocket
@@ -95,52 +52,123 @@ class BasicGuidanceGen:
         self.llm_lock = llm_lock
         self.llm = llm
         self.websocket = websocket
+        self.running_task = None
         self.loop = asyncio.get_event_loop()
- 
+
     async def listen(self):
         try:
-            while  self.websocket.client_state != 3:
+            while self.websocket.client_state != 3:
                 data = await self.websocket.receive_text()
-                # Handle the received data
                 task = asyncio.create_task(self.handle(data))
-                res = await task
-                dictres = {"command": "finalans", "text": res}
-                jsonz = json.dumps(dictres)
-                await self.websocket.send_text(jsonz)
-                
-                #stop task after 2 seconds
-                # await asyncio.sleep(2)
-                # task.cancel()
-                 
-                 
-                 
-            
-        except asyncio.CancelledError:
-            # Handle the websocket cleanup if necessary
+                await task
+        except  Exception as e:
+            import logging
+            logging.basicConfig(level=logging.DEBUG)
+            logging.debug(e)
             pass
+
     async def run(self):
         listener_task = asyncio.create_task(self.listen())
-        res = await asyncio.gather(listener_task)
-        return res
+        await listener_task
+
     async def handle(self, prompt_json):
         try:
             obj = json.loads(prompt_json)
         except Exception as e:
             print(e)
             return
-         
-        
-        if obj["cmd"] == "gen":
-            
-            topic = obj["topic"]
-            agent =  CodeInterpreterAgent(self.llm)
-            async with self.llm_lock:
-                self.llm._send_to_event_queue = MethodType(
-                    make_send_to_event_queue(self.loop, self.websocket), self.llm
-                )    
-                task = asyncio.create_task(agent.run(input))
-                res = await task
-                return res
 
-                
+        if obj["cmd"] == "stop":
+            import logging
+            logging.basicConfig(level=logging.DEBUG)
+
+            logging.debug("Stopping the task")
+            if self.running_task is not None:
+                self.running_task.cancel()
+                self.running_task = None
+                return
+
+        if obj["cmd"] == "gen":
+            import logging
+            logging.basicConfig(level=logging.DEBUG)
+
+            topic = obj["topic"]
+            agent = CodeInterpreterAgent(self.llm)
+            async with self.llm_lock:
+                # self.llm._send_to_event_queue = MethodType(
+                #     make_send_to_event_queue(self.loop, self.websocket), self.llm
+                # )
+                if self.running_task is not None:
+                    self.running_task.cancel()
+
+
+                 
+                self.running_task = asyncio.create_task(agent.run(topic))
+                res = await self.running_task
+                self.running_task = None
+
+                logging.debug(res)
+                return res
  
+ 
+class CodeInterpreterAgent:
+    def __init__(self, llm: models.LlamaCpp) -> None:
+        self.llm = llm
+        self.llm.max_display_rate = 0.001
+        self.task = ""
+        self.running_task = None
+        self.loop = asyncio.get_event_loop()
+        asyncio.set_event_loop(self.loop)
+        self.ThreadPoolExecutor = ThreadPoolExecutor(max_workers=4)
+
+    def init_code_interpreter(self, prompt):
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
+        logging.debug("Running the task")
+        # res = self.llm + " <|im_start|> user\n you will generate a short paragraph about  a topic of your choice. \n" + gen("result", max_tokens=100, stop=["<|im_end|>"], temperature=0.7)
+        # logging.debug(res["result"])
+
+        streamer = self.llm.stream()
+        res = ""
+        oldres = ""
+        count = 0
+        for part in streamer + prompt + gen( max_tokens=450, stop=["<|im_end|>"], temperature=0.7):      
+
+            diff = str(part)[len(oldres):]
+            if count > 10:
+                 
+                self.llm.reset()
+                
+                self.llm._state = None
+                break
+            count += 1
+            # time.sleep(0.1)
+            logging.debug(diff)
+            oldres = part
+            
+        
+             
+
+        return oldres
+     
+ 
+    
+ 
+    async def run(self, prompt):
+        try:          
+            self.task = self.loop.run_in_executor(self.ThreadPoolExecutor, self.init_code_interpreter, prompt)
+            self.runningtask = asyncio.ensure_future(self.task)
+            res = await self.runningtask
+            # streamer = self.llm.stream()
+            # async for part in streamer + prompt + gen("result", max_tokens=100, stop=["<|im_end|>"], temperature=0.7):
+            #     logging.debug(part)
+            #     await asyncio.sleep(0)
+                
+            return res 
+
+        except Exception as e:
+            logging.debug(e)
+
+        
+            return str(e)
+     
