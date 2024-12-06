@@ -14,21 +14,9 @@ import outlines
 from llama_cpp import Llama
 
 from outlines import models, generate, samplers
+import vllm
+from outlines import models
 
-
-class Weapon(str, Enum):
-    sword = "sword"
-    axe = "axe"
-    mace = "mace"
-    spear = "spear"
-    bow = "bow"
-    crossbow = "crossbow"
-
-
-class Armor(str, Enum):
-    leather = "leather"
-    chainmail = "chainmail"
-    plate = "plate"
 
 
 class ExtractedWord(BaseModel):
@@ -37,43 +25,37 @@ class ExtractedWord(BaseModel):
 
 
 # tokenizerpath = "microsoft/Phi-3-mini-4k-instruct"
-tokenizerpath = "Qwen/Qwen2.5-0.5B-Instruct"
+# tokenizerpath = "Qwen/Qwen2.5-0.5B-Instruct"
 tokenizerpath = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
-#tokenizerpath = "microsoft/Phi-3.5-mini-instruct"
+# tokenizerpath = "microsoft/Phi-3.5-mini-instruct"
 # tokenizerpath = "Qwen/Qwen2.5-Coder-7B-Instruct"
-tokenizerpath = "HuggingFaceTB/SmolLM2-135M-Instruct"
-modelpath = "models/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
-#modelpath = "models/Phi-3.5-mini-instruct-Q4_0.gguf"
+# tokenizerpath = "HuggingFaceTB/SmolLM2-135M-Instruct"
+# modelpath = "models/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
+# modelpath = "models/Phi-3.5-mini-instruct.Q4_0.gguf"
 modelpath = "models/qwen2.5-coder-0.5b-instruct-q8_0.gguf"
-modelpath = "models/smollm2-135m-instruct-q8_0.gguf"
 # modelpath = "models/Qwen2.5-Coder-7B.Q4_0.gguf"
 # modelpath = "models/Phi-3-mini-4k-instruct-v0.3.Q4_K_M.gguf"
-#modelpath =  "models/SmolLM2-135M-Instruct.Q4_0.gguf"
+# modelpath =  "models/SmolLM2-135M-Instruct-Q3_K_L.gguf"
 
 
 if __name__ == "__main__":
     # curl -L -o mistral-7b-instruct-v0.2.Q5_K_M.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q5_K_M.gguf
-    llama = Llama(
-        model_path=modelpath,
-        verbose=True,
-        tokenizer=llama_cpp.llama_tokenizer.LlamaHFTokenizer.from_pretrained(
-            tokenizerpath
-        ),
-        n_gpu_layers=-1,
-        n_ctx=8192,
-        logits_all=False,
-    )
+    llm = vllm.LLM(   "HuggingFaceTB/SmolLM2-135M-Instruct")
+    model = models.VLLM(llm)
 
-    # tokenizer = LlamaCppTokenizer(llama)
 
-    model = models.LlamaCpp(llama)
+    # model = outlines.vllm.transformers(
+    #    # "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+    #     "HuggingFaceTB/SmolLM2-135M-Instruct",
+    
+    # )
     sampler = samplers.greedy()
-    #sampler = samplers.multinomial(3, top_p=0.95)
+    sampler = samplers.multinomial(3, top_p=0.95)
     generator = generate.json(model, ExtractedWord, sampler=sampler)
 
     # Draw a sample
     seed = 7890055
-    default_test_cases = [{'word': 'byukziyractptxknpaiclmzedgjkjrivvkzeerododnhzlehiiacysjpnneudlvahjxmgnqvzcwaqncbwetkfrwvhjrxhfckzytoctqyjyahqsiegkalootiiirrtcsgbidw', 'letter': 'p'   },
+    default_test_cases = [{'word': 'byukziyractptxknpaiclmfktonlaetwifnvpawsgjkjrivvkzeerododnhzlehiiacysjpnneudlvahjxmgnqvzcwaqncbwetkfrwvhjrxhfckzytoctqyjyahqsiegkalootiiirrtcsgbidw', 'letter': 'p'   },
     ] 
         # add a random 100 test cases with random words and letters
     import random
@@ -81,7 +63,7 @@ if __name__ == "__main__":
 
     for i in range(2):
         word = "".join(
-            random.choices(string.ascii_lowercase, k=random.randint(11, 110))
+            random.choices(string.ascii_lowercase, k=random.randint(100, 150))
         )
         letter = random.choice(string.ascii_lowercase)
         default_test_cases.append({"word": word, "letter": letter})
@@ -97,9 +79,6 @@ if __name__ == "__main__":
      
 
     for test_case in default_test_cases:
-        #clear context
-        llama.reset()
-        
         try:
             word = test_case["word"]
             letter = test_case["letter"]
@@ -108,20 +87,19 @@ if __name__ == "__main__":
             )
 
             # Construct structured sequence generator
-            question = f"USER: How many times does the letter '{letter}' appear in  '{word}' ?"
+            question = f"How many times does the letter '{letter}' appear in the word '{word}' ?"
 
-            jsonvar = ""
-            for token in generator.stream(
-                f"{question }\nSYSTEM: Extract the word and the letter the user is talking about in json format\n AI:"  ,
-                max_tokens=512,
-            ):
-                jsonvar += token
-                print(token)
-                # check for triple backticks
-                # if "```" in jsonvar:
-                #     # remove it
-                #     jsonvar = jsonvar.replace("```", "")
-                #     break
+            jsonvar =  generator(
+                 f"{question }.Extract EXACTLY the word and the letter  ```json\n",
+                 max_tokens=512,
+         ) 
+            #     jsonvar += token
+
+            #     # check for triple backticks
+            #     if "```" in jsonvar:
+            #         # remove it
+            jsonvar = jsonvar.replace("```", "")
+            #         break
 
             # load the json
             extracted = json.loads(jsonvar)
@@ -157,7 +135,7 @@ if __name__ == "__main__":
 
 
         except Exception as e:
-            failed_cases.append({"jsonvar": jsonvar,  "error": str(e)})
+            failed_cases.append({"word": word, "letter": letter, "error": str(e)})
 
         # Print current statistics
         print(f"Processed: {len(failed_cases) + success}/{len(default_test_cases)}")
@@ -179,7 +157,7 @@ if __name__ == "__main__":
     print(f"Final Success rate: {success}/{len(default_test_cases)}")
     print(f"Failed cases: {failed_cases}")
 
-    llama.close()
+    
 
 #   prefix =  "```python\n"
 #             python_code_prompt = (

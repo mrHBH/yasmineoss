@@ -232,6 +232,9 @@ class Main {
       await this.entityManager.AddEntity(uitester, "uitester");
       this.maincController.MainEntity = uitester;
       uitestercontroller2.face();
+
+
+      this.maincController.UIManager.toggleScrollmode();
    
 
   //   // const introui = new Entity();

@@ -22,7 +22,7 @@ class DynamicuiWorkerComponent extends Component {
   constructor(pagescriptpath: string) {
     super();
     this.pagescriptpath = pagescriptpath;
-    this._size = new THREE.Vector2(1500, 1500);  
+    this._size = new THREE.Vector2( window.innerWidth, window.innerHeight);
     this._htmlElement = document.createElement("div");
     this.flat = true;
 
@@ -59,8 +59,8 @@ class DynamicuiWorkerComponent extends Component {
     planeMaterial.side = THREE.DoubleSide;
     this._webgpuplane = new THREE.Mesh(
       new THREE.PlaneGeometry(
-        (1.5  * this._size.x) / 100,
-        (1.5 * this._size.y) / 100
+        (1  * this._size.x) / 10,
+        (1 * this._size.y) / 10
       ),
       planeMaterial
     );

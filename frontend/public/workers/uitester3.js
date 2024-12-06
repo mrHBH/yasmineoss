@@ -40,6 +40,78 @@ let cb = function (e) {
     const resultsArea = this.uiElement.querySelector("#results-area");
     const generateButton = this.uiElement.querySelector("#generate-page");
 
+    const path = protocol + this.hostname + "/ws/outlinesagent/";
+    ws = new WebSocket(path);
+
+    ws.onopen = () => {
+      console.log("Connected to the server.");
+    };
+
+    ws.onmessage = (event) => {
+      console.log("Message from server ", event.data);
+      const obj = JSON.parse(event.data);
+
+      switch (obj.command) {
+        case "token":
+          streamOutput.textContent += obj.text;
+          break;
+        case "result":
+          resultsArea.innerHTML = `
+            <div class="uk-alert uk-alert-primary uk-margin-small-top">
+              ${obj.text}
+            </div>`;
+          const stopButton = this.uiElement.querySelector(".uk-button-danger");
+          if (stopButton) {
+            stopButton.remove();
+          }
+          generateButton.disabled = false;
+          generateButton.innerHTML = "Count Letters";
+          break;
+        case "error":
+          resultsArea.innerHTML = `
+            <div class="uk-alert uk-alert-danger uk-margin-small-top">
+              Error: ${obj.text}
+            </div>`;
+          const stopButtonError = this.uiElement.querySelector(".uk-button-danger");
+          if (stopButtonError) {
+            stopButtonError.remove();
+          }
+          generateButton.disabled = false;
+          generateButton.innerHTML = "Count Letters";
+          break;
+        case "info":
+          resultsArea.innerHTML = `
+            <div class="uk-alert uk-alert-warning uk-margin-small-top">
+              ${obj.text}
+            </div>`;
+          break;
+      }
+    };
+
+    ws.onclose = () => {
+      console.log("Connection closed.");
+      const stopButton = this.uiElement.querySelector(".uk-button-danger");
+      if (stopButton) {
+        stopButton.remove();
+      }
+      generateButton.disabled = false;
+      generateButton.innerHTML = "Count Letters";
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      resultsArea.innerHTML = `
+        <div class="uk-alert uk-alert-danger uk-margin-small-top">
+          WebSocket error occurred. Please try again.
+        </div>`;
+      const stopButton = this.uiElement.querySelector(".uk-button-danger");
+      if (stopButton) {
+        stopButton.remove();
+      }
+      generateButton.disabled = false;
+      generateButton.innerHTML = "Count Letters";
+    };
+
     generateButton.addEventListener("click", async () => {
       const word = this.uiElement.querySelector("#test-word").value;
       const letter = this.uiElement.querySelector("#test-letter").value;
@@ -52,11 +124,9 @@ let cb = function (e) {
         return;
       }
     
-      // Clear previous results
       streamOutput.textContent = "";
       resultsArea.innerHTML = "";
     
-      // Disable button and show loading state
       generateButton.disabled = true;
       generateButton.innerHTML = "Processing...";
       let spinner = document.createElement("span");
@@ -64,118 +134,45 @@ let cb = function (e) {
       spinner.setAttribute("uk-spinner", "ratio: 0.6");
       generateButton.appendChild(spinner);
     
-      const path = protocol + this.hostname + "/ws/outlinesagent/";
-      ws = new WebSocket(path);
-    
-      ws.onopen = () => {
-        console.log("Connected to the server.");
+      if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           cmd: "gen",
           word: word,
           letter: letter
         }));
-    
-        // Remove existing stop button if present
-        const existingStopButton = this.uiElement.querySelector(".uk-button-danger");
-        if (existingStopButton) {
-          existingStopButton.remove();
-        }
-    
-              // Add stop button
-        const stopButton = document.createElement("button");
-        stopButton.innerHTML = "Stop";
-        stopButton.classList.add("uk-button", "uk-button-danger", "uk-width-1-1", "uk-margin-small-top");
-
-        stopButton.addEventListener("click", () => {
-          console.info("Stop button clicked");
-
-          // Close the WebSocket connection gracefully
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ cmd: "stop" }));
-            ws.close();
-          }
-
-          // Remove stop button and reset generate button state
-          stopButton.remove();
-          generateButton.disabled = false;
-          generateButton.innerHTML = "Count Letters";
-        });
-
-        generateButton.parentNode.insertBefore(stopButton, generateButton.nextSibling);
-      };
-    
-      ws.onmessage = (event) => {
-        console.log("Message from server ", event.data);
-        const obj = JSON.parse(event.data);
-    
-        switch (obj.command) {
-          case "token":
-            streamOutput.textContent += obj.text;
-            break;
-          case "result":
-            resultsArea.innerHTML = `
-              <div class="uk-alert uk-alert-primary uk-margin-small-top">
-                ${obj.text}
-              </div>`;
-            // Remove stop button
-            const stopButton = this.uiElement.querySelector(".uk-button-danger");
-            if (stopButton) {
-              stopButton.remove();
-            }
-            // Reset button state
-            generateButton.disabled = false;
-            generateButton.innerHTML = "Count Letters";
-            break;
-          case "error":
-            resultsArea.innerHTML = `
-              <div class="uk-alert uk-alert-danger uk-margin-small-top">
-                Error: ${obj.text}
-              </div>`;
-            // Remove stop button
-            const stopButtonError = this.uiElement.querySelector(".uk-button-danger");
-            if (stopButtonError) {
-              stopButtonError.remove();
-            }
-            // Reset button state
-            generateButton.disabled = false;
-            generateButton.innerHTML = "Count Letters";
-            break;
-          case "info":
-            resultsArea.innerHTML = `
-              <div class="uk-alert uk-alert-warning uk-margin-small-top">
-                ${obj.text}
-              </div>`;
-            break;
-        }
-      };
-    
-      ws.onclose = () => {
-        console.log("Connection closed.");
-        // Remove stop button if exists
-        const stopButton = this.uiElement.querySelector(".uk-button-danger");
-        if (stopButton) {
-          stopButton.remove();
-        }
-        // Reset button state if not already reset
-        generateButton.disabled = false;
-        generateButton.innerHTML = "Count Letters";
-      };
-    
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
+      } else {
+        console.error("WebSocket is not open. Ready state: " + ws.readyState);
         resultsArea.innerHTML = `
           <div class="uk-alert uk-alert-danger uk-margin-small-top">
-            WebSocket error occurred. Please try again.
+            WebSocket is not open. Please try again later.
           </div>`;
-        // Remove stop button
-        const stopButton = this.uiElement.querySelector(".uk-button-danger");
-        if (stopButton) {
-          stopButton.remove();
-        }
-        // Reset button state
         generateButton.disabled = false;
         generateButton.innerHTML = "Count Letters";
-      };
+        return;
+      }
+
+      const existingStopButton = this.uiElement.querySelector(".uk-button-danger");
+      if (existingStopButton) {
+        existingStopButton.remove();
+      }
+
+      const stopButton = document.createElement("button");
+      stopButton.innerHTML = "Stop";
+      stopButton.classList.add("uk-button", "uk-button-danger", "uk-width-1-1", "uk-margin-small-top");
+
+      stopButton.addEventListener("click", () => {
+        console.info("Stop button clicked");
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ cmd: "stop" }));
+        }
+
+        stopButton.remove();
+        generateButton.disabled = false;
+        generateButton.innerHTML = "Count Letters";
+      });
+
+      generateButton.parentNode.insertBefore(stopButton, generateButton.nextSibling);
     });
   });
 };

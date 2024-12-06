@@ -20,7 +20,7 @@ class DynamicuiComponent extends Component {
 
   constructor() {
     super();
-     this._size = new THREE.Vector2(1500, 1500);  
+     this._size = new THREE.Vector2(window.innerWidth, window.innerHeight);
     this._htmlElement = document.createElement("div");
     this.flat = true;
 
@@ -56,8 +56,8 @@ class DynamicuiComponent extends Component {
     planeMaterial.side = THREE.DoubleSide;
     this._webgpuplane = new THREE.Mesh(
       new THREE.PlaneGeometry(
-        (   this._size.x) / 100,
-        (   this._size.y) / 100
+        (   this._size.x) / 10,
+        (   this._size.y) / 10
       ),
       planeMaterial
     );
