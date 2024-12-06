@@ -128,51 +128,57 @@ let cb = function (e) {
       resultsArea.innerHTML = "";
     
       generateButton.disabled = true;
-      generateButton.innerHTML = "Processing...";
+      generateButton.innerHTML = "Connecting...";
       let spinner = document.createElement("span");
       spinner.classList.add("uk-margin-small-left");
       spinner.setAttribute("uk-spinner", "ratio: 0.6");
       generateButton.appendChild(spinner);
     
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          cmd: "gen",
-          word: word,
-          letter: letter
-        }));
-      } else {
-        console.error("WebSocket is not open. Ready state: " + ws.readyState);
-        resultsArea.innerHTML = `
-          <div class="uk-alert uk-alert-danger uk-margin-small-top">
-            WebSocket is not open. Please try again later.
-          </div>`;
-        generateButton.disabled = false;
-        generateButton.innerHTML = "Count Letters";
-        return;
-      }
+      const checkConnection = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          clearInterval(checkConnection);
+          generateButton.innerHTML = "Generating...";
+          spinner.setAttribute("uk-spinner", "ratio: 0.6");
+          generateButton.appendChild(spinner);
 
-      const existingStopButton = this.uiElement.querySelector(".uk-button-danger");
-      if (existingStopButton) {
-        existingStopButton.remove();
-      }
+          ws.send(JSON.stringify({
+            cmd: "gen",
+            word: word,
+            letter: letter
+          }));
 
-      const stopButton = document.createElement("button");
-      stopButton.innerHTML = "Stop";
-      stopButton.classList.add("uk-button", "uk-button-danger", "uk-width-1-1", "uk-margin-small-top");
+          const existingStopButton = this.uiElement.querySelector(".uk-button-danger");
+          if (existingStopButton) {
+            existingStopButton.remove();
+          }
 
-      stopButton.addEventListener("click", () => {
-        console.info("Stop button clicked");
+          const stopButton = document.createElement("button");
+          stopButton.innerHTML = "Stop";
+          stopButton.classList.add("uk-button", "uk-button-danger", "uk-width-1-1", "uk-margin-small-top");
 
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ cmd: "stop" }));
+          stopButton.addEventListener("click", () => {
+            console.info("Stop button clicked");
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ cmd: "stop" }));
+            }
+
+            stopButton.remove();
+            generateButton.disabled = false;
+            generateButton.innerHTML = "Count Letters";
+          });
+
+          generateButton.parentNode.insertBefore(stopButton, generateButton.nextSibling);
+        } else if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+          clearInterval(checkConnection);
+          resultsArea.innerHTML = `
+            <div class="uk-alert uk-alert-danger uk-margin-small-top">
+              WebSocket is not open. Please try again later.
+            </div>`;
+          generateButton.disabled = false;
+          generateButton.innerHTML = "Count Letters";
         }
-
-        stopButton.remove();
-        generateButton.disabled = false;
-        generateButton.innerHTML = "Count Letters";
-      });
-
-      generateButton.parentNode.insertBefore(stopButton, generateButton.nextSibling);
+      }, 100);
     });
   });
 };
