@@ -41,11 +41,11 @@ tokenizerpath = "Qwen/Qwen2.5-0.5B-Instruct"
 tokenizerpath = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
 #tokenizerpath = "microsoft/Phi-3.5-mini-instruct"
 # tokenizerpath = "Qwen/Qwen2.5-Coder-7B-Instruct"
-tokenizerpath = "HuggingFaceTB/SmolLM2-135M-Instruct"
+#tokenizerpath = "HuggingFaceTB/SmolLM2-135M-Instruct"
 modelpath = "models/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
 #modelpath = "models/Phi-3.5-mini-instruct-Q4_0.gguf"
 modelpath = "models/qwen2.5-coder-0.5b-instruct-q8_0.gguf"
-modelpath = "models/smollm2-135m-instruct-q8_0.gguf"
+#modelpath = "models/smollm2-135m-instruct-q8_0.gguf"
 # modelpath = "models/Qwen2.5-Coder-7B.Q4_0.gguf"
 # modelpath = "models/Phi-3-mini-4k-instruct-v0.3.Q4_K_M.gguf"
 #modelpath =  "models/SmolLM2-135M-Instruct.Q4_0.gguf"
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     import random
     import string
 
-    for i in range(2):
+    for i in range(0):
         word = "".join(
             random.choices(string.ascii_lowercase, k=random.randint(11, 110))
         )
@@ -178,6 +178,22 @@ if __name__ == "__main__":
     print(f"Total time: {end_time - start_time}") 
     print(f"Final Success rate: {success}/{len(default_test_cases)}")
     print(f"Failed cases: {failed_cases}")
+    
+
+    clasiffication_gen =  generate.choice(model, ["no","yes" ] , sampler= samplers.multinomial(1, top_k=2   ) )
+    # Create a classification prompt
+    classification_prompt = "is the following question: \n"
+
+    # Create a classification question
+    classification_question = f"Question: How many r' are  in the word  ert?\n Is it a question about counting letters in words ? respond with yes/no\n AI:" 
+    #classification_question = f"Question: is the weather good tonight?\n AI:"
+
+    # Generate the classification question
+    classification = clasiffication_gen(f"{classification_prompt} {classification_question}")
+    print(f"Classification: {classification }")
+
+
+
 
     llama.close()
 

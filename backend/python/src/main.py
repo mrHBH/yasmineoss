@@ -30,7 +30,7 @@ load_dotenv()
 app = FastAPI()
 llm_lock = asyncio.Lock()
 llm = None
-
+generator = None
 
 connectedClients: List[WebSocket] = []
 origins = ["*"]
@@ -50,21 +50,25 @@ async def websocket_endpointy(websocket: WebSocket):
     """This function is a websocket endpoint that sends log messages to connected clients."""
     try:
         await websocket.accept()
-        global llm, dynamicmodule
+        global llm, dynamicmodule , generator
 
         if llm is None:
             from fastapi import WebSocketDisconnect
             from fastapi import status
 
             modelpath = "models/qwen2.5-coder-0.5b-instruct-q8_0.gguf"
+            #modelpath = "models/Qwen2.5-Coder-7B.Q4_0.gguf"
+            #modelpath = "models/SmolLM2-360M-Instruct-Q4_0.gguf"
             tokenizerpath = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
-            # tokenizerpath = "microsoft/Phi-3.5-mini-instruct"
-            # modelpath = "models/Phi-3.5-mini-instruct.Q4_0.gguf"
+            #tokenizerpath = "Qwen/Qwen2.5-Coder-7B-Instruct"
+            #tokenizerpath =  "HuggingFaceTB/SmolLM2-360M-Instruct"
+            #tokenizerpath = "microsoft/Phi-3.5-mini-instruct"
+           # modelpath = "models/Phi-3.5-mini-instruct.Q4_0.gguf"
 
             # llm = models.LlamaCpp("models/Phi-3-mini-128k-instruct.Q5_0.gguf", n_gpu_layers=-1, n_ctx=1024  , verbose=True , echo= False  )
             llm = llama_cpp.Llama(
                 model_path=modelpath,
-                verbose=True,
+                verbose=False,
                 tokenizer=llama_cpp.llama_tokenizer.LlamaHFTokenizer.from_pretrained(
                     tokenizerpath
                 ),
@@ -73,12 +77,25 @@ async def websocket_endpointy(websocket: WebSocket):
                 logits_all=False,
             )
 
-        # append text or generations to the model
-        import modules.basicoutlines as bo
 
+
+            # append text or generations to the model
+            import modules.basicoutlines as bo
+            from outlines import models, generate, samplers
+            import outlines
+            from pydantic import BaseModel, constr
+            import re
+            class ExtractedWord(BaseModel):
+                """Schema for word extraction results."""
+                letter: constr(min_length=1, max_length=1)
+                word: constr(min_length=2)
+
+
+            generator = generate.json( models.LlamaCpp(llm), ExtractedWord, sampler= samplers.greedy() )
+        import modules.basicoutlines as bo
         importlib.reload(bo)
         dynamicmodule = bo.BasicGuidanceGen(
-            llm=llm, websocket=websocket, llm_lock=llm_lock
+            llm=llm, websocket=websocket, llm_lock=llm_lock , generator=generator
         )
 
         await getattr(dynamicmodule, "run")()
