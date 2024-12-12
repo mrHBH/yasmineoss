@@ -1,8 +1,6 @@
-ARG CUDA_VERSION=12.2.2 
-# Build stage
+ARG CUDA_IMAGE="12.5.0-devel-ubuntu22.04"
+FROM nvidia/cuda:${CUDA_IMAGE}
 
-
-FROM nvidia/cuda:12.2.2-devel-ubuntu22.04 as build
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y git build-essential \
@@ -18,8 +16,9 @@ ENV GGML_CUDA=1
 RUN python3 -m pip install --upgrade pip pytest cmake scikit-build setuptools  sse-starlette pydantic-settings starlette-context
 
 # Install llama-cpp-python (build with cuda)
-RUN CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python   --no-cache-dir -vvv --upgrade
-
+RUN CMAKE_ARGS="-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86" pip install llama-cpp-python  --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu125    --upgrade --force-reinstall --no-cache-dir -vvv
+ 
+ 
 RUN python3 -m pip install --upgrade guidance
 #install poetry and dependencies without creating a virtualenv
 RUN python3 -m pip install poetry

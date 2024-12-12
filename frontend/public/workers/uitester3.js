@@ -11,12 +11,12 @@ let cb = function (e) {
   let html0 = `
   <div class="uk-container uk-container-small" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; padding: 20px;">
     <div class="uk-card-title">Letter Counter AI</div>
-    <p>Ask me about counting letters</p>
+    <p>Ask me about counting number of a specific letter in a word.</p>
     
     <div class="uk-margin-small">
       <div class="uk-inline uk-width-1-1">
         <span class="uk-form-icon" uk-icon="icon: question"></span>
-        <input id="user-question" class="uk-input" type="text" placeholder="Ask me how many letters in a word"  value="How many r  in the word strawawavbbery ?" />
+        <input id="user-question" class="uk-input" type="text" placeholder="Ask me how many letters in a word"  value="How many 'r'  in the word strawawavbbery ?" />
 
       </div>
     </div>

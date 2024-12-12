@@ -1683,9 +1683,9 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     cliContainer.style.bottom = "100%";
     cliContainer.style.left = " 0%";
      //cliContainer.style.transform = "translateX(-50%)";
-    cliContainer.style.minWidth = "250px";
-    cliContainer.style.maxWidth = "60vw";
-    cliContainer.style.maxHeight = "40vh";
+    cliContainer.style.minWidth = "40vw";
+    cliContainer.style.maxWidth = "80vw";
+    cliContainer.style.maxHeight = "50vh";
      cliContainer.style.overflowY = " auto";
 
      //rounder corners

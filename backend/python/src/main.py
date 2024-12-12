@@ -57,9 +57,13 @@ async def websocket_endpointy(websocket: WebSocket):
             from fastapi import status
 
             modelpath = "models/qwen2.5-coder-0.5b-instruct-q8_0.gguf"
+            # modelpath = "models/EXAONE-3.5-2.4B-Instruct-Q8_0.gguf"
+            # modelpath = "models/qwen2.5-coder-1.5b-instruct-q8_0.gguf"
             #modelpath = "models/Qwen2.5-Coder-7B.Q4_0.gguf"
             #modelpath = "models/SmolLM2-360M-Instruct-Q4_0.gguf"
             tokenizerpath = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
+            # tokenizerpath = "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct"
+            # tokenizerpath = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
             #tokenizerpath = "Qwen/Qwen2.5-Coder-7B-Instruct"
             #tokenizerpath =  "HuggingFaceTB/SmolLM2-360M-Instruct"
             #tokenizerpath = "microsoft/Phi-3.5-mini-instruct"
@@ -73,7 +77,7 @@ async def websocket_endpointy(websocket: WebSocket):
                     tokenizerpath
                 ),
                 n_gpu_layers=-1,
-                n_ctx=1024,
+                n_ctx=32768,
                 logits_all=False,
             )
 
@@ -88,7 +92,7 @@ async def websocket_endpointy(websocket: WebSocket):
             class ExtractedWord(BaseModel):
                 """Schema for word extraction results."""
                 letter: constr(min_length=1, max_length=1)
-                word: constr(min_length=2)
+                word: constr(min_length=2 , max_length=10)
 
 
             generator = generate.json( models.LlamaCpp(llm), ExtractedWord, sampler= samplers.greedy() )

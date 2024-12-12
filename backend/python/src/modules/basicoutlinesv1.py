@@ -52,7 +52,7 @@ class ExtractedWord(BaseModel):
     """Schema for word extraction results."""
 
     letter: constr(min_length=1, max_length=1)
-    word: constr(min_length=2 , max_length=10)
+    word: constr(min_length=2)
 
 
 @dataclass
@@ -205,140 +205,186 @@ class BasicGuidanceGen:
         return jsonvar
 
     
-    async def verify(self, question: str, word: str, letter: str) -> None:
-        """Verify the word and letter are exactly found in the question and count occurrences."""
+    async def verify(self, question: str, word: str, letter: str, attempt=1, previous_errors=None) -> None:
+        """Verify the word and letter are exactly found in the question and count occurrences"""
 
-        clean_letter = letter.strip('"\'').lower()
-        attempted_word = word.strip('"\'').lower()
-        original_attempted_word = attempted_word
-        report_steps = []
-        match_found = False
-        found_word = None
+        if previous_errors is None:
+            previous_errors = []
 
-        # Step 1: Try to recall the word by matching its starting letters
-        while attempted_word:
-            word_pattern = rf'\b({re.escape(attempted_word)}\w*)\b'
-            report_steps.append(f"Trying regex pattern: `{word_pattern}`")
-            matches = re.findall(word_pattern, question, re.IGNORECASE)
-            if len(matches) == 1:
-                found_word = matches[0]
-                report_steps.append(f"Unique match found: '{found_word}'")
-                match_found = True
-                break
-            elif len(matches) == 0:
-                report_steps.append(f"No matches found for starting letters '{attempted_word}'.")
-            else:
-                report_steps.append(f"Ambiguity found for '{attempted_word}': matches {matches}")
-                break  # Cannot proceed due to ambiguity
-            # Remove last character and try again
-            attempted_word = attempted_word[:-1]
-
-        if not match_found:
-            error_message = "Could not uniquely identify the word in the question."
-            report_steps.append(error_message)
-            await self.send_to_client(WebSocketCommands.ERROR, self._format_report(report_steps))
+        # Strip quotes for processing
+        clean_word = word.strip('"\'')
+        clean_letter = letter.strip('"\'')
+        
+        if not isinstance(clean_word, str) or not isinstance(clean_letter, str):
+            await self.send_to_client(
+                WebSocketCommands.ERROR, "Word and letter must be strings."
+            )
             return
 
-        # Step 2: Verify the letter exists as a standalone in the question
-        letter_pattern = rf'\b{re.escape(clean_letter)}\b'
-        report_steps.append(f"Checking for letter '{clean_letter}' using pattern `{letter_pattern}`")
-        letter_matches = re.findall(letter_pattern, question, re.IGNORECASE)
-        if len(letter_matches) == 0:
-            report_steps.append(f"Letter '{clean_letter}' not found as standalone in the question.")
-            correction_query =   f"""SYSTEM: Extract the word and the alphanumerical letter the user is talking about in json format\nUSER:{question}\n AI:
-            letter:{clean_letter}\nAI: woops I made a mistake, looking again at the input: {question}\n the user is asking about the letter '"""
-            classification = self.clasiffication_gen(
-                correction_query, max_tokens=2, stop_at="\n"
-            )
-            logger.debug(f"Loaded: {classification}")     
- 
-         
-            
-            corrected_letter = classification.strip()
-            report_steps.append(f"silly me, i made a typo, the user is actually asking about the letter '{corrected_letter}'")
+        # Match word with or without quotes
+        word_pattern = re.compile(rf'\b{re.escape(clean_word)}\b|["\']({re.escape(clean_word)})["\']', re.IGNORECASE)
+        word_match = bool(word_pattern.search(question))
 
-            # Verify the corrected letter exists in the question standalone
-            letter_pattern = rf'\b{re.escape(corrected_letter)}\b'
+        # Match letter with or without quotes
+        letter_pattern = re.compile(rf'\b{re.escape(clean_letter)}\b|["\']({re.escape(clean_letter)})["\']', re.IGNORECASE)
+        letter_match = bool(letter_pattern.search(question))
 
-            letter_matches = re.findall(letter_pattern, question, re.IGNORECASE)
-            logger.debug(f"letter_matches {letter_matches}")
-            if len(letter_matches) == 1:
-                report_steps.append(f"Corrected letter '{clean_letter}' found in the question.")
-                clean_letter = corrected_letter
+        if word_match and letter_match:
+            count = clean_word.lower().count(clean_letter.lower())
+
+            # Create a highlighted question with the word in bold and letter in green
+            def highlight_letter_in_word(word_text):
+                # Highlight the letter in green within the word
+                return re.sub(
+                    rf'({re.escape(clean_letter)})',
+                    r'<span style="color: green;">\1</span>',
+                    word_text,
+                    flags=re.IGNORECASE
+                )
+
+            def highlight_word_in_question(question_text):
+                # Highlight the entire word in bold
+                word_regex = rf'\b({re.escape(clean_word)})\b'
+                return re.sub(
+                    word_regex,
+                    lambda match: f"<strong>{highlight_letter_in_word(match.group(1))}</strong>",
+                    question_text,
+                    flags=re.IGNORECASE
+                )
+
+            # Apply word and letter highlighting
+            highlighted_question = highlight_word_in_question(question)
+
+            result_html = f"""
+            <div class='uk-card uk-card-default uk-card-body uk-margin-small'>
+                <h4>Analysis Steps:</h4>
+                <ol class='uk-list uk-list-decimal'>
+                    <li>Found word: {clean_word} as is in the question</li>
+                    <li>Found letter: {clean_letter}</li>
+                    <li>Count: {count} occurrences of '{clean_letter}' in '{clean_word}'</li>    
+                </ol>
+                <div class='uk-text-small uk-margin-small-top'>
+                    <strong>Original question:</strong> {highlighted_question}
+                </div>
+            </div>
+            """
+            if previous_errors:
+                error_html = f"""
+                <div class='uk-alert uk-alert-warning'>
+                    <h4>Previous Errors:</h4>
+                    <ul class='uk-list uk-list-bullet'>
+                        {''.join(f'<li>{msg}</li>' for msg in previous_errors)}
+                    </ul>
+                </div>
+                """
+                result_html = error_html + result_html
+
+            await self.send_to_client(WebSocketCommands.RESULT, result_html)
+
+        else:
+            if previous_errors is None:
+                previous_errors = []
+
+            error_msg = []
+            if not word_match:
+                error_msg.append(f"Could not find word '{word}' exactly as shown in the question")
+            if not letter_match:
+                error_msg.append(f"Could not find letter '{letter}' as a standalone character in the question")
+
+            previous_errors.extend(error_msg)
+
+            if attempt == 1:
+                # First attempt failed, allow agent to correct the extraction
+                retry_query = f"""AI: Woops, I made a mistake recalling the word. The question was {question}. My previous recall was 
+                {word} and {letter}. It should have been json"""
+                jsonvar = await self._stream_tokens(retry_query, self.generator)
+                if jsonvar:
+                    logger.debug(f"JSON: {jsonvar}")
+                    # load the json
+                    loaded = json.loads(jsonvar)
+                    logger.debug(f"Second Loaded: {loaded}")
+                    await self.verify(question, loaded["word"], loaded["letter"], attempt=2, previous_errors=previous_errors)
+            elif attempt == 2:
+                # Second attempt failed, allow agent a second chance
+                retry_query = f"""AI: Woops, I made a mistake recalling the letter. The question was {question}. My previous recall was 
+                {word} and {letter}. It should have been json"""
+                jsonvar = await self._stream_tokens(retry_query, self.generator)
+                if jsonvar:
+                    logger.debug(f"JSON: {jsonvar}")
+                    # load the json
+                    loaded = json.loads(jsonvar)
+                    logger.debug(f"Second Loaded: {loaded}")
+                    await self.verify(question, loaded["word"], loaded["letter"], attempt=3, previous_errors=previous_errors)
+            elif attempt == 3:
+                # Third attempt: Extract word and letter using regex
+                # Extract standalone letters from question
+                letters_in_question = re.findall(r'\b[a-zA-Z]\b', question)
+                letters_in_question = list(set(letters_in_question))  # Remove duplicates
+
+                # Extract words from question
+                words_in_question = re.findall(r'\b\w+\b', question)
+
+                # Attempt to find the word
+                potential_words = []
+                for w in words_in_question:
+                    if len(w) > 5:
+                        word_start = w[:5]
+                        word_end = w[5:]
+                        matches = [
+                            word for word in words_in_question
+                            if word.startswith(word_start) and word.endswith(word_end)
+                        ]
+                        if len(matches) == 1:
+                            potential_words.append(matches[0])
+
+                potential_words = list(set(potential_words))
+
+                if len(potential_words) == 1 and letters_in_question:
+                    extracted_word = potential_words[0]
+                    extracted_letter = letters_in_question[0]
+
+                    # Provide detailed reporting
+                    detailed_report = f"""
+                    <div class='uk-card uk-card-default uk-card-body uk-margin-small'>
+                        <h4>Third Attempt Extraction:</h4>
+                        <p>Extracted word: {extracted_word}</p>
+                        <p>Extracted letter: {extracted_letter}</p>
+                    </div>
+                    """
+                    await self.send_to_client(WebSocketCommands.INFO, detailed_report)
+
+                    # Proceed to verify with extracted values
+                    await self.verify(question, extracted_word, extracted_letter, attempt=4, previous_errors=previous_errors)
+                else:
+                    previous_errors.append("Could not uniquely identify word and letter from question using regex.")
+
+                    # Send error to client
+                    await self.send_to_client(
+                        WebSocketCommands.ERROR,
+                        f"""<div class='uk-alert uk-alert-danger'>
+                            <h4>Extraction Error after all attempts:</h4>
+                            <ul class='uk-list uk-list-bullet'>
+                                {''.join(f'<li>{msg}</li>' for msg in previous_errors)}
+                            </ul>
+                            <div class='uk-text-small uk-margin-small-top'>
+                                <strong>Original question:</strong> {question}
+                            </div>
+                        </div>"""
+                    )
             else:
-                correction_message = "Could not find the corrected letter in the question."
-                report_steps.append(correction_message)
-                await self.send_to_client(WebSocketCommands.INFO, correction_message)
-                await self.send_to_client(WebSocketCommands.ERROR, self._format_report(report_steps))
-                return
-            
-                 
-          
-      
-        elif len(letter_matches) > 1:
-            report_steps.append(f"Multiple instances of letter '{clean_letter}' found as standalone in the question.")
-            await self.send_to_client(WebSocketCommands.ERROR, self._format_report(report_steps))
-            return
-
-        # Step 3: Count occurrences of the letter in the word
-        count = found_word.lower().count(clean_letter)
-        report_steps.append(f"Counted {count} occurrences of '{clean_letter}' in '{found_word}'.")
-
-        # Step 4: Send the detailed report with highlighting
-        await self.send_to_client(
-            WebSocketCommands.RESULT, 
-            self._format_report(
-                report_steps,
-                question=question,
-                found_word=found_word,
-                letter=clean_letter
-            )
-        )
-
-    def highlight_letter_in_word(self, word_text: str, letter: str) -> str:
-        """Highlight the letter in green within the word."""
-        return re.sub(
-            rf'({re.escape(letter)})',
-            r'<span style="color: green;">\1</span>',
-            word_text,
-            flags=re.IGNORECASE
-        )
-
-    def highlight_word_in_question(self, question_text: str, word: str, letter: str) -> str:
-        """Highlight the word in bold and its letters in green."""
-        word_regex = rf'\b({re.escape(word)})\b'
-        return re.sub(
-            word_regex,
-            lambda match: f"<strong>{self.highlight_letter_in_word(match.group(1), letter)}</strong>",
-            question_text,
-            flags=re.IGNORECASE
-        )
-
-    def _format_report(self, steps: list, question: str = None, found_word: str = None, letter: str = None) -> str:
-        """Helper method to format the report steps into HTML with highlighting."""
-        report_html = "<div class='uk-card uk-card-default uk-card-body uk-margin-small'><h3>Analysis Steps:</h3><ol>"
-        for i, step in enumerate(steps, 1):
-            if 'regex pattern' in step:
-                pattern = re.search(r'`(.*?)`', step).group(1)
-                report_html += f"<li>{step}<pre><code>{pattern}</code></pre></li>"
-            elif 'Counted' in step:
-                # Special highlight for the counting step
-                report_html += f"""<li class='uk-text-primary' style='background-color: #f8f8f8; padding: 10px; border-radius: 4px;'>
-                    <strong>🎯 Result:</strong> {step}
-                </li>"""
-            else:
-                report_html += f"<li>{step}</li>"
-        report_html += "</ol>"
-        
-        if question and found_word and letter:
-            highlighted_question = self.highlight_word_in_question(question, found_word, letter)
-            report_html += f"""
-            <div class='uk-text-small uk-margin-small-top'>
-                <strong>Original question:</strong> {highlighted_question}
-            </div>"""
-        
-        report_html += "</div>"
-        return report_html
+                # All attempts failed, send error to client
+                await self.send_to_client(
+                    WebSocketCommands.ERROR,
+                    f"""<div class='uk-alert uk-alert-danger'>
+                        <h4>Extraction Error after all attempts:</h4>
+                        <ul class='uk-list uk-list-bullet'>
+                            {''.join(f'<li>{msg}</li>' for msg in previous_errors)}
+                        </ul>
+                        <div class='uk-text-small uk-margin-small-top'>
+                            <strong>Original question:</strong> {question}
+                        </div>
+                    </div>"""
+                )
 
     async def handle(self, message: str) -> None:
         """Handle incoming WebSocket messages."""
