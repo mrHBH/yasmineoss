@@ -1,16 +1,22 @@
-let version ="8.90.84"; 
+let version ="8.90.87"; 
 console.log(version)
 let shiftpedal = 0;
 //parameters :
-let maxSteerVal = 0.8;
+let maxSteerVal = 0.89;
 let steerStep = 0.025;
-let maxForce = 2000;
+let maxForce = 20000;
+
+
+
+
+
+
 //------------------------------>CARSPAWNHERE
 
 // Speed threshold for auto-reverse (units depend on your speed measurement)
-const REVERSE_SPEED_THRESHOLD = 2;
+const REVERSE_SPEED_THRESHOLD = 1;
 const MAX_REVERSE_RPM = 2500;
-const REVERSE_IDLE_RPM = 1200;
+const REVERSE_IDLE_RPM = 1600;
 const REVERSE_RPM_SPEED_FACTOR = 700;
 
 //input :
@@ -20,7 +26,7 @@ let speed = -200;
 
 //output :
 let engineForce0 = 10; 
-let engineForce1 = 0;
+let engineForce1 = 150;
 let engineForce2 = 0;
 let engineForce3 = 0;
 let steeringValue = 0;

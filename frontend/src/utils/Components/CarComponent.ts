@@ -80,6 +80,24 @@ class CarComponent extends Component {
     });
   }
 
+  startScript() {
+  
+      this.carWorker?.postMessage({
+        type: "init",
+        filename: "car.js",
+      });
+     
+  
+  }
+  stopScript() {  
+      this.carWorker.postMessage({
+        type: "stop",
+      });
+      this.carWorker.terminate();
+      
+    
+  }
+
   loadscript(script: string) {
     this.carWorker?.terminate();
     let blob = new Blob([script], { type: "application/javascript" });
@@ -87,12 +105,7 @@ class CarComponent extends Component {
     this.carWorker = new Worker(url);
         this.carWorker.onmessage = (e) => {
       //	console.log("Message received from worker", e.data);
-      if (e.data.type === "boot") {
-        this.carWorker.postMessage({
-          type: "init",
-          filename: "car.js",
-        });
-      }
+     
       if (e.data.type === "tick") {
         this.rpm = e.data.rpm;
         this.gear = e.data.gear;

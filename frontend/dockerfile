@@ -10,7 +10,7 @@ WORKDIR /frontend
 COPY package.json /frontend/package.json
 # Install dependencies
 RUN bun install
-
+EXPOSE 3001
 COPY entrypoint.sh /frontend/entrypoint.sh
 RUN chmod +x /frontend/entrypoint.sh
 CMD ["/bin/bash", "/frontend/entrypoint.sh"]

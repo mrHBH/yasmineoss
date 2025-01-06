@@ -1,15 +1,10 @@
 """
 Basic Outlines Module
 --------------------
-Handles real-time word and letter analysis through WebSocket connections.
-Uses LLama model for text generation and analysis.
-
-This module provides functionality to:
-- Process word/letter pairs
-- Generate responses using LLama model
-- Handle WebSocket communication
-- Manage async tasks and cancellation
+showcases a basic agent that uses constrained and normal llm generations
+to robustly solve a specific task: counting the number of occurences of a letter in a word
 """
+
 
 import asyncio
 import json

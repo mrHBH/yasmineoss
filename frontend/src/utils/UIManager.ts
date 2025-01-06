@@ -52,7 +52,7 @@ class UIManager {
     this.createUIButtons();
     this.addScrollbar();
     this.moveCubeAlongPath(0);
-    this.createInitialUI();
+   // this.createInitialUI();
   }
 
   private async createInitialUI(): Promise<void> {
@@ -104,7 +104,7 @@ class UIManager {
     }
     const uicomponent = new twoDUIComponent(html , size);
     uicomponent.sticky = true;
-    uicomponent.fittoscroll = false;
+    uicomponent.fittoscroll = true;
     uicomponent.typed = true;
     
       let introui = new Entity();
@@ -126,8 +126,7 @@ class UIManager {
           console.log('Button clicked or created!');
  
             this.mc.UIManager.toggleBirdEyemode();
-            this.mc.UIManager.removeuiElement("chatPage");
- 
+            this.mc.UIManager.removeuiElement(name);
           element.style.backgroundColor = 'blue';
           element.style.color = 'white';
         }

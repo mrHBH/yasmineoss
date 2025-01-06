@@ -414,6 +414,13 @@ class MainController {
   };
 
   createWallsFromCamera = function () {
+
+
+    //destroy all walls
+    for (let wall of this.walls) {
+      this.webgpuscene.remove(wall);
+      this.physicsmanager.world.removeBody(wall.body);
+    }
     const camera = this.camera;
     const targetDistance = camera.position.y; // Distance to ground plane
 

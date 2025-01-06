@@ -8,10 +8,90 @@ import { StaticCLI } from "../../SimpleCLI";
 import SimpleBar from "simplebar";
 import { mapContext } from "xstate/lib/utils";
 import * as monaco from 'monaco-editor';
-import { init } from "xstate/lib/actionTypes";
+// import { init } from "xstate/lib/actionTypes";
+import { HtmlGenerator, parse } from 'latex.js';
+
+// Create HTML element for output
+const outputDiv = document.createElement('div');
+document.body.appendChild(outputDiv);
+
+let generator = new HtmlGenerator({ hyphenate: false });
 
 
- class twoDUIComponent extends Component {
+ 
+// Usage example
+let rawTemplate = String.raw`\documentclass{article}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{calc,pict2e,picture}
+\usepackage{textgreek,textcomp,gensymb,stix}
+\title{Sample \LaTeX}
+\begin{document}
+  \maketitle
+  \begin{abstract}
+    The abstract goes here and here.
+  \end{abstract}
+    \section{Text}
+  Text, paragraphs and ligatures goes here.
+  \section{Characters}
+  Sample characters:
+  \$ \& \% \# \_ \{ \} \~{} \^{}
+  \section{Math}
+  Sample math formulae:
+  $f(x) = \int_{-\infty}^\infty \hat f(\xi)\,e^{2 \pi \xi} \, d\xi$
+  \section{Multicolumn}
+  \begin{multicols}{3}
+    Column 1
+    Column 2
+    Column 3
+  \end{multicols}
+  \section{Boxes}
+  \medbreak\noindent\fbox{\verb|\mbox{|\emph{Sample box}\verb|}|}\smallbreak
+  \section{Symbols}
+  Sample symbols:
+  \noindent \textfractionsolidus \textdiv \texttimes \textminus \textpm \textsurd \textlnot \textasteriskcentered
+  \section{Picture}
+  Sample picture:
+  \setlength{\unitlength}{0.68cm}
+  \begin{picture}(6,5)
+    \thicklines
+    \put(1,0.5){\line(20,1){3}}
+    \put(4,2){\line(-2,1){2}}
+    \put(2,3){\line(-2,-5){1}}
+    \put(0.7,0.3){$A$}
+    \put(4.05,1.9){$B$}
+    \put(1.7,2.95){$C$}
+    \put(3.1,2.5){$a$}
+    \put(1.3,1.7){$b$}
+    \put(2.5,1.05){$c$}
+    \put(0.3,4){$F=\sqrt{s(s-a)(s-b)(s-c)}$}
+    \put(3.5,0.4){$\displaystyle s:=\frac{a+b+c}{2}$}
+  \end{picture}
+\end{document}
+`;
+
+// Escape the template
+ generator = parse(rawTemplate, { generator: generator });
+ document.head.appendChild(generator.stylesAndScripts(""))
+ document.body.appendChild(generator.domFragment())
+// Use the escaped template
+ 
+ 
+
+ 
+// import * as latexjs from "latex.js"
+ 
+
+// let latex = "Hi, this is a line of text."
+
+// var generator = new latexjs.HtmlGenerator({ hyphenate: false })
+// generator = latexjs.parse(latex, { generator: generator })
+
+// // document.head.appendChild(generator.stylesAndScripts("https://cdn.jsdelivr.net/npm/latex.js@0.12.4/dist/"))
+// document.head.appendChild(generator.stylesAndScripts(""))
+// document.body.appendChild(generator.domFragment())
+
+  class twoDUIComponent extends Component {
   private _html: string;
   private _css2dobject: CSS2DObject;
   private _webgpuplane: THREE.Mesh;
@@ -263,7 +343,7 @@ import { init } from "xstate/lib/actionTypes";
     // );
     tween({
       from: { x: this._webgpuplane.scale.x, y: this._webgpuplane.scale.y },
-      to: { x: 15, y: 15 },
+      to: { x: 150, y: 150 },
       duration: 1500,
       easing: "easeOutQuad",
       render: (state: any) => {

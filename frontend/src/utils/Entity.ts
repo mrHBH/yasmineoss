@@ -134,7 +134,7 @@ class Entity {
             return;
         }
         for (const curHandler of this._handlers[msg.topic]) {
-            await curHandler(msg.data);
+              curHandler(msg.data);
         }
     }
 

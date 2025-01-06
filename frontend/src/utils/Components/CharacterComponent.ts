@@ -1752,6 +1752,10 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
       nameElement.addEventListener("click", () => {
         this._entity._entityManager._mc.MainEntity = this._entity;
                 this.face();
+                //if script is not loaded, load it 
+                if (!this.worker) {
+                  this.LoadWorker(this.behaviourscriptname);
+                }
         this.toggleDropdown();
       });
 
@@ -2074,6 +2078,8 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     this.vehicle = vehicle;   
 
      this.AnimationFSMService_.send("DRIVE");
+    vehicle.startScript();
+
     
 
  
@@ -2081,6 +2087,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
 
   async unmountvehicle() {
     this.AnimationFSMService_.send("STOPDRIVING");
+    this.vehicle.stopScript();
   }
   
  
@@ -2096,7 +2103,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
         //check if an entity is in front of the player
         if ( this.carcomponent){
 
-          this.unmountvehicle();          
+          this.unmountvehicle(); 
           
          } 
        }

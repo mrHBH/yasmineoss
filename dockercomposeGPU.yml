@@ -38,7 +38,25 @@ services:
   #     - '8089:8089'
   #   networks:
   #     - yasminenet
-
+  # # comfyui:
+  # #   container_name: comfyui
+  # #   image: frefrik/comfyui-flux:latest
+  # #   restart: unless-stopped
+  # #   ports:
+  # #     - "8188:8188"
+  # #   volumes:
+  # #     - "./backend/comfy:/app"
+  # #   environment:
+  # #     - CLI_ARGS=
+  # #     - HF_TOKEN=${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}
+  # #     - LOW_VRAM=${LOW_VRAM:-false}
+  # #   deploy:
+  # #     resources:
+  # #       reservations:
+  # #         devices:
+  # #           - driver: nvidia
+  # #             device_ids: ['0']
+  # #             capabilities: [gpu]
   
   # code-server:
   #   image: lscr.io/linuxserver/code-server:latest
