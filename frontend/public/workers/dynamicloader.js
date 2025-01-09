@@ -75,7 +75,7 @@ function init(data){
     }
     else {
         getFileStats(filename);
-        setInterval(getFileStats, 1000, filename);
+        setInterval(getFileStats, 10000, filename);
 
     }
     

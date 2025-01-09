@@ -9,7 +9,9 @@ services:
     volumes:
       - ./backend/python/models/:/app/models
       - ./backend/python/src/:/app/src
-      - ./tempdir/:/app/tempdir
+      - ./backend/python/kokoro/:/app/kokoro
+      - ./tempdir/:/app/tempdir 
+      - ./frontend/:/app/frontend
     ports:
       - '8000:8000'
     environment:
@@ -21,30 +23,30 @@ services:
       - yasminenett
 
 
-  tsbackend:
-    container_name: tsbackend
-    build:
-      context: ./backend/typescript/
-      dockerfile: dockerfile 
-    restart: unless-stopped    
-    ports:
-      - '8089:8089'
-    networks:
-      - yasminenett
+  # tsbackend:
+  #   container_name: tsbackend
+  #   build:
+  #     context: ./backend/typescript/
+  #     dockerfile: dockerfile 
+  #   restart: unless-stopped    
+  #   ports:
+  #     - '8089:8089'
+  #   networks:
+  #     - yasminenett
  
-  ollamabackend:
-    image: ollama/ollama
-    container_name: ollamabackend
-    volumes:
-      - ./ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"   
+  # ollamabackend:
+  #   image: ollama/ollama
+  #   container_name: ollamabackend
+  #   volumes:
+  #     - ./ollama_data:/root/.ollama
+  #   ports:
+  #     - "11434:11434"   
        
-    networks:
-      - yasminenett
+  #   networks:
+  #     - yasminenett
  
  
-    restart: unless-stopped
+    # restart: unless-stopped
   
   # cppbackend:
   #   container_name: cppbackend
@@ -86,4 +88,6 @@ services:
 
 networks:
   yasminenett:
-
+volumes:
+  kokoro:
+    driver: local

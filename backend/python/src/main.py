@@ -1,8 +1,11 @@
+import io
+import logging.handlers
 import os
 import logging
 import asyncio
 import importlib
 import json
+import re
 from typing import List
 from dotenv import load_dotenv
 from fastapi import (
@@ -12,7 +15,10 @@ from fastapi import (
     UploadFile,
     File,
     WebSocketDisconnect,
+    
+
 )
+from fastapi.responses import StreamingResponse
 import os
 import wave
 import tempfile
@@ -23,12 +29,23 @@ import datetime
 from datetime import datetime as dt
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
-from guidance import models
 import llama_cpp
-from balacoon_tts import TTS , SpeechUtterance
+# from balacoon_tts import TTS , SpeechUtterance
 import numpy as np
+import sys# from openai import OpenAI
+import soundfile as sf
 
-# from openai import OpenAI
+
+sys.path.append("/app/kokoro")
+print("sys.path:", sys.path)  # Print the current sys.path
+print("Current working directory:", os.getcwd())  
+import istftnet
+import models
+from kokoro import generate as tts_generate
+     
+import torch
+ 
+ 
 
 
 load_dotenv()
@@ -283,94 +300,164 @@ async def load_file(websocket: WebSocket, workspace_name: str):
 
 
 
-@app.websocket("/ws/tts/")
-async def tts_endpoint(websocket: WebSocket):
-    logging.info("TTS WebSocket connection opened")
-    await websocket.accept()
-    
+
+@app.post("/api/tts/voices")
+async def list_voices():
+    """Get list of available TTS voices"""
     try:
-        data = await websocket.receive_json()
-        text = data.get("text")
-        if not text:
-            await websocket.send_json({"error": "No text provided"})
-            return
-
-        logging.info(f"Synthesizing text: {text}")
-        
-        path = "models/en_us_hifi92_light_cpu.addon"
-        tts = TTS(path)
-        supported_speakers = tts.get_speakers()
-        speaker = supported_speakers[-1]
-        
-        utterance = SpeechUtterance(text)
-        chunk_count = 0
-        
-        while True:
-            samples = tts.synthesize_chunk(utterance, speaker)
-            if len(samples) == 0:
-                break
-                
-            # Convert float32 samples to int16 PCM
-            samples = (samples * 32767).astype(np.int16)
-            await websocket.send_bytes(samples.tobytes())
-            chunk_count += 1
-            logging.info(f"Sent audio chunk {chunk_count}")
-
-        logging.info("TTS synthesis completed")
-
+        AVAILABLE_VOICES = [
+            {'id': 'af', 'name': 'Default (Bella & Sarah Mix)'},
+            {'id': 'af_bella', 'name': 'Bella'},
+            {'id': 'af_sarah', 'name': 'Sarah'}, 
+            {'id': 'am_adam', 'name': 'Adam'},
+            {'id': 'am_michael', 'name': 'Michael'},
+            {'id': 'bf_emma', 'name': 'Emma'},
+            {'id': 'bf_isabella', 'name': 'Isabella'},
+            {'id': 'bm_george', 'name': 'George'},
+            {'id': 'bm_lewis', 'name': 'Lewis'},
+            {'id': 'af_nicole', 'name': 'Nicole'},
+            {'id': 'af_sky', 'name': 'Sky'}
+        ]
+        return {"voices": AVAILABLE_VOICES}
     except Exception as e:
-        logging.error(f"TTS error: {str(e)}")
-        await websocket.send_json({"error": str(e)})
-    finally:
-        logging.info("TTS WebSocket connection closed")
-        await websocket.close()
+        return {"error": str(e)}
+
+
+def split_text(text: str, max_chunk=None):
+    """Split text into chunks on natural pause points
+    
+    Args:
+        text: Text to split into chunks
+        max_chunk: Maximum chunk size (defaults to settings.max_chunk_size)
+    """
+    if max_chunk is None:
+        max_chunk =52
+        
+    if not isinstance(text, str):
+        text = str(text) if text is not None else ""
+        
+    text = text.strip()
+    if not text:
+        return
+        
+    # First split into sentences
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+            
+        # For medium-length sentences, split on punctuation
+        if len(sentence) > max_chunk:  # Lower threshold for more consistent sizes
+            # First try splitting on semicolons and colons
+            parts = re.split(r"(?<=[;:])\s+", sentence)
+            
+            for part in parts:
+                part = part.strip()
+                if not part:
+                    continue
+                    
+                # If part is still long, split on commas
+                if len(part) > max_chunk:
+                    subparts = re.split(r"(?<=,)\s+", part)
+                    for subpart in subparts:
+                        subpart = subpart.strip()
+                        if subpart:
+                            yield subpart
+                else:
+                    yield part
+        else:
+            yield sentence
+
+
 
 @app.post("/api/tts/generate")
 async def generate_tts(request: dict):
     try:
         text = request.get("text")
+        voice_id = request.get("voice", "am_michael") # Default to michael if no voice specified
+        
         if not text:
             return {"error": "No text provided"}
-
-        # Initialize TTS
-        path = "models/en_us_hifi92_light_cpu.addon"
-        path = "models/uk_ltm_jets_cpu.addon"
-        #path = "models/en_us_cmuartic_jets_cpu.addon"
-        # path= "models/uk_tetiana_light_cpu.addon"
-
-        tts = TTS(path)
-        speaker = tts.get_speakers()[-1]
+   
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print(f'Using device: {device}')
+        print('Loading model...')
+        print("current working directory:", os.getcwd())
+    
+        MODEL = models.build_model('/app/kokoro/fp16/kokoro-v0_19-half.pth', device)
         
-        # Generate speech
-        samples = tts.synthesize(text, speaker)
- 
-        tts = TTS( path )
-        supported_speakers = tts.get_speakers()
-        speaker = supported_speakers[
-            -1
-        ]
-        # samples = tts.synthesize("Even though i sound like a stupid AI system; let me assure you; I am not ! I am instead quite sophisticated. Note that english is not my mother language.", speaker)
-        outputpath = "/app/tempdir/nice.wav"
-        # save under tempdir/nice.wav
-        with wave.open (outputpath, "wb") as fp:
-            fp.setparams((1, 2, tts.get_sampling_rate(), len(samples), "NONE", "NONE"))
-            fp.writeframes(samples)
-
-            # Return file
-            response = FileResponse(
-                outputpath,
-                media_type="audio/wav",
-                headers={
-                    "Content-Disposition": f"attachment; filename={outputpath}"
-                },
-            )
-            return response
+        # Validate voice_id
+        valid_voices = ['af', 'af_bella', 'af_sarah', 'am_adam', 'am_michael',
+                       'bf_emma', 'bf_isabella', 'bm_george', 'bm_lewis',
+                       'af_nicole', 'af_sky']
+        
+        if voice_id not in valid_voices:
+            return {"error": f"Invalid voice. Available voices are: {', '.join(valid_voices)}"}
             
+        VOICEPACK = torch.load(f'/app/kokoro/voices/{voice_id}.pt', weights_only=True).to(device)
+        print(f'Loaded voice: {voice_id}')
+        
+        outputpath = "/app/tempdir/nice.wav"
+        audio, out_ps = tts_generate(MODEL, text, VOICEPACK)
+        print("out_ps:", out_ps)
+        sf.write(outputpath, audio, 24000)
+        
+        response = FileResponse(
+            outputpath,
+            media_type="audio/wav",
+            headers={
+                "Content-Disposition": f"attachment; filename={outputpath}"
+            },
+        )
+        return response
+        
     except Exception as e:
+        logging.error(e)
         return {"error": str(e)}
 
+@app.post("/api/tts/stream")
+async def stream_tts(request: dict):
+    try:
+        text = request.get("text")
+        voice_id = request.get("voice", "am_michael")
+        
+        if not text:
+            raise HTTPException(status_code=400, detail="No text provided")
 
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        MODEL = models.build_model('/app/kokoro/fp16/kokoro-v0_19-half.pth', device)
+        VOICEPACK = torch.load(f'/app/kokoro/voices/{voice_id}.pt', weights_only=True).to(device)
+        
+        async def generate():
+            for chunk in split_text(text):
+                try:
+                    audio, _ = tts_generate(MODEL, chunk, VOICEPACK)
+                    # Convert to 16-bit PCM and ensure even length
+                    audio_int16 = (audio * 32767).astype(np.int16)
+                    
+                    # Pad with zeros if odd length
+                    if len(audio_int16) % 2 != 0:
+                        audio_int16 = np.pad(audio_int16, (0, 1), 'constant')
+                        
+                    yield audio_int16.tobytes()
+                except Exception as e:
+                    logging.error(f"Chunk generation error: {str(e)}")
+                    continue
 
+        return StreamingResponse(
+            generate(), 
+            media_type="audio/l16",
+            headers={
+                "X-Audio-Sample-Rate": "24000",
+                "X-Audio-Channels": "1"
+            }
+        )
+        
+    except Exception as e:
+        logging.error(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # @app.post("/loadguidance/")
@@ -390,4 +477,4 @@ async def generate_tts(request: dict):
 
 if __name__ == "__main__":
     # check if not local host ; then secure https
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

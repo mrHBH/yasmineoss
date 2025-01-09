@@ -18,19 +18,51 @@ RUN python3 -m pip install --upgrade pip pytest cmake scikit-build setuptools  s
 # Install llama-cpp-python (build with cuda)
 RUN CMAKE_ARGS="-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86" pip install llama-cpp-python  --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu125    --upgrade --force-reinstall --no-cache-dir -vvv
  
+# Install llama-cpp-python and outlines
+RUN pip3 install phonemizer torch transformers scipy munch
+RUN apt-get update && \
+    apt-get install -y \
+    ninja-build 
+RUN pip3 install outlines --no-cache-dir --upgrade
+
+
+# Initialize git-lfs and clone Kokoro model
+RUN apt-get update && apt-get install -y git-lfs espeak-ng && \
+    git lfs install  
+
+WORKDIR /app
+# Create an initialization script with debug logging
+RUN echo '#!/bin/bash\n\
+set -x\n\
+echo "Starting initialization script"\n\
+ls -la /app/kokoro\n\
+\n\
+echo "Initializing git-lfs"\n\
+git lfs install\n\
+\n\
+if [ ! -d "/app/kokoro/.git" ]; then\n\
+    echo "Kokoro repository not found. Cloning..."\n\
+    rm -rf /app/kokoro/*\n\
+    git clone https://huggingface.co/hexgrad/Kokoro-82M /app/kokoro\n\
+    cd /app/kokoro && git lfs pull\n\
+    echo "Clone completed. Contents of /app/kokoro:"\n\
+    ls -la /app/kokoro\n\
+else\n\
+    echo "Kokoro repository already exists"\n\
+    ls -la /app/kokoro\n\
+fi\n\
+\n\
+echo "Initialization complete. Starting main application..."\n\
+exec python3 src/main.py\n\
+' > /app/init.sh && chmod +x /app/init.sh
+RUN pip3 install uvicorn[standard] fastapi fastapi-cors pylint asyncio pydantic python-dotenv nest-asyncio ipython aiosqlite autopep8 dill --upgrade
+RUN pip3 install soundfile
+# Set the working directory
+
+
+EXPOSE 8000
+ENV AM_I_IN_A_DOCKER_CONTAINER Yes
+CMD ["/bin/bash", "/app/init.sh"]
+
  
-RUN python3 -m pip install --upgrade guidance
-#install poetry and dependencies without creating a virtualenv
-RUN python3 -m pip install poetry
-COPY pyproject.toml  ./
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi
-
-
-
-
-WORKDIR /app 
-
-
-
-CMD ["python3", "src/main.py"]
+ 

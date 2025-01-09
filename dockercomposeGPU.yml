@@ -11,6 +11,8 @@ services:
       - ./backend/python/src/:/app/src
       - ./tempdir/:/app/tempdir
       - ./frontend/:/app/frontend
+      - ./backend/python/kokoro/:/app/kokoro
+
 
     ports:
       - '8000:8000'

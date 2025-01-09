@@ -250,6 +250,7 @@ class Main {
         animationspathslist: this.maincController.animations,
         behaviourscriptname: "uitester3.js",
       });
+
       await uitester.AddComponent(uitestercontroller2);
 
       await uitester.AddComponent(new AIInput());
@@ -257,7 +258,8 @@ class Main {
 
      //  await environmentbot2.AddComponent(new KeyboardInput());
       await this.entityManager.AddEntity(uitester, "uitester");
-
+      uitester.Broadcast({ topic
+        : "walk", data: { position: new THREE.Vector3(  5, 0 , 0 )} });
     //add script entity environmentbot to the scene
     const ttsbot = new Entity();
     ttsbot.Position = new THREE.Vector3(5, 1,5);
@@ -266,6 +268,9 @@ class Main {
       animationspathslist: this.maincController.animations,
       behaviourscriptname: "ttsbot.js",
     });
+
+
+
     await ttsbot.AddComponent(ttsbotcontrol);
 
     await ttsbot.AddComponent(new AIInput());
@@ -273,6 +278,19 @@ class Main {
 
    //  await environmentbot2.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(ttsbot, "ttsbot");
+
+    const tts_streamer_bot = new Entity();
+    const tts_streamer_botcontrol = new CharacterComponent({
+      modelpath: "models/gltf/ybot2.glb",
+      animationspathslist: this.maincController.animations,
+      behaviourscriptname: "ttsbot_streamer.js",
+    });
+    tts_streamer_bot.Position = new THREE.Vector3(0, 1, 0);
+    await tts_streamer_bot.AddComponent(tts_streamer_botcontrol);
+    await tts_streamer_bot.AddComponent(new AIInput());
+    await tts_streamer_bot.AddComponent(new KeyboardInput());
+    await this.entityManager.AddEntity(tts_streamer_bot, "tts_streamer_bot");
+    
 
       this.maincController.UIManager.toggleScrollmode();
    
