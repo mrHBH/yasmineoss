@@ -34,6 +34,7 @@ import llama_cpp
 import numpy as np
 import sys# from openai import OpenAI
 import soundfile as sf
+from scipy.io import wavfile
 
 
 sys.path.append("/app/kokoro")
@@ -331,7 +332,7 @@ def split_text(text: str, max_chunk=None):
         max_chunk: Maximum chunk size (defaults to settings.max_chunk_size)
     """
     if max_chunk is None:
-        max_chunk =52
+        max_chunk =1024
         
     if not isinstance(text, str):
         text = str(text) if text is not None else ""
@@ -417,6 +418,42 @@ async def generate_tts(request: dict):
         logging.error(e)
         return {"error": str(e)}
 
+
+@app.post("/api/tts/stream_ogg")
+async def stream_ogg_tts(request: dict):
+    try:
+        text = request.get("text")
+        voice_id = request.get("voice", "am_michael")
+        if not text:
+            raise HTTPException(status_code=400, detail="No text provided")
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        MODEL = models.build_model("/app/kokoro/fp16/kokoro-v0_19-half.pth", device)
+        VOICEPACK = torch.load(f"/app/kokoro/voices/{voice_id}.pt", weights_only=True).to(device)
+
+        async def generate_ogg():
+            for chunk in split_text(text):
+                audio, _ = tts_generate(MODEL, chunk, VOICEPACK)
+                wav_data = (audio * 32767).astype(np.int16)
+                
+                # Encode to Ogg Vorbis
+                with io.BytesIO() as mem_wav, io.BytesIO() as mem_ogg:
+                    wavfile.write(mem_wav, 24000, wav_data)
+                    mem_wav.seek(0)
+                    sf_data, samplerate = sf.read(mem_wav)
+                    sf.write(mem_ogg, sf_data, samplerate, format="OGG", subtype="VORBIS")
+                    mem_ogg.seek(0)
+                    yield mem_ogg.read()
+
+        return StreamingResponse(
+            generate_ogg(),
+            media_type="audio/ogg",
+            headers={"X-Audio-Sample-Rate": "24000", "X-Audio-Channels": "1"}
+        )
+    except Exception as e:
+        logging.error(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/tts/stream")
 async def stream_tts(request: dict):
     try:
@@ -430,21 +467,46 @@ async def stream_tts(request: dict):
         MODEL = models.build_model('/app/kokoro/fp16/kokoro-v0_19-half.pth', device)
         VOICEPACK = torch.load(f'/app/kokoro/voices/{voice_id}.pt', weights_only=True).to(device)
         
+        # Add crossfade window size (in samples)
+        CROSSFADE_SIZE = 0  # Remove crossfade by setting it to 0
+        
+        def apply_fade(audio, fade_length, fade_in=True):
+            """Apply linear fade in/out to audio"""
+            fade = np.linspace(0, 1, fade_length) if fade_in else np.linspace(1, 0, fade_length)
+            fade_region = audio[:fade_length] if fade_in else audio[-fade_length:]
+            if fade_in:
+                audio[:fade_length] = fade_region * fade
+            else:
+                audio[-fade_length:] = fade_region * fade
+            return audio
+            
+        def normalize_audio(audio, target_db=-23):
+            """Normalize audio to target dB level"""
+            rms = np.sqrt(np.mean(audio**2))
+            target_rms = 10**(target_db/20)
+            gain = target_rms / (rms + 1e-6)
+            return audio * gain
+        
         async def generate():
+            previous_chunk_end = None
             for chunk in split_text(text):
                 try:
                     audio, _ = tts_generate(MODEL, chunk, VOICEPACK)
-                    # Convert to 16-bit PCM and ensure even length
-                    audio_int16 = (audio * 32767).astype(np.int16)
-                    
-                    # Pad with zeros if odd length
-                    if len(audio_int16) % 2 != 0:
-                        audio_int16 = np.pad(audio_int16, (0, 1), 'constant')
-                        
-                    yield audio_int16.tobytes()
+                    audio = normalize_audio(audio)
+                    # Remove crossfade usage
+                    # audio = apply_fade(audio.copy(), CROSSFADE_SIZE, fade_in=True)
+                    # audio = apply_fade(audio, CROSSFADE_SIZE, fade_in=False)
+
+                    # Directly yield each chunk without crossfade
+                    output_data = (audio * 32767).astype(np.int16)
+                    if len(output_data) % 2 != 0:
+                        output_data = np.pad(output_data, (0, 1), 'constant')
+                    yield output_data.tobytes()
+
                 except Exception as e:
                     logging.error(f"Chunk generation error: {str(e)}")
                     continue
+            # No final crossfade
 
         return StreamingResponse(
             generate(), 
@@ -458,6 +520,7 @@ async def stream_tts(request: dict):
     except Exception as e:
         logging.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # @app.post("/loadguidance/")
