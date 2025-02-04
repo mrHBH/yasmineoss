@@ -51,6 +51,7 @@ let cb = function (e) {
         <button id="stop-btn" class="uk-button uk-button-danger uk-width-1-1 uk-margin-small-top" hidden>
           <span uk-icon="icon: stop"></span> Stop
         </button>
+        
       </div>
       <div id="status" class="uk-margin-small-top uk-text-center"></div>
     </div>
@@ -69,7 +70,7 @@ let cb = function (e) {
       const hostname = this.hostname;
 
       try {
-        const voicesResponse = await fetch(`${protocol}${hostname}/v2/audio/voices`, {
+        const voicesResponse = await fetch(`${protocol}${hostname}/v1/audio/voices`, {
           method: 'GET',
         });
         const voicesData = await voicesResponse.json();
@@ -109,8 +110,8 @@ let cb = function (e) {
           const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
           
           if (isStopped) return false;
-
           this.positionalAudio.setBuffer(audioBuffer);
+          this.positionalAudio.setRefDistance(10);
           this.positionalAudio.play();
           return true;
         } catch (error) {

@@ -11,7 +11,14 @@ import { MeshPhongNodeMaterial,PointsNodeMaterial ,  uniform, skinning , MeshPhy
 import {   reflector, uv, texture, color , mix } from 'three/tsl';
  
 import { CodeEditor } from "./CodeEditor";
- 
+import {
+  SoundGeneratorAudioListener,
+  SineWaveSoundGenerator,
+  EngineSoundGenerator,
+  AudioSoundGenerator,
+  SoundGenerator
+
+} from "../sound_generator.js";
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import SimpleBar from "simplebar";
 let CE = new CodeEditor();
@@ -75,12 +82,13 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
    isDriving: any;
    vehicle: any;
    carcomponent: any;
-   audiogenerator: THREE.PositionalAudio;
+   audiogenerator: SoundGenerator;
    positionalAudio: THREE.PositionalAudio;
    lastSourcePos: THREE.Vector3;
    lastListenerPos: any;
    prevPosition: any;
    velocity: THREE.Vector3;
+   SoundGenerator: any;
   
 
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
@@ -2040,13 +2048,20 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
 
 
   initTTS(){
+
+
+   	this.SoundGenerator?.removeAll();
+  	this.SoundGenerator = new SoundGenerator(this._entity._entityManager._mc.listener);
+
     if (this.positionalAudio === undefined) {
+      this.positionalAudio= new AudioSoundGenerator(this._entity._entityManager._mc.listener);
         // Create positional audio source
-      this.positionalAudio = new THREE.PositionalAudio(this._entity._entityManager._mc.listener);
-          
+
+           
         // Configure spatial properties
-        this.positionalAudio.setRefDistance(1);
-  
+        this.positionalAudio.setRefDistance(10);
+        this.SoundGenerator.add(  this.positionalAudio);
+
 
         //attach to webgpugroup
         this._webgpugroup.add(this.positionalAudio);
@@ -2154,16 +2169,9 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
  
   async Update(deltaTime: number): Promise<void> {
 
-    if (this.positionalAudio && this.positionalAudio.isPlaying) {
-      // Store previous position if not exists
-      if (!this.prevPosition) {
-        this.prevPosition = this._webgpugroup.position.clone();
-        this.velocity = new THREE.Vector3();
-      }
-
-
+    if (this.SoundGenerator ) {
  
-  
+      this.SoundGenerator.updateSounds(deltaTime);
    
     }
     

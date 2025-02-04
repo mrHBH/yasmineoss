@@ -294,6 +294,22 @@ class Main {
     await this.entityManager.AddEntity(tts_streamer_bot, "tts_streamer_bot");
     
 
+
+
+
+
+    const musicstreamerenity = new Entity();
+    const musicstreamerenitycontrol = new CharacterComponent({
+      modelpath: "models/gltf/Xbot.glb",
+      animationspathslist: this.maincController.animations,
+      behaviourscriptname: "musicStreamer.js",
+    });
+    musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
+    await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
+    await musicstreamerenity.AddComponent(new AIInput());
+    await musicstreamerenity.AddComponent(new KeyboardInput());
+    await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
+
       this.maincController.UIManager.toggleScrollmode();
    
 
