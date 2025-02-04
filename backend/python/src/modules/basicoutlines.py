@@ -375,8 +375,10 @@ class BasicGuidanceGen:
             )
         )
 
-    async def listen(self) -> None:
-        """Listen for WebSocket messages."""
+ 
+    async def run(self) -> None:
+        """Main entry point for the WebSocket handler."""
+        
         try:
             while self.websocket.client_state != WEBSOCKET_CLOSED_STATE:
                 data = await self.websocket.receive_text()
@@ -384,18 +386,8 @@ class BasicGuidanceGen:
         except Exception as e:
             logger.error(f"Error in listener: {e}")
         finally:
-            await self._cleanup()
+            logger.debug("Closing WebSocket connection")            
+            if self.current_task and not self.current_task.done():
+                self.current_task.cancel()
 
-    async def _cleanup(self) -> None:
-        """Clean up running tasks."""
-        if self.current_task and not self.current_task.done():
-            self.current_task.cancel()
-
-    async def run(self) -> None:
-        """Main entry point for the WebSocket handler."""
-        try:
-            await self.listen()
-        except Exception as e:
-            logger.error(f"Error in run: {e}")
-        finally:
-            await self._cleanup()
+ 

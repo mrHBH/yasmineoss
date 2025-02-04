@@ -104,7 +104,7 @@ class UIManager {
     }
     const uicomponent = new twoDUIComponent(html , size);
     uicomponent.sticky = true;
-    uicomponent.fittoscroll = true;
+    uicomponent.fittoscroll = false;
     uicomponent.typed = true;
     
       let introui = new Entity();
@@ -145,11 +145,11 @@ class UIManager {
 
 
   }
-  removeuiElement(name: string): void {
-    this.mc.entitymanager.Entities.forEach((entity) => {
+  async removeuiElement(name: string):  Promise<void> {
+    this.mc.entitymanager.Entities.forEach( async (entity) => {
       if (entity._name === name) {
 
-        this.mc.entitymanager.RemoveEntity(entity);
+      await  this.mc.entitymanager.RemoveEntity(entity);
       }
     });
   }

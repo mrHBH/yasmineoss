@@ -39,7 +39,7 @@ class EntityManager {
     }
 
     async RemoveEntity(entity: Entity) {
-       entity.Destroy().then(() => {
+       await entity.Destroy().then(() => {
             this._entities = this._entities.filter(e => e !== entity);
             this._entitiesMap.delete(entity.id);
         }

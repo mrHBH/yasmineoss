@@ -62,6 +62,7 @@ class CarComponent extends Component {
   fpsquat: THREE.Quaternion = new THREE.Quaternion().setFromAxisAngle( new THREE.Vector3(0, 1, 0), -Math.PI/2);
   private _titlebar: any;
   private _css2dgroup: any;
+  workerblob: Blob  ;
   constructor(params: any) {
     super();
     this._webgpugroup = new THREE.Group();
@@ -81,11 +82,19 @@ class CarComponent extends Component {
   }
 
   startScript() {
+    console.log("start script");
+
   
-      this.carWorker?.postMessage({
-        type: "init",
-        filename: "car.js",
-      });
+    // this.carWorker?.postMessage({
+    //   type: "init",
+    //   filename: "car.js",
+    // });
+ 
+  
+
+
+  
+      
      
   
   }
@@ -94,16 +103,18 @@ class CarComponent extends Component {
         type: "stop",
       });
       this.carWorker.terminate();
+      // this.soundCarEngine?.stop();
+      // this._webgpugroup.remove(this.soundCarEngine);
       
     
   }
 
   loadscript(script: string) {
     this.carWorker?.terminate();
-    let blob = new Blob([script], { type: "application/javascript" });
-    let url = URL.createObjectURL(blob);
-    this.carWorker = new Worker(url);
-        this.carWorker.onmessage = (e) => {
+    this.workerblob  = new Blob([script], { type: "application/javascript" });
+    this.carWorker = new Worker(URL.createObjectURL(this.workerblob));
+    
+    this.carWorker.onmessage = (e) => {
       //	console.log("Message received from worker", e.data);
      
       if (e.data.type === "tick") {
@@ -168,6 +179,7 @@ class CarComponent extends Component {
  
       }
       if (e.data.type === "soundupdate") {
+        try {
         console.log("soundupdate", e.data);
         if (this.soundCarEngine) {
           this.soundCarEngine?.stop();
@@ -207,10 +219,13 @@ class CarComponent extends Component {
         }.bind(this);
 
         EngineSoundGenerator.load(this.loadingManager, this.listener, ".");
+      } catch (error) {
+        console.log(error);
+      }
       }
     };
-
  
+
 
   
 

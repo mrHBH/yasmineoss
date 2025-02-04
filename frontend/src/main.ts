@@ -15,6 +15,8 @@ import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
 import { DynamicuiComponent } from "./utils/Components/DynamicuiComponent";
 import { HelicopterComponent } from "./utils/Components/HelicopterComponent";
+import { StaticCLI } from "./SimpleCLI";
+import { twoDUIComponent } from "./utils/Components/2dUIComponent";
 // // import { CarComponent } from "./utils/Components/CarComponent";
 // // import { StaticCLI } from "./SimpleCLI";
 // // // InfiniteGridHelper class definition ends here
@@ -243,41 +245,41 @@ class Main {
 
   
       //add script entity environmentbot to the scene
-      const uitester = new Entity();
-      uitester.Position = new THREE.Vector3(0, 1,39);
-      const uitestercontroller2 = new CharacterComponent({
+      const letterCounterBot = new Entity();
+      letterCounterBot.Position = new THREE.Vector3(0, 1,39);
+      const letterCounterBotcontroller2 = new CharacterComponent({
         modelpath: "models/gltf/ybot2.glb",
         animationspathslist: this.maincController.animations,
-        behaviourscriptname: "uitester3.js",
+        behaviourscriptname: "letterCounterBot.js",
       });
 
-      await uitester.AddComponent(uitestercontroller2);
+      await letterCounterBot.AddComponent(letterCounterBotcontroller2);
 
-      await uitester.AddComponent(new AIInput());
-      await uitester.AddComponent(new KeyboardInput());
+      await letterCounterBot.AddComponent(new AIInput());
+      await letterCounterBot.AddComponent(new KeyboardInput());
 
      //  await environmentbot2.AddComponent(new KeyboardInput());
-      await this.entityManager.AddEntity(uitester, "uitester");
-      uitester.Broadcast({ topic
+      await this.entityManager.AddEntity(letterCounterBot, "uitester");
+      letterCounterBot.Broadcast({ topic
         : "walk", data: { position: new THREE.Vector3(  5, 0 , 0 )} });
     //add script entity environmentbot to the scene
-    const ttsbot = new Entity();
-    ttsbot.Position = new THREE.Vector3(5, 1,5);
-    const ttsbotcontrol = new CharacterComponent({
+    const uitesterbot = new Entity();
+    uitesterbot.Position = new THREE.Vector3(5, 1,15);
+    const uitester6 = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
       animationspathslist: this.maincController.animations,
-      behaviourscriptname: "ttsbot.js",
+      behaviourscriptname: "uitester6.js",
     });
 
 
 
-    await ttsbot.AddComponent(ttsbotcontrol);
+    await uitesterbot.AddComponent(uitester6);
 
-    await ttsbot.AddComponent(new AIInput());
-    await ttsbot.AddComponent(new KeyboardInput());
+    await uitesterbot.AddComponent(new AIInput());
+    await uitesterbot.AddComponent(new KeyboardInput());
 
    //  await environmentbot2.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(ttsbot, "ttsbot");
+    await this.entityManager.AddEntity(uitesterbot, "uitester66");
 
     const tts_streamer_bot = new Entity();
     const tts_streamer_botcontrol = new CharacterComponent({
@@ -299,7 +301,7 @@ class Main {
 
 
   
-    // const dynamicbaseui = new Entity();
+    //  const dynamicbaseui = new Entity();
     // const dynamicbaseuicontroller = new DynamicuiComponent("../pages/homepage.js");
     // dynamicbaseui.Position = new THREE.Vector3(0, 0, 0);
     // //rotate to be flat on the ground
@@ -543,245 +545,126 @@ class Main {
     //   );
 
     // //create 50  ui elements , and animate them in a random fashion , and change the text inside them in a random fashion
-    // let randomuirules = [
-    //   " a good ui is to be felt not seen",
-    //   " fps is the most important thing in a ui",
-    //   " programming language? all you need is computing power",
-    //   " the best ui is the one that is not there",
-    //   " main rendering thread : shall not be disturbed",
-    //   " cards cards cards",
-    //   " hyper smooth transitions , fight the jank",
-    //   " 60 fps or bust",
-    //   " fonts : max resolution",
-    // ];
+    // // let randomuirules = [
+    // //   " a good ui is to be felt not seen",
+    // //   " fps is the most important thing in a ui",
+    // //   " programming language? all you need is computing power",
+    // //   " the best ui is the one that is not there",
+    // //   " main rendering thread : shall not be disturbed",
+    // //   " cards cards cards",
+    // //   " hyper smooth transitions , fight the jank",
+    // //   " 60 fps or bust",
+    // //   " fonts : max resolution",
+    // // ];
 
-    // let randomprogrammingtips = [
-    //   " always use a linter , respect the linter , obey the linter",
-    // ];
+    // // let randomprogrammingtips = [
+    // //   " always use a linter , respect the linter , obey the linter",
+    // // ];
 
-    // let randomfacts = [
-    //   " human attention span is 8 seconds , quite short , huh?",
-    //   " the average person spends a huge amount clicking on things and moving the mouse",
-    // ];
+    // // let randomfacts = [
+    // //   " human attention span is 8 seconds , quite short , huh?",
+    // //   " the average person spends a huge amount clicking on things and moving the mouse",
+    // // ];
 
-    // let randomtitles = [
-    //   " Dynamically Generated UI",
-    //   "Random UI",
-    //   "Random ui rules",
-    //   "random programming tips",
-    //   "random facts",
-    //   "random titles",];
+    // // let randomtitles = [
+    // //   " Dynamically Generated UI",
+    // //   "Random UI",
+    // //   "Random ui rules",
+    // //   "random programming tips",
+    // //   "random facts",
+    // //   "random titles",];
 
-    //   //combine all the random facts and rules
-    //   randomfacts = randomfacts.concat(randomuirules).concat(randomprogrammingtips)
-    // for (let i = 0; i < 50; i++) {
-    //   let randomsize =  new THREE.Vector2( Math.random() * 100 + 250, Math.random() * 100 + 250);
-    //    let entity = new Entity();
-    //   let randomposition = new THREE.Vector3(
-    //     Math.random() * 204,
-    //     Math.random() * 209,
-    //     Math.random() * 206
-    //   );
+    // //   //combine all the random facts and rules
+    // //   randomfacts = randomfacts.concat(randomuirules).concat(randomprogrammingtips)
+    // // for (let i = 0; i < 5; i++) {
+    // //   let randomsize =  new THREE.Vector2( Math.random() * 100 + 250, Math.random() * 100 + 250);
+    // //    let entity = new Entity();
+    // //   let randomposition = new THREE.Vector3(
+    // //     Math.random() * 20,
+    // //     Math.random() * 3,
+    // //     Math.random() * 20
+    // //   );
 
-    //   let randomrotation = new THREE.Quaternion(
-    //    0,
-    //     Math.random() * 2 * Math.PI,
-    //     0,
-    //     1
-    //   );
+    // //   let randomrotation = new THREE.Quaternion(
+    // //    0,
+    // //     Math.random() * 2 * Math.PI,
+    // //     0,
+    // //     1
+    // //   );
 
-    //   let randomui = new twoDUIComponent(
-    //     '<div class="uk-card uk-card-default uk-card-body " > <h3 class="uk-card-title">Hello World</h3> <p class="inner-text">UI Component</p> </div>',
-    //     randomsize
-    //     );
+    // //   let randomui = new twoDUIComponent(
+    // //     '<div class="uk-card uk-card-default uk-card-body " > <h3 class="uk-card-title">Hello World</h3> <p class="inner-text">UI Component</p> </div>',
+    // //     randomsize
+    // //     );
 
-    //   entity.position.set(randomposition.x, randomposition.y, randomposition.z);
-    //  entity. rotation.set(randomrotation.x, randomrotation.y, randomrotation.z, randomrotation.w);
-    //   await entity.AddComponent(randomui);
-    //   await this.entityManager.AddEntity(entity, "UI" + i);
-    //   StaticCLI.typeInside(
-    //     randomui.htmlElement,
-    //     "uk-card-title",
-    //     randomtitles[Math.floor(Math.random() * randomtitles.length)],
-    //     25,
-    //     true
-    //   );
-    //     StaticCLI.typeInside(
-    //     randomui.htmlElement,
-    //     "inner-text",
-    //     randomfacts[Math.floor(Math.random() * randomfacts.length)],
-    //     250,
-    //     true
-    //   );
-    //   let deathtimeout = Math.random() * 32000 + 2000;
-    //   let randommobility = Math.random() * 6 + 1;
-    //   if (randommobility  > 6.5) {
-    //     setInterval(
-    //       () => {
-    //         tween({
-    //           from: {
-    //             x: entity.position.x,
-    //             y: entity.position.y,
-    //             z: entity.position.z,
-    //           },
-    //           to: {
-    //             x: Math.random() * 200,
-    //             y: Math.random() * 200,
-    //             z: Math.random() * 200,
-    //           },
-    //           duration: 1000000,
-    //           easing: "cubicInOut",
-    //           render: (state) => {
-    //             // Here ensure all state values are treated as numbers explicitly
-    //             entity.position.set(
-    //               Number(state.x),
-    //               Number(state.y),
-    //               Number(state.z)
-    //             );
-    //           },
-    //         });
-    //         // tween({
-    //         //   from: {
-    //         //     x: randomui.Size.x,
-    //         //     y: randomui.Size.y,
-    //         //   },
-    //         //   to: {
-    //         //     x: Math.random() * 200 + 250,
-    //         //     y: Math.random() * 200 + 250,
-    //         //   },
-    //         //   duration: 2000,
-    //         //   easing: "cubicInOut",
-    //         //   render: (state) => {
-    //         //     // Here ensure all state values are treated as numbers explicitly
-    //         //     randomui.Size = new THREE.Vector2(
-    //         //       Number(state.x),
-    //         //       Number(state.y)
-    //         //     );
-    //         //   },
-    //         // });
+    // //   entity.Position.set(randomposition.x, randomposition.y, randomposition.z);
+    // //  entity.Quaternion.set(randomrotation.x, randomrotation.y, randomrotation.z, randomrotation.w);
+    // //   await entity.AddComponent(randomui);
+    // //   await this.entityManager.AddEntity(entity, "UI" + i);
+    // //   StaticCLI.typeInside(
+    // //     randomui.HtmlElement,
+    // //     "uk-card-title",
+    // //     randomtitles[Math.floor(Math.random() * randomtitles.length)],
+    // //     25,
+    // //     true
+    // //   );
+    // //     StaticCLI.typeInside(
+    // //     randomui.HtmlElement,
+    // //     "inner-text",
+    // //     randomfacts[Math.floor(Math.random() * randomfacts.length)],
+    // //     250,
+    // //     true
+    // //   );
+    // //   let deathtimeout = Math.random() * 32000 + 2000;
+    // //   let randommobility = Math.random() * 6 + 1;
+       
+     
 
-    //         this.inferencewebsocket.send(
-    //           JSON.stringify({ cmd: "gen", topic: "random fact about programming" })
-    //         );
-    //         StaticCLI.typeInside(
-    //                   randomui.htmlElement,
-    //                   "uk-card-title",
-    //                   " Dynamically Generated UI",
-    //                   25,
-    //                   true
-    //                 );
+    // //     StaticCLI.typeInside(
+    // //       randomui.HtmlElement,
+    // //       "uk-card-title",
+    // //       "YASMINE OS OS BUILD 5",
+    // //       25,
+    // //       true
+    // //     );
+    // //     StaticCLI.typeInside(
+    // //       randomui.HtmlElement,
+    // //       "inner-text",
+    // //       randomfacts[Math.floor(Math.random() * randomfacts.length)],
+    // //       55,
+    // //       true
+    // //     );
+      
 
-    //         this.inferencewebsocket.onmessage = function incoming(event) {
-    //           //load json
-    //           let json = JSON.parse(event.data);
+    // //   setTimeout(() => {
+    // //   //  entity.kill();
+    // //   }, deathtimeout);
+    // // }
 
-    //           console.log(json);
-    //           if (json.command === "token") {
-    //             console.log(json.text);
+    // //    setInterval(() => {
 
-    //             StaticCLI.typeInside(
-    //               randomui.htmlElement,
-    //               "inner-text",
-    //               json.text,
-    //               55,
-    //               true
-    //             );
-    //           }
-    //           (json.command === "finalans")
-    //           {
-    //             //remove tje event listener
-    //             this.inferencewebsocket.removeEventListener("message",  this.inferencewebsocket.onmessage);
-    //           }
-    //           //check if json
-    //         }.bind(this);
-    //         StaticCLI.typeInside(
-    //           randomui.htmlElement,
-    //           "uk-card-title",
-    //           "YASMINE OS OS BUILD 9",
-    //           25,
-    //           true
-    //         );
-    //         StaticCLI.typeInside(
-    //           randomui.htmlElement,
-    //           "inner-text",
-    //           randomfacts[Math.floor(Math.random() * randomfacts.length)],
-    //           55,
-    //           true
-    //         );
-    //       },
+    // //   //select a random entity , and zoom to it
+    // //   let randomentity = this.entityManager.Entities[
+    // //     Math.floor(Math.random() * this.entityManager.Entities.length)
+    // //   ];
 
-    //       8000
-    //     );
-    //   }
-    //   else {
+    // //   randomentity.Broadcast({
+    // //     topic: "zoom",
+    // //     data: {},
+    // //   });
+    // //   randomentity.Broadcast({
+    // //     topic: "panaround",
+    // //     data: {
+    // //       size: new THREE.Vector2(
+    // //         Math.random() * 250 + 150,
+    // //         Math.random() * 150 + 150
+    // //       ),
+    // //     },
+    // //   });
+    // // }
+    // // ,4500);
 
-    //     StaticCLI.typeInside(
-    //       randomui.htmlElement,
-    //       "uk-card-title",
-    //       "YASMINE OS OS BUILD 5",
-    //       25,
-    //       true
-    //     );
-    //     StaticCLI.typeInside(
-    //       randomui.htmlElement,
-    //       "inner-text",
-    //       randomfacts[Math.floor(Math.random() * randomfacts.length)],
-    //       55,
-    //       true
-    //     );
-    //   }
-
-    //   setTimeout(() => {
-    //   //  entity.kill();
-    //   }, deathtimeout);
-    // }
-
-    //    setInterval(() => {
-
-    //   //select a random entity , and zoom to it
-    //   let randomentity = this.entityManager.Entities[
-    //     Math.floor(Math.random() * this.entityManager.Entities.length)
-    //   ];
-
-    //   randomentity.Broadcast({
-    //     topic: "zoom",
-    //     data: {},
-    //   });
-    //   randomentity.Broadcast({
-    //     topic: "panaround",
-    //     data: {
-    //       size: new THREE.Vector2(
-    //         Math.random() * 250 + 150,
-    //         Math.random() * 150 + 150
-    //       ),
-    //     },
-    //   });
-    // }
-    // ,4500);
-
-    // //add 50 random entities at random positions either bob or sydney all walking
-    // for (let i = 0; i < 50; i++) {
-    //   let entity = new Entity();
-    //   let randoemclass =
-    //     Math.random() < 0.5 ? "models/gltf/ybot2.glb" : "models/gltf/Xbot.glb";
-    //   let randomposition = new THREE.Vector3(
-    //     Math.random() * 20,
-    //     0,
-    //     Math.random() * 50
-    //   );
-    //   let randomcontroller = new CharacterComponent({
-    //     modelpath: randoemclass,
-    //     animationspath: "animations/gltf/ybot2@walking.glb",
-    //   });
-    //   entity.position.set(randomposition.x, randomposition.y, randomposition.z);
-    //   await entity.AddComponent(randomcontroller);
-    //   await this.entityManager.AddEntity(entity, "RandomEntity" + i);
-    //   let deathtimeout = Math.random() * 32000 + 2000;
-    //   setTimeout(() => {
-    //     entity.kill();
-    //   }, deathtimeout);
-    // }
-
+    
     this.animate(); 
 
     //for every animation frame

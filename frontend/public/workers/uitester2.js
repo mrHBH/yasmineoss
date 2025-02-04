@@ -127,7 +127,8 @@ let cb = function (e) {
           this.carcomponent.body.velocity.set(0, 0, 0);
           this.carcomponent.body.angularVelocity.set(0, 0, 0);
 
-          this.carcomponent.loadscript(this.editor.component.editor.getValue());
+          this.carcomponent.loadscript(this.editor.component.editor.getValue()); 
+          this.carcomponent.startScript();
         });
 
         controls.stop.addEventListener("click", async (event) => {
@@ -188,7 +189,6 @@ let cb = function (e) {
           this.charcompoent = null;
         });
       }
-
       let element2 = document.getElementById("heli.js");
       if (element2) {
         // Remove existing controls if any

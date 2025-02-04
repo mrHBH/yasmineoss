@@ -11,70 +11,70 @@ import * as monaco from 'monaco-editor';
 // import { init } from "xstate/lib/actionTypes";
 import { HtmlGenerator, parse } from 'latex.js';
 
-// Create HTML element for output
-const outputDiv = document.createElement('div');
-document.body.appendChild(outputDiv);
+// // Create HTML element for output
+// const outputDiv = document.createElement('div');
+// document.body.appendChild(outputDiv);
 
-let generator = new HtmlGenerator({ hyphenate: false });
+// let generator = new HtmlGenerator({ hyphenate: false });
 
 
  
-// Usage example
-let rawTemplate = String.raw`\documentclass{article}
-\usepackage{hyperref}
-\usepackage{multicol}
-\usepackage{calc,pict2e,picture}
-\usepackage{textgreek,textcomp,gensymb,stix}
-\title{Sample \LaTeX}
-\begin{document}
-  \maketitle
-  \begin{abstract}
-    The abstract goes here and here.
-  \end{abstract}
-    \section{Text}
-  Text, paragraphs and ligatures goes here.
-  \section{Characters}
-  Sample characters:
-  \$ \& \% \# \_ \{ \} \~{} \^{}
-  \section{Math}
-  Sample math formulae:
-  $f(x) = \int_{-\infty}^\infty \hat f(\xi)\,e^{2 \pi \xi} \, d\xi$
-  \section{Multicolumn}
-  \begin{multicols}{3}
-    Column 1
-    Column 2
-    Column 3
-  \end{multicols}
-  \section{Boxes}
-  \medbreak\noindent\fbox{\verb|\mbox{|\emph{Sample box}\verb|}|}\smallbreak
-  \section{Symbols}
-  Sample symbols:
-  \noindent \textfractionsolidus \textdiv \texttimes \textminus \textpm \textsurd \textlnot \textasteriskcentered
-  \section{Picture}
-  Sample picture:
-  \setlength{\unitlength}{0.68cm}
-  \begin{picture}(6,5)
-    \thicklines
-    \put(1,0.5){\line(20,1){3}}
-    \put(4,2){\line(-2,1){2}}
-    \put(2,3){\line(-2,-5){1}}
-    \put(0.7,0.3){$A$}
-    \put(4.05,1.9){$B$}
-    \put(1.7,2.95){$C$}
-    \put(3.1,2.5){$a$}
-    \put(1.3,1.7){$b$}
-    \put(2.5,1.05){$c$}
-    \put(0.3,4){$F=\sqrt{s(s-a)(s-b)(s-c)}$}
-    \put(3.5,0.4){$\displaystyle s:=\frac{a+b+c}{2}$}
-  \end{picture}
-\end{document}
-`;
+// // Usage example
+// let rawTemplate = String.raw`\documentclass{article}
+// \usepackage{hyperref}
+// \usepackage{multicol}
+// \usepackage{calc,pict2e,picture}
+// \usepackage{textgreek,textcomp,gensymb,stix}
+// \title{Sample \LaTeX}
+// \begin{document}
+//   \maketitle
+//   \begin{abstract}
+//     The abstract goes here and here.
+//   \end{abstract}
+//     \section{Text}
+//   Text, paragraphs and ligatures goes here.
+//   \section{Characters}
+//   Sample characters:
+//   \$ \& \% \# \_ \{ \} \~{} \^{}
+//   \section{Math}
+//   Sample math formulae:
+//   $f(x) = \int_{-\infty}^\infty \hat f(\xi)\,e^{2 \pi \xi} \, d\xi$
+//   \section{Multicolumn}
+//   \begin{multicols}{3}
+//     Column 1
+//     Column 2
+//     Column 3
+//   \end{multicols}
+//   \section{Boxes}
+//   \medbreak\noindent\fbox{\verb|\mbox{|\emph{Sample box}\verb|}|}\smallbreak
+//   \section{Symbols}
+//   Sample symbols:
+//   \noindent \textfractionsolidus \textdiv \texttimes \textminus \textpm \textsurd \textlnot \textasteriskcentered
+//   \section{Picture}
+//   Sample picture:
+//   \setlength{\unitlength}{0.68cm}
+//   \begin{picture}(6,5)
+//     \thicklines
+//     \put(1,0.5){\line(20,1){3}}
+//     \put(4,2){\line(-2,1){2}}
+//     \put(2,3){\line(-2,-5){1}}
+//     \put(0.7,0.3){$A$}
+//     \put(4.05,1.9){$B$}
+//     \put(1.7,2.95){$C$}
+//     \put(3.1,2.5){$a$}
+//     \put(1.3,1.7){$b$}
+//     \put(2.5,1.05){$c$}
+//     \put(0.3,4){$F=\sqrt{s(s-a)(s-b)(s-c)}$}
+//     \put(3.5,0.4){$\displaystyle s:=\frac{a+b+c}{2}$}
+//   \end{picture}
+// \end{document}
+// `;
 
-// Escape the template
- generator = parse(rawTemplate, { generator: generator });
- document.head.appendChild(generator.stylesAndScripts(""))
- document.body.appendChild(generator.domFragment())
-// Use the escaped template
+// // Escape the template
+//  generator = parse(rawTemplate, { generator: generator });
+//  document.head.appendChild(generator.stylesAndScripts(""))
+//  document.body.appendChild(generator.domFragment())
+// // Use the escaped template
  
  
 
@@ -467,6 +467,8 @@ let rawTemplate = String.raw`\documentclass{article}
       this._entity.Quaternion.w
     );
 
+    //
+
     const camera = this._entity._entityManager._mc.camera;
     const distance = this._entity.Position.distanceTo(camera.position);
 
@@ -542,11 +544,9 @@ let rawTemplate = String.raw`\documentclass{article}
     // this._htmlElement.style.opacity = "0";
     //check if a scroll bar is present , if yes hide it
 
-      this._htmlElement.style.overflow = "hidden";
-      this._htmlElement.style.overflowY = "hidden";
-      this._htmlElement.style.overflowX = "hidden";
+     
      this._webgpuplane.material.transparent = true;
-     tween({
+     await tween({
       from: { x:  1},
       to: { x: 0 },
       duration: 1000,
@@ -555,13 +555,14 @@ let rawTemplate = String.raw`\documentclass{article}
         this._webgpuplane.material.opacity = 0;
         this._htmlElement.style.opacity = state.x;
       },
-      finish: () => {
-        this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
-        this._entity._entityManager._mc.html2dScene.remove(this._css2dgroup);
-        this._htmlElement.remove();
-      }
-      
+     
     });
+    this._htmlElement.style.overflow = "hidden";
+    this._htmlElement.style.overflowY = "hidden";
+    this._htmlElement.style.overflowX = "hidden";
+    this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+    this._entity._entityManager._mc.html2dScene.remove(this._css2dgroup);
+    this._htmlElement.remove();
  
     // setTimeout(() => {
     // this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);

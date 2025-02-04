@@ -150,10 +150,12 @@ let cb = function (e) {
     </div>
   `;
   const h = async () => {
+    await mc.UIManager.removeuiElement("faq");
+
   let pos = new THREE.Vector3(15, 5, 10);
               let availableScreenSize = new THREE.Vector2(
-                window.innerWidth  ,
-                window.innerHeight  
+                window.innerWidth / 3  ,
+                window.innerHeight / 2 
               );
 
               let startpos = pos.clone().add(new THREE.Vector3(0, 0, 0));
@@ -162,7 +164,7 @@ let cb = function (e) {
               let lookatFlow = [new THREE.Vector3(0, 0, 1)];
               mc.UIManager.lookatPath = lookatFlow;
               mc.UIManager.splinePath.points = contactFlow;
-              mc.UIManager.toggleScrollmode();
+              // mc.UIManager.toggleScrollmode();
               mc.UIManager.updateSplineObject(); 
               mc.UIManager.cubePosition = 1;
               mc.UIManager.moveCubeAlongPath(1);
@@ -179,13 +181,13 @@ let cb = function (e) {
                 pos,
                 availableScreenSize
               );
-
+ 
 
               //find back to main button
               let backToMain = component.HtmlElement.querySelector("#back-to-main");
               if (backToMain) {
                 backToMain.onclick = () => {
-                mc.UIManager.removeUIElement("faq");
+                mc.UIManager.removeuiElement("faq");
                 };
               }
 

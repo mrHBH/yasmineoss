@@ -31,13 +31,21 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import llama_cpp
 # from balacoon_tts import TTS , SpeechUtterance
+import numpy as np
 import sys# from openai import OpenAI
-from guidance  import models as guidance_models
- 
+import soundfile as sf
+from scipy.io import wavfile
+
+
+sys.path.append("/app/kokoro")
+sys.path.append("app/src/modules/agents")
 print("sys.path:", sys.path)  # Print the current sys.path
 print("Current working directory:", os.getcwd())  
-# import models
+import istftnet
+import models
+from kokoro import generate as tts_generate
      
+import torch
  
  
 
@@ -73,10 +81,6 @@ async def websocket_endpointy(websocket: WebSocket):
             from fastapi import status
 
             modelpath = "models/qwen2.5-coder-0.5b-instruct-q8_0.gguf"
-            modelpath = "models/qwen2.5-coder-1.5b-instruct-q8_0.gguf"
-            #modelpath = "models/phi-4-q4.gguf"
-
-
             #modelpath = "models/phi-4-Q6_K.gguf"
             # modelpath = "models/EXAONE-3.5-2.4B-Instruct-Q8_0.gguf"
             # modelpath = "models/qwen2.5-coder-1.5b-instruct-q8_0.gguf"
@@ -85,8 +89,7 @@ async def websocket_endpointy(websocket: WebSocket):
             tokenizerpath = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
             #tokenizerpath = "NyxKrage/Microsoft_Phi-4"
             # tokenizerpath = "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct"
-            tokenizerpath = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-            #tokenizerpath = "microsoft/phi-4"
+            # tokenizerpath = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
             #tokenizerpath = "Qwen/Qwen2.5-Coder-7B-Instruct"
             #tokenizerpath =  "HuggingFaceTB/SmolLM2-360M-Instruct"
             #tokenizerpath = "microsoft/Phi-3.5-mini-instruct"
@@ -123,71 +126,6 @@ async def websocket_endpointy(websocket: WebSocket):
         import ais.letter_counter_ai  as LCA
         importlib.reload(LCA)
         agent = LCA.LetterCounterAgent(llm=llm, llm_lock=llm_lock, websocket=websocket, generator=generator)
-        await agent.run()
-
-        # importlib.reload(bo)
-        # dynamicmodule = bo.BasicGuidanceGen(
-        #     llm=llm, websocket=websocket, llm_lock=llm_lock , generator=generator
-        # )
-
-        # await getattr(dynamicmodule, "run")()
-    except Exception as e:
-        import logging
-
-        logging.error(e)
-    finally:
-        try:
-            await websocket.close()
-        except:
-            pass
-
-@app.websocket("/ws/guidanceagent/")
-async def websocket_endpointy(websocket: WebSocket):
-    """This function is a websocket endpoint that sends log messages to connected clients."""
-    try:
-        await websocket.accept()
-        global llm, dynamicmodule , generator
-
-        if llm is None:
-            from fastapi import WebSocketDisconnect
-            from fastapi import status
-
-            modelpath = "models/qwen2.5-coder-0.5b-instruct-q8_0.gguf"
-            #modelpath = "models/phi-4-Q6_K.gguf"
-            # modelpath = "models/EXAONE-3.5-2.4B-Instruct-Q8_0.gguf"
-            modelpath = "models/qwen2.5-coder-1.5b-instruct-q8_0.gguf"
-            #modelpath = "models/Qwen2.5-Coder-7B.Q4_0.gguf"
-            #modelpath = "models/SmolLM2-360M-Instruct-Q4_0.gguf"
-            tokenizerpath = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
-            #tokenizerpath = "NyxKrage/Microsoft_Phi-4"
-            # tokenizerpath = "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct"
-            # tokenizerpath = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-            #tokenizerpath = "Qwen/Qwen2.5-Coder-7B-Instruct"
-            #tokenizerpath =  "HuggingFaceTB/SmolLM2-360M-Instruct"
-            #tokenizerpath = "microsoft/Phi-3.5-mini-instruct"
-           # modelpath = "models/Phi-3.5-mini-instruct.Q4_0.gguf"
-
-            # llm = models.LlamaCpp("models/Phi-3-mini-128k-instruct.Q5_0.gguf", n_gpu_layers=-1, n_ctx=1024  , verbose=True , echo= False  )
-            llm = llama_cpp.Llama(
-                model_path=modelpath,
-                verbose=False,
-                # tokenizer=llama_cpp.llama_tokenizer.LlamaHFTokenizer.from_pretrained(
-                #     tokenizerpath
-                # ),
-                n_gpu_layers=-1,
-                n_ctx=2048,
-                logits_all=False,
-            )
-            
-       
-
-
-
-             
-            
-        import ais.letter_counter_guidance  as LCG
-        importlib.reload(LCG)
-        agent = LCG.LetterCounterGuidanceAgent(llm= guidance_models.LlamaCpp(llm), llm_lock=llm_lock, websocket=websocket, generator=generator)
         await agent.run()
 
         # importlib.reload(bo)
@@ -369,13 +307,243 @@ async def load_file(websocket: WebSocket, workspace_name: str):
 
 
 
- 
 
- 
+@app.post("/api/tts/voices")
+async def list_voices():
+    """Get list of available TTS voices"""
+    try:
+        AVAILABLE_VOICES = [
+            {'id': 'af', 'name': 'Default (Bella & Sarah Mix)'},
+            {'id': 'af_bella', 'name': 'Bella'},
+            {'id': 'af_sarah', 'name': 'Sarah'}, 
+            {'id': 'am_adam', 'name': 'Adam'},
+            {'id': 'am_michael', 'name': 'Michael'},
+            {'id': 'bf_emma', 'name': 'Emma'},
+            {'id': 'bf_isabella', 'name': 'Isabella'},
+            {'id': 'bm_george', 'name': 'George'},
+            {'id': 'bm_lewis', 'name': 'Lewis'},
+            {'id': 'af_nicole', 'name': 'Nicole'},
+            {'id': 'af_sky', 'name': 'Sky'}
+        ]
+        return {"voices": AVAILABLE_VOICES}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def split_text(text: str, max_chunk=None):
+    """Split text into chunks on natural pause points
+    
+    Args:
+        text: Text to split into chunks
+        max_chunk: Maximum chunk size (defaults to settings.max_chunk_size)
+    """
+    if max_chunk is None:
+        max_chunk =1024
+        
+    if not isinstance(text, str):
+        text = str(text) if text is not None else ""
+        
+    text = text.strip()
+    if not text:
+        return
+        
+    # First split into sentences
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+            
+        # For medium-length sentences, split on punctuation
+        if len(sentence) > max_chunk:  # Lower threshold for more consistent sizes
+            # First try splitting on semicolons and colons
+            parts = re.split(r"(?<=[;:])\s+", sentence)
+            
+            for part in parts:
+                part = part.strip()
+                if not part:
+                    continue
+                    
+                # If part is still long, split on commas
+                if len(part) > max_chunk:
+                    subparts = re.split(r"(?<=,)\s+", part)
+                    for subpart in subparts:
+                        subpart = subpart.strip()
+                        if subpart:
+                            yield subpart
+                else:
+                    yield part
+        else:
+            yield sentence
+
+
+
+@app.post("/api/tts/generate")
+async def generate_tts(request: dict):
+    try:
+        text = request.get("text")
+        voice_id = request.get("voice", "am_michael") # Default to michael if no voice specified
+        
+        if not text:
+            return {"error": "No text provided"}
+   
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print(f'Using device: {device}')
+        print('Loading model...')
+        print("current working directory:", os.getcwd())
+    
+        MODEL = models.build_model('/app/kokoro/fp16/kokoro-v0_19-half.pth', device)
+        
+        # Validate voice_id
+        valid_voices = ['af', 'af_bella', 'af_sarah', 'am_adam', 'am_michael',
+                       'bf_emma', 'bf_isabella', 'bm_george', 'bm_lewis',
+                       'af_nicole', 'af_sky']
+        
+        if voice_id not in valid_voices:
+            return {"error": f"Invalid voice. Available voices are: {', '.join(valid_voices)}"}
+            
+        VOICEPACK = torch.load(f'/app/kokoro/voices/{voice_id}.pt', weights_only=True).to(device)
+        print(f'Loaded voice: {voice_id}')
+        
+        outputpath = "/app/tempdir/nice.wav"
+        audio, out_ps = tts_generate(MODEL, text, VOICEPACK)
+        print("out_ps:", out_ps)
+        sf.write(outputpath, audio, 24000)
+        
+        response = FileResponse(
+            outputpath,
+            media_type="audio/wav",
+            headers={
+                "Content-Disposition": f"attachment; filename={outputpath}"
+            },
+        )
+        return response
+        
+    except Exception as e:
+        logging.error(e)
+        return {"error": str(e)}
+
+
+@app.post("/api/tts/stream_ogg")
+async def stream_ogg_tts(request: dict):
+    try:
+        text = request.get("text")
+        voice_id = request.get("voice", "am_michael")
+        if not text:
+            raise HTTPException(status_code=400, detail="No text provided")
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        MODEL = models.build_model("/app/kokoro/fp16/kokoro-v0_19-half.pth", device)
+        VOICEPACK = torch.load(f"/app/kokoro/voices/{voice_id}.pt", weights_only=True).to(device)
+
+        async def generate_ogg():
+            for chunk in split_text(text):
+                audio, _ = tts_generate(MODEL, chunk, VOICEPACK)
+                wav_data = (audio * 32767).astype(np.int16)
+                
+                # Encode to Ogg Vorbis
+                with io.BytesIO() as mem_wav, io.BytesIO() as mem_ogg:
+                    wavfile.write(mem_wav, 24000, wav_data)
+                    mem_wav.seek(0)
+                    sf_data, samplerate = sf.read(mem_wav)
+                    sf.write(mem_ogg, sf_data, samplerate, format="OGG", subtype="VORBIS")
+                    mem_ogg.seek(0)
+                    yield mem_ogg.read()
+
+        return StreamingResponse(
+            generate_ogg(),
+            media_type="audio/ogg",
+            headers={"X-Audio-Sample-Rate": "24000", "X-Audio-Channels": "1"}
+        )
+    except Exception as e:
+        logging.error(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tts/stream")
+async def stream_tts(request: dict):
+    try:
+        text = request.get("text")
+        voice_id = request.get("voice", "am_michael")
+        
+        if not text:
+            raise HTTPException(status_code=400, detail="No text provided")
+
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        MODEL = models.build_model('/app/kokoro/fp16/kokoro-v0_19-half.pth', device)
+        VOICEPACK = torch.load(f'/app/kokoro/voices/{voice_id}.pt', weights_only=True).to(device)
+        
+        # Add crossfade window size (in samples)
+        CROSSFADE_SIZE = 0  # Remove crossfade by setting it to 0
+        
+        def apply_fade(audio, fade_length, fade_in=True):
+            """Apply linear fade in/out to audio"""
+            fade = np.linspace(0, 1, fade_length) if fade_in else np.linspace(1, 0, fade_length)
+            fade_region = audio[:fade_length] if fade_in else audio[-fade_length:]
+            if fade_in:
+                audio[:fade_length] = fade_region * fade
+            else:
+                audio[-fade_length:] = fade_region * fade
+            return audio
+            
+        def normalize_audio(audio, target_db=-23):
+            """Normalize audio to target dB level"""
+            rms = np.sqrt(np.mean(audio**2))
+            target_rms = 10**(target_db/20)
+            gain = target_rms / (rms + 1e-6)
+            return audio * gain
+        
+        async def generate():
+            previous_chunk_end = None
+            for chunk in split_text(text):
+                try:
+                    audio, _ = tts_generate(MODEL, chunk, VOICEPACK)
+                    audio = normalize_audio(audio)
+                    # Remove crossfade usage
+                    # audio = apply_fade(audio.copy(), CROSSFADE_SIZE, fade_in=True)
+                    # audio = apply_fade(audio, CROSSFADE_SIZE, fade_in=False)
+
+                    # Directly yield each chunk without crossfade
+                    output_data = (audio * 32767).astype(np.int16)
+                    if len(output_data) % 2 != 0:
+                        output_data = np.pad(output_data, (0, 1), 'constant')
+                    yield output_data.tobytes()
+
+                except Exception as e:
+                    logging.error(f"Chunk generation error: {str(e)}")
+                    continue
+            # No final crossfade
+
+        return StreamingResponse(
+            generate(), 
+            media_type="audio/l16",
+            headers={
+                "X-Audio-Sample-Rate": "24000",
+                "X-Audio-Channels": "1"
+            }
+        )
+        
+    except Exception as e:
+        logging.error(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# @app.post("/loadguidance/")
+# async def loadguidance():
+#     import modules.basicguidancegen as bg
+#     importlib.reload(bg)
+#     llama3 = guidance.models.LiteLLMCompletion(
+#     model="ollama/llama3:8b-instruct-q8_0",
+#     base_url="http://localhost:11434",
+#     api_key="ollama")
+#     import modules.guidanceollama as go
+#     importlib.reload(go)
+#     # res = await  go.
 
 
 # load the module
 
 if __name__ == "__main__":
     # check if not local host ; then secure https
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

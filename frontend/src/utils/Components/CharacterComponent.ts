@@ -75,6 +75,12 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
    isDriving: any;
    vehicle: any;
    carcomponent: any;
+   audiogenerator: THREE.PositionalAudio;
+   positionalAudio: THREE.PositionalAudio;
+   lastSourcePos: THREE.Vector3;
+   lastListenerPos: any;
+   prevPosition: any;
+   velocity: THREE.Vector3;
   
 
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
@@ -95,6 +101,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     this.hostname = window.location.hostname;
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
+
     // if (behaviourscriptname !== "")
     //   this.LoadWorker(behaviourscriptname);
   }
@@ -110,6 +117,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
     this._model = await LoadingManager.loadGLTF(this._modelpath);
+
 
     this.decceleration_ = new THREE.Vector3(-0.005, -0.001, -7.0);
     this.acceleration_ = new THREE.Vector3(1, 0.125, 5.0);
@@ -500,10 +508,10 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
             },
           },
           JumpingFromWalk: {
-            entry: "StartJumping",
+            entry: "StartJumping2",
             on: {
               LAND: {
-                target: "StoppingRunning",
+                target: "Ideling",
               },
             },
           },
@@ -558,13 +566,26 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
             forward.applyQuaternion(this._webgpugroup.quaternion);
             forward.normalize();
             //apply a force to the body
-
+         
+  
+            let interval  
             //set timeout to land
             setTimeout(() => {
               this.AnimationFSMService_.send("LAND");
+              interval = setInterval(() => {
+                const controlObject = this._entity.Position;
+                controlObject.add(forward.multiplyScalar(1.05));
+                this._entity.Position = controlObject;
+              } , 10);
+              //shift position forward by 2 to account for the forward vector
+         
               //this.Parent.SetPosition(controlObject);
               //	this.body.position.copy(new CANNON.Vec3(controlObject.x, controlObject.y, controlObject.z));
             }, curAction.getClip().duration * 1000 - 250);
+
+            setTimeout(() => {
+              clearInterval(interval);
+            }, curAction.getClip().duration * 1000);
           },
           StartWalking: (context, event) => {
             // // //console.log(this.animations_);
@@ -607,6 +628,27 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
               this.AnimationFSMService_.send("LAND");
             }, (curAction.getClip().duration * 1000) / 1);
           },
+          StartJumping2: (context, event) => {
+            const ac1 = this.animations_[this.AnimationFSMService_.state.value];
+
+            const ac2 =
+              this.animations_[this.AnimationFSMService_._state.history.value];
+
+            const curAction = this._mixer.clipAction(ac1);
+            const prevAction = this._mixer.clipAction(ac2);
+
+            curAction.time = 0.0;
+            curAction.enabled = true;
+            curAction.setEffectiveTimeScale(1.0);
+            curAction.setEffectiveWeight(1.0);
+            curAction.crossFadeFrom(prevAction, 0.25, true);
+            curAction.play();
+
+           
+              this.AnimationFSMService_.send("LAND");
+        
+          },
+
 
           StartSlowWalking: (context, event) => {
             const ac1 = this.animations_[this.AnimationFSMService_.state.value];
@@ -1934,6 +1976,11 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
     this._entity._entityManager._mc.physicsmanager.world.addBody(this.body);
 
+
+
+
+
+
     //register handler for     this._entity.Broadcast({ topic: "inputinitialized", data: {input : this} }); async (data: any) => {
     this._entity._RegisterHandler("walk", async (data: any) => {
      await this.walkToPos(data.position);
@@ -1949,6 +1996,8 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
         }
       }
     );
+
+    
 
 
 
@@ -1989,6 +2038,20 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     });
   }
 
+
+  initTTS(){
+    if (this.positionalAudio === undefined) {
+        // Create positional audio source
+      this.positionalAudio = new THREE.PositionalAudio(this._entity._entityManager._mc.listener);
+          
+        // Configure spatial properties
+        this.positionalAudio.setRefDistance(1);
+  
+
+        //attach to webgpugroup
+        this._webgpugroup.add(this.positionalAudio);
+    }
+  }
 
   respond(message : string){
     StaticCLI.typeSync(
@@ -2078,9 +2141,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     this.vehicle = vehicle;   
 
      this.AnimationFSMService_.send("DRIVE");
-    vehicle.startScript();
-
-    
+     this.vehicle.startScript();
 
  
   }
@@ -2092,11 +2153,21 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
   
  
   async Update(deltaTime: number): Promise<void> {
-    
-    //update state name in the title bar
-    // this._titlebar.querySelector(".status").textContent =
-    //   this.state + " " + this.task;
 
+    if (this.positionalAudio && this.positionalAudio.isPlaying) {
+      // Store previous position if not exists
+      if (!this.prevPosition) {
+        this.prevPosition = this._webgpugroup.position.clone();
+        this.velocity = new THREE.Vector3();
+      }
+
+
+ 
+  
+   
+    }
+    
+ 
 		if (this.isDriving) {
       if (this.Input._keys.attack1 ) {
          
@@ -2319,8 +2390,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
       if (this.Input._keys.attack1 ) {
          
         //check if an entity is in front of the player
-        if ( this.carcomponent){
-
+        if ( this.carcomponent &&   this.AnimationFSMService_.state.value != "Driving"    && this.AnimationFSMService_.state.value != "Mounting"  ){ 
           this.mountvehicle (this.carcomponent);          
           
          } 
@@ -2410,7 +2480,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
       case "SlowWalking":
         return 1.35;
       case "Landing":
-        return 0;
+        return 2;
         setTimeout(() => {
           return 0;
         }, 75);

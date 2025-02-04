@@ -24,45 +24,15 @@ RUN apt-get update && \
     apt-get install -y \
     ninja-build 
 RUN pip3 install outlines --no-cache-dir --upgrade
-
-
-# Initialize git-lfs and clone Kokoro model
-RUN apt-get update && apt-get install -y git-lfs espeak-ng && \
-    git lfs install  
-
+RUN pip3 install guidance
 WORKDIR /app
-# Create an initialization script with debug logging
-RUN echo '#!/bin/bash\n\
-set -x\n\
-echo "Starting initialization script"\n\
-ls -la /app/kokoro\n\
-\n\
-echo "Initializing git-lfs"\n\
-git lfs install\n\
-\n\
-if [ ! -d "/app/kokoro/.git" ]; then\n\
-    echo "Kokoro repository not found. Cloning..."\n\
-    rm -rf /app/kokoro/*\n\
-    git clone https://huggingface.co/hexgrad/Kokoro-82M /app/kokoro\n\
-    cd /app/kokoro && git lfs pull\n\
-    echo "Clone completed. Contents of /app/kokoro:"\n\
-    ls -la /app/kokoro\n\
-else\n\
-    echo "Kokoro repository already exists"\n\
-    ls -la /app/kokoro\n\
-fi\n\
-\n\
-echo "Initialization complete. Starting main application..."\n\
-exec python3 src/main.py\n\
-' > /app/init.sh && chmod +x /app/init.sh
+
 RUN pip3 install uvicorn[standard] fastapi fastapi-cors pylint asyncio pydantic python-dotenv nest-asyncio ipython aiosqlite autopep8 dill --upgrade
-RUN pip3 install soundfile
 # Set the working directory
 
 
 EXPOSE 8000
 ENV AM_I_IN_A_DOCKER_CONTAINER Yes
-CMD ["/bin/bash", "/app/init.sh"]
-
+CMD ["python3", "src/main.py"]
  
  
