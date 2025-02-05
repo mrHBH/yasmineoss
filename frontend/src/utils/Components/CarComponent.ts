@@ -85,10 +85,10 @@ class CarComponent extends Component {
     console.log("start script");
 
   
-    // this.carWorker?.postMessage({
-    //   type: "init",
-    //   filename: "car.js",
-    // });
+    this.carWorker?.postMessage({
+      type: "init",
+      filename: "car.js",
+    });
  
   
 
@@ -103,8 +103,8 @@ class CarComponent extends Component {
         type: "stop",
       });
       this.carWorker.terminate();
-      // this.soundCarEngine?.stop();
-      // this._webgpugroup.remove(this.soundCarEngine);
+      this.soundCarEngine?.stop();
+      this._webgpugroup.remove(this.soundCarEngine);
       
     
   }

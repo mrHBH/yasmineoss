@@ -133,13 +133,13 @@ let cb = function (e) {
 
           let audioLoader = new THREE.AudioLoader();
           audioLoader.load("sounds/viridian.mp3", function(buffer) {
-           this.positionalAudio = new AudioSoundGenerator( mc.listener, buffer);
+           //this.positionalAudio = new AudioSoundGenerator( mc.listener, buffer);
            this.positionalAudio.setBuffer( buffer );
-           this.positionalAudio .setRefDistance( 20 );
+          //  this.positionalAudio .setRefDistance( 20 );
            this.positionalAudio .play();
              
-           this.SoundGenerator.add(  this.positionalAudio);
-           this._webgpugroup.add(this.positionalAudio);
+          //  this.SoundGenerator.add(  this.positionalAudio);
+          //  this._webgpugroup.add(this.positionalAudio);
 
           
 

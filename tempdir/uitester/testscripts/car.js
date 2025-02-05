@@ -210,68 +210,62 @@ self.onmessage = function (e) {
         postMessage({ type: 'tick', rpm: rpm,   gear: gear, engineForce0:  engineForce0, engineForce1:  engineForce1, engineForce2:  engineForce2, engineForce3:  engineForce3, steeringValue:  steeringValue, brakeForce:  brakeForce });
        
     } 
-
-    if (e.data.type == "init") {
-            console.log("CARJS worker  received init message", e.data);
-        let soundoptions = {
     
-            cylinders:3,
-        
-            intakeWaveguideLength: 200,
-            exhaustWaveguideLength: 50,
-            extractorWaveguideLength: 100,
-        
-            intakeOpenReflectionFactor: 0.01,
-            intakeClosedReflectionFactor: 0.95,
-        
-            exhaustOpenReflectionFactor: 0.01,
-            exhaustClosedReflectionFactor: 0.95,
-            ignitionTime: 2.036,
-        
-            straightPipeWaveguideLength: 1280,
-            straightPipeReflectionFactor: 0.01,
-        
-            mufflerElementsLength: [10, 35, 20, 25],
-            action: 0.01,
-        
-            outletWaveguideLength: 115,
-            outletReflectionFactor: 0.02};
-        
-        
-            let clamp = false;
-            let gain = 0.04;
-            let gainEngineBlockVibrations = 0.02;
-            let gainOutlet = 0.01;
-        
-        
-         postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });
-        
-        
-         let wheelOptions = {
-            radius: 0.6,
-             suspensionStiffness: 40,
-            suspensionRestLength: 0.4,
-            frictionSlip: 0.98,
-            dampingRelaxation: 0.3,
-            dampingCompression: 1.1,
-            maxSuspensionForce: 150000,
-            rollInfluence: 0.3,
-            
-            maxSuspensionTravel: 0.3,
-            customSlidingRotationalSpeed: 30,
-            useCustomSlidingRotationalSpeed: false,
-        //	material : this.wheelMaterial,
-        };
-        
-        
-         
-        
-        postMessage({ type: 'wheelupdate' , wheelOptions : wheelOptions });
-         
-        
-            
-        
-         
-     }
+ 
 }
+ 
+let soundoptions = {
+    
+    cylinders:3,
+
+    intakeWaveguideLength: 200,
+    exhaustWaveguideLength: 50,
+    extractorWaveguideLength: 100,
+
+    intakeOpenReflectionFactor: 0.01,
+    intakeClosedReflectionFactor: 0.95,
+
+    exhaustOpenReflectionFactor: 0.01,
+    exhaustClosedReflectionFactor: 0.95,
+    ignitionTime: 2.036,
+
+    straightPipeWaveguideLength: 1280,
+    straightPipeReflectionFactor: 0.01,
+
+    mufflerElementsLength: [10, 35, 20, 25],
+    action: 0.01,
+
+    outletWaveguideLength: 115,
+    outletReflectionFactor: 0.02};
+
+
+    let clamp = false;
+    let gain = 0.04;
+    let gainEngineBlockVibrations = 0.02;
+    let gainOutlet = 0.01;
+
+
+ postMessage({ type: 'soundupdate' , soundoptions : soundoptions , clamp : clamp , gain : gain , gainEngineBlockVibrations : gainEngineBlockVibrations , gainOutlet : gainOutlet });
+
+
+ let wheelOptions = {
+    radius: 0.6,
+     suspensionStiffness: 40,
+    suspensionRestLength: 0.4,
+    frictionSlip: 0.98,
+    dampingRelaxation: 0.3,
+    dampingCompression: 1.1,
+    maxSuspensionForce: 150000,
+    rollInfluence: 0.3,
+    
+    maxSuspensionTravel: 0.3,
+    customSlidingRotationalSpeed: 30,
+    useCustomSlidingRotationalSpeed: false,
+//	material : this.wheelMaterial,
+};
+
+
+ 
+
+postMessage({ type: 'wheelupdate' , wheelOptions : wheelOptions });
  

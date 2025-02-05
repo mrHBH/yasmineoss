@@ -2156,14 +2156,14 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     this.vehicle = vehicle;   
 
      this.AnimationFSMService_.send("DRIVE");
-     this.vehicle.startScript();
+    // this.vehicle.startScript();
 
  
   }
 
   async unmountvehicle() {
     this.AnimationFSMService_.send("STOPDRIVING");
-    this.vehicle.stopScript();
+   // this.vehicle.stopScript();
   }
   
  

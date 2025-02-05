@@ -99,9 +99,9 @@ class GeneratedPositionalAudio extends THREE.PositionalAudio {
       this.lastPosition = null;
       this.currentPosition = new THREE.Vector3();
 
-      this.delayNode = this.context.createDelay(150);
-      this.delayNode.delayTime.linearRampToValueAtTime(0, this.context.currentTime);
-      this.setFilter(this.delayNode);
+      // this.delayNode = this.context.createDelay(150);
+      // this.delayNode.delayTime.linearRampToValueAtTime(0, this.context.currentTime);
+      // this.setFilter(this.delayNode);
 
       this.started = false;
       this.active = false;
@@ -144,7 +144,7 @@ class GeneratedPositionalAudio extends THREE.PositionalAudio {
                try{
         this.source.playbackRate.value  = THREE.MathUtils.clamp( Number(dopplerShift)  , 0.95, 1.05);
              //convert the doppler shift to a detune value , 0 when velocity is 0 , down to -500 when velocity is negative , up to 1200 when velocity is positive
-             let detune =  2200 * Math.log2(dopplerShift); 
+             let detune =  2300 * Math.log2(dopplerShift); 
              detune = THREE.MathUtils.clamp(detune, -140, 140);
                this.setDetune(  detune)
                }
@@ -312,7 +312,7 @@ class AudioSoundGenerator extends GeneratedPositionalAudio {
       // Apply the Doppler shift to the playback rate using the 
  
       // Update delay node
-      this.updateDelayAndDopplerEffect(listenerPosition, estimatedNewPositionListener, dt);
+       this.updateDelayAndDopplerEffect(listenerPosition, estimatedNewPositionListener, dt);
     }
 
 

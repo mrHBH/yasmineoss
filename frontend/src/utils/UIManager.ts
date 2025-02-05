@@ -52,7 +52,7 @@ class UIManager {
     this.createUIButtons();
     this.addScrollbar();
     this.moveCubeAlongPath(0);
-   // this.createInitialUI();
+     this.createInitialUI();
   }
 
   private async createInitialUI(): Promise<void> {

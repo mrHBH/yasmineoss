@@ -19,9 +19,9 @@ let cb = function (e) {
   async function renderBotWelcome() {
     let html1 = `
     <div class="uk-container uk-container-small" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; padding: 20px;">
-      <div class="uk-card-title">3D Positional TTS Bot</div>
+      <div class="uk-card-title">Streaming 3D Positional TTS Bot</div>
       <div class="uk-margin-small">
-        <p>This is a 3D positional TTS bot. Type text, pick a voice, and the audio will play from the entity's position.</p>
+        <p>This is a streaming 3D positional TTS bot. Type text, pick a voice, and the audio will stream from the entity's position.</p>
       </div>
       <button id="welcome-btn" class="uk-button uk-button-primary uk-width-1-1">Let's Go</button>
     </div>
@@ -32,7 +32,7 @@ let cb = function (e) {
   function renderTTSInterface() {
     let html1 = `
     <div class="uk-container uk-container-small" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; padding: 20px;">
-      <div class="uk-card-title">3D Positional Text to Speech</div>
+      <div class="uk-card-title">Streaming 3D Positional TTS</div>
       <div class="uk-margin-small">
         <div class="uk-inline uk-width-1-1">
           <span class="uk-form-icon" uk-icon="icon: microphone"></span>
@@ -51,7 +51,6 @@ let cb = function (e) {
         <button id="stop-btn" class="uk-button uk-button-danger uk-width-1-1 uk-margin-small-top" hidden>
           <span uk-icon="icon: stop"></span> Stop
         </button>
-        
       </div>
       <div id="status" class="uk-margin-small-top uk-text-center"></div>
     </div>
@@ -64,9 +63,9 @@ let cb = function (e) {
       const stopBtn = this.uiElement.querySelector("#stop-btn");
       const status = this.uiElement.querySelector("#status");
       
-      let isProcessingAudio = false;
-      let isStopped = false;
-
+      let isPlaying = false;
+      let shouldStop = false;
+      let currentSource = null;
       const hostname = this.hostname;
 
       try {
@@ -93,12 +92,21 @@ let cb = function (e) {
         speakBtn.hidden = false;
         stopBtn.hidden = true;
         status.textContent = '';
-        isProcessingAudio = false;
-        isStopped = false;
+        isPlaying = false;
+        shouldStop = false;
       };
 
-      async function createAndPlayAudio(audioArrayBuffer) {
-        if (isStopped) return false;
+      const stopPlayback = () => {
+        shouldStop = true;
+        if (currentSource) {
+          currentSource.stop();
+          currentSource = null;
+        }
+        resetUI();
+      };
+
+      async function playAudioChunk(audioData) {
+        if (shouldStop) return false;
         
         try {
           if (!this.positionalAudio) {
@@ -107,29 +115,42 @@ let cb = function (e) {
           }
 
           const audioContext = this.positionalAudio.context;
-          const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
+          const audioBuffer = await audioContext.decodeAudioData(audioData.buffer);
           
-          if (isStopped) return false;
+          if (shouldStop) return false;
+
+          // Update the buffer in the existing positional audio source
           this.positionalAudio.setBuffer(audioBuffer);
-          this.positionalAudio.setRefDistance(10);
-          this.positionalAudio.play();
-          return true;
+          
+          return new Promise((resolve) => {
+            // Store the current playback state
+            const wasPlaying = this.positionalAudio.isPlaying;
+            
+            // If it was already playing, stop it first
+            if (wasPlaying) {
+              this.positionalAudio.stop();
+            }
+            
+            // Set up the onEnded callback
+            this.positionalAudio.onEnded = () => resolve(true);
+            
+            // Start playback
+            this.positionalAudio.play();
+          });
         } catch (error) {
-          console.error('Error playing positional audio:', error);
+          console.error('Error playing audio chunk:', error);
           return false;
         }
       }
 
       async function generateAndPlaySpeech(text, voice) {
-        if (isProcessingAudio) return;
-        
         try {
-          isProcessingAudio = true;
           status.textContent = 'Generating speech...';
           speakBtn.disabled = true;
           speakBtn.hidden = true;
           stopBtn.hidden = false;
-          isStopped = false;
+          isPlaying = true;
+          shouldStop = false;
 
           const response = await fetch(`${protocol}${hostname}/v1/audio/speech`, {
             method: 'POST',
@@ -140,44 +161,35 @@ let cb = function (e) {
               input: text,
               voice: voice,
               response_format: "mp3",
-              speed: 1
+              speed: 1,
+              stream: true
             })
           });
 
           if (!response.ok) throw new Error('Network response was not ok');
+
+          const reader = response.body.getReader();
           
-          const audioArrayBuffer = await response.arrayBuffer();
-          if (isStopped) {
-            resetUI();
-            return;
+          while (true) {
+            if (shouldStop) break;
+            
+            const {done, value} = await reader.read();
+            if (done) break;
+            
+            const success = await playAudioChunk.call(this, value);
+            if (!success || shouldStop) break;
           }
 
-          const success = await createAndPlayAudio.call(this, audioArrayBuffer);
-          if (!success) {
-            throw new Error('Failed to play audio');
+          if (!shouldStop) {
+            status.textContent = 'Playback complete';
           }
-
-          this.positionalAudio.onEnded = () => {
-            if (!isStopped) {
-              status.textContent = 'Playback complete';
-              resetUI();
-            }
-          };
-
+          resetUI();
         } catch (error) {
           console.error('Error:', error);
           status.textContent = 'Error generating speech';
           resetUI();
         }
       }
-
-      const stopPlayback = () => {
-        isStopped = true;
-        if (this.positionalAudio && this.positionalAudio.isPlaying) {
-          this.positionalAudio.stop();
-        }
-        setTimeout(resetUI, 100);
-      };
 
       speakBtn.addEventListener("click", () => {
         const text = ttsText.value.trim();
@@ -186,7 +198,9 @@ let cb = function (e) {
           status.textContent = 'Please enter some text';
           return;
         }
-        generateAndPlaySpeech.call(this, text, selectedVoice);
+        if (!isPlaying) {
+          generateAndPlaySpeech.call(this, text, selectedVoice);
+        }
       });
 
       stopBtn.addEventListener("click", stopPlayback);
