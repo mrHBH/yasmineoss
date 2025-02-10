@@ -32,7 +32,7 @@ from concurrent.futures import ThreadPoolExecutor
 import llama_cpp
 # from balacoon_tts import TTS , SpeechUtterance
 import sys# from openai import OpenAI
-from guidance  import models as guidance_models
+# from guidance  import models as guidance_models
  
 print("sys.path:", sys.path)  # Print the current sys.path
 print("Current working directory:", os.getcwd())  
