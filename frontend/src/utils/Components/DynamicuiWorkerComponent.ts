@@ -177,29 +177,29 @@ class DynamicuiWorkerComponent extends Component {
 
 
 
-     let contactFlow = [
-       startpos.clone().add( new THREE.Vector3 (0, 0, -0.25* this._size.y/100 ) ), 
-       startpos.clone().add( new THREE.Vector3 (0, 0,0.25* this._size.y/100 ) ),
+    //  let contactFlow = [
+    //    startpos.clone().add( new THREE.Vector3 (0, 0, -0.25* this._size.y/100 ) ), 
+    //    startpos.clone().add( new THREE.Vector3 (0, 0,0.25* this._size.y/100 ) ),
   
 
        
-     ];
+    //  ];
 
-     let lookatFlow = [
-       new THREE.Vector3 ( 0, -1, 0)
+    //  let lookatFlow = [
+    //    new THREE.Vector3 ( 0, -1, 0)
  
 
       
-       // new THREE.Vector3(25, -100, 0),
+    //    // new THREE.Vector3(25, -100, 0),
 
       
-     ];
-     this._entity._entityManager._mc.UIManager.splinePath.points = contactFlow;   
-     this._entity._entityManager._mc.UIManager.lookatPath = lookatFlow;
-     this._entity._entityManager._mc.UIManager.updateSplineObject();
-     this._entity._entityManager._mc.UIManager.cubePosition =  0.4;
+    //  ];
+    //  this._entity._entityManager._mc.UIManager.splinePath.points = contactFlow;   
+    //  this._entity._entityManager._mc.UIManager.lookatPath = lookatFlow;
+    //  this._entity._entityManager._mc.UIManager.updateSplineObject();
+    //  this._entity._entityManager._mc.UIManager.cubePosition =  0.4;
 
-     this._entity._entityManager._mc.UIManager.updateScrollbarPosition();
+    //  this._entity._entityManager._mc.UIManager.updateScrollbarPosition();
 
 
     if (this._entity._entityManager._mc.UIManager.scrollmodenavigation == false) {

@@ -197,7 +197,7 @@ class UIManager {
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
     this.splineObject = new THREE.Line(geometry, material);
-     this.mc.webgpuscene.add(this.splineObject);
+   //  this.mc.webgpuscene.add(this.splineObject);
 
     // Create control points
     controlPoints.forEach((point, index) => {
@@ -206,7 +206,7 @@ class UIManager {
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.copy(point);
       this.controlpointsmeshes?.push(sphere);
-      this.mc.webgpuscene.add(sphere);
+  //    this.mc.webgpuscene.add(sphere);
     });
   }
 
@@ -252,7 +252,7 @@ class UIManager {
      let nextlookatpoint =
       this.lookatPath[Math.round(this.cubePosition * this.lookatPath.length)];
     if (nextlookatpoint) {
-      console.log(nextlookatpoint);
+      //console.log(nextlookatpoint);
       const up = new THREE.Vector3(0, 1, 0);  // Default up vector
 
       const quaternion = new THREE.Quaternion().setFromUnitVectors(up, nextlookatpoint.normalize());
@@ -292,7 +292,7 @@ class UIManager {
       transition: "background-color 0.3s ease-in-out", // Add hover effect
     });
 
-    this.scrollbarContainer.style.display = "none";
+    // this.scrollbarContainer.style.display = "none";
     //animate opacity when swtiching between display block and none
     this.scrollbarContainer.style.transition = "opacity 0.5s";
     this.scrollbarContainer.style.opacity = "0.5";
@@ -553,8 +553,8 @@ class UIManager {
       .getElementById("togglemousecontrolsbutton")
       ?.classList.add("uk-text-danger");
    
-    //show the navigation scrollbarq
-    // this.scrollbarContainer.style.display = "none";
+//    show the navigation scrollbarq
+    this.scrollbarContainer.style.display = "block";
     if (this.currentUIelement) {
       this.currentUIelement.FitToScroll = true;
     }
@@ -656,8 +656,8 @@ class UIManager {
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
     this.mc.webgpuscene.remove(this.splineObject);
-    this.splineObject = new THREE.Line(geometry, material);
-     this.mc.webgpuscene.add(this.splineObject);
+    // this.splineObject = new THREE.Line(geometry, material);
+    //  this.mc.webgpuscene.add(this.splineObject);
   }
   private resetSplinePath(): void {
     const controlPoints = [
@@ -716,7 +716,7 @@ class UIManager {
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.copy(point);
       this.controlpointsmeshes.push(sphere);
-      this.mc.webgpuscene.add(sphere);
+     // this.mc.webgpuscene.add(sphere);
     });
     this.mc.zoomTo(
       this.attentionCursor.position,

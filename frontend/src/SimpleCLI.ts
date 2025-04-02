@@ -1,3 +1,5 @@
+import { color } from "three/webgpu";
+
 class StaticCLI {
   private static timeouts: { [key: string]: NodeJS.Timeout } = {};
   private static queues: { [key: string]: (() => Promise<void>)[] } = {};
@@ -95,35 +97,35 @@ class StaticCLI {
     container: HTMLElement,
     text: string,
     delay: number = 100,
-    override: boolean = false
+    override: boolean = false,
+    color: string = ''
   ): Promise<void> {
- 
     // Clear the container if override is true
     if (override) {
       container.innerHTML = '';
     }
-
+  
     // Remove existing cursor
     const existingCursor = container.querySelector('span[data-cli-cursor]');
     if (existingCursor) {
       existingCursor.remove();
     }
-
+  
     // Create and insert a cursor
     let cursor = this.createCursor(container);
     let currentContainer = container;
-
+  
     let currentIndex = 0;
-
+  
     while (currentIndex < text.length) {
       const remainingText = text.slice(currentIndex);
       let match = remainingText.match(/^<\/?[\w\s="/.':;#-\/\?]+>/); // Match HTML tags
-
+  
       if (match) {
         // Handle HTML tag
         const tag = match[0];
         currentIndex += tag.length;
-
+  
         if (tag.startsWith('</')) {
           // Closing tag: Move up to the parent element
           currentContainer = currentContainer.parentElement!;
@@ -132,9 +134,14 @@ class StaticCLI {
           const tempContainer = document.createElement('div');
           tempContainer.innerHTML = tag;
           const element = tempContainer.firstChild as HTMLElement;
-
+  
           if (element) {
             currentContainer.insertBefore(element, cursor);
+            // Apply color to the element and all its children
+            if (color) {
+              element.style.color = color;
+              this.applyColorToChildren(element, color);
+            }
             if (!tag.endsWith('/>') && !tag.startsWith('<input')) {
               // Move into the new element unless it's self-closing
               currentContainer = element;
@@ -145,31 +152,53 @@ class StaticCLI {
         // Handle regular text
         const char = text[currentIndex];
         const charElement = document.createTextNode(char);
-        currentContainer.insertBefore(charElement, cursor);
+        const span = document.createElement('span');
+        span.appendChild(charElement);
+        currentContainer.insertBefore(span, cursor);
+        
+        // Apply color if specified
+        if (color) {
+          span.style.color = color;
+        }
+        
         currentIndex++;
       }
-
+  
       cursor.style.visibility = 'visible';
-
+  
       // Reposition the cursor
       currentContainer.appendChild(cursor);
-
+  
       // Wait for the specified delay
       await new Promise<void>((resolve) => setTimeout(resolve, delay));
-
+  
       // Stop typing if cancelTyping is true
       if (this.cancelTyping) {
         this.cancelTyping = false;
         break;
       }
     }
-
+  
     // Add a space after the last character to ensure the cursor appears correctly
     const spaceElement = document.createTextNode(' ');
-    currentContainer.insertBefore(spaceElement, cursor);
-
+    const span = document.createElement('span');
+    span.appendChild(spaceElement);
+    if (color) {
+      span.style.color = color;
+    }
+    currentContainer.insertBefore(span, cursor);
+  
     // Remove the cursor after typing is complete
     cursor.remove();
+  }
+  
+  private static applyColorToChildren(element: HTMLElement, color: string): void {
+    const children = element.children;
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i] as HTMLElement;
+      child.style.color = color;
+      this.applyColorToChildren(child, color);
+    }
   }
   public static async typeWithCallbacks(
     container: HTMLElement,

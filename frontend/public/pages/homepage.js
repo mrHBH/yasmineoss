@@ -1,230 +1,301 @@
 let ver = "0.0.306";
 
-  
-const fronthtml = /*html*/ `
-<div class="uk-container">
- <div class="uk-grid-match uk-child-width-1-2@m" uk-grid>
-   <div>
-     <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
-       <article class="uk-comment uk-comment-secondary" role="comment">
-         <header class="uk-comment-header">
-           <div class="uk-grid-medium uk-flex-middle" uk-grid>
-             <div class="uk-width-auto"> <img class="uk-comment-avatar uk-border-circle" src="Hamza012.jpg" width="80"
-                 height="80" alt=""> </div>
-             <div class="uk-width-expand">
-               <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
-               <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
-                 <li><a href="#">Electrical Engineer</a></li>
-               </ul>
-             </div>
-           </div>
-         </header>
-         <div class="uk-comment-body">
-           <p>Welcome to my personal website!</p>            </div>
-       </article>
-     </div>
-   </div>
-   <div>
-     <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-right; repeat: true">
-       <h3 class="uk-card-title uk-text-center">Navigation</h3> 
-       <div class="uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match" uk-grid>
-         <div>
-           <div class="uk-card uk-card-secondary uk-card-body uk-card-hover uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-             <span uk-icon="icon: mail; ratio: 2"></span>
-             <div class="uk-grid-small uk-child-width-auto  uk-center" uk-grid>
-                 <div>
-                   <a class="uk-button  uk-button-text  uk-text-center "  id="contactButton" href="#">Contact</a>
-                 </div>
-           
-       </div>
-             
-           </div>
-         </div>
-         <div>
-           <div class="uk-card uk-card-secondary uk-card-body uk-card-hover uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-             <span uk-icon="icon: code; ratio: 2"></span>
-              <a class="uk-button  uk-button-text"  id="projectsButton" href="#">Projects</a>
-
-            </div>
-         </div>
-         <div>
-           <div class="uk-card uk-card-secondary uk-card-body  uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
-             <span uk-icon="icon: user; ratio: 2"></span>
-              <a class="uk-button  uk-button-text"  id="aboutButton" href="#">About</a>
-
-
-         </div>
-       </div>
-     </div>
-      </div>
-</div>
-`;
 let cb = function (e) {
-
-const interestshtml = /*html*/ `
-<div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
-
-  <h3 class="uk-card-title">Interests</h3>
-  <ul class="uk-list uk-list-divider">
-
-    <li><a href="#">Embedded Systems</a></li>
-    <li><a href="#">Automation</a></li>
-    <li><a href="#">Human-Machine Interfaces</a></li>
-    <li><a href="#">LLM driven agents</a></li>
-
-  </ul>
-</div>
-`;
-const contacthtml =/*html*/ `
-<div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
-  <h3 class="uk-card-title">Contact</h3>
-  <form>
-    <fieldset class="uk-fieldset">
-      <div class="uk-margin">
-        <input class="uk-input" type="text" placeholder="Name" required>
-      </div>
-      <div class="uk-margin">
-        <input class="uk-input" type="email" placeholder="Email" required>
-      </div>
-      <div class="uk-margin">
-        <textarea class="uk-textarea" rows="5" placeholder="Message" required></textarea>
-      </div>
-      <button class="uk-button uk-button-primary" type="submit">Send</button>
-    </fieldset>
-  </form>
-</div>
-`;
-
-   let mc =   this._entity._entityManager._mc
-   console.log(mc);
-   if (mc){
-   
-      let contactButton =this.HtmlElement.querySelector(
-        "#contactButton"
-      )  
-      let projectsButton = this.HtmlElement.querySelector(
-        "#projectsButton"
-      )  
-      let aboutButton = this.HtmlElement.querySelector(
-        "#aboutButton"
-      )  
+  let del = ` // <div class="uk-width-auto">
+  //   <img class="uk-border-circle" src="Hamza012.jpg" width="60" height="60" alt="">
+  // </div> `;
+  const chatHTML = /*html*/ `
+  <div class="cli-container">
+    <div class="cli-header">
+      <div class="uk-grid-medium uk-flex-middle" uk-grid>
       
-      let startpos = new THREE.Vector3(0, 15, 0);
-      contactButton.onclick = () => {
-        let pos =   new THREE.Vector3(-15, 10, 0)  
-        let contactFlow = [
-          startpos,
-          pos,
- 
-        ];
-        let lookatFlow = [
-          new THREE.Vector3(0, 0, -1),
-         ];
-        mc.UIManager.lookatPath = lookatFlow;
-        mc.UIManager.splinePath.points = contactFlow;   
-      
-        mc.UIManager.cubePosition = 1;
-        mc.UIManager.updateScrollbarPosition();
-        mc.UIManager.updateSplineObject();
-        mc.UIManager.adduiElement("contactui", contacthtml, pos);
+        <div class="uk-width-expand">
+          <h3 class="uk-margin-remove">Hamza Ben Hassen</h3>
+          <p class="uk-text-meta">Electrical Engineer</p>
+        </div>
+      </div>
+    </div>
 
-      };
+    <div class="cli-console" id="console">
+      <div id="consoleContent" class="console-content"></div>
+    </div>
 
-      projectsButton.onclick = () => {
-        mc.initSound();
-       // mc.initProjects();
-      // mc.UIManager.toggleBirdEyemode();
+    <div class="cli-input-container">
 
-        // let contactFlow = [
-        //   startpos,
-        //   new THREE.Vector3(0, 10, 0),
-        //   new THREE.Vector3(0,3, 5),
-        //   new THREE.Vector3(5,3, 15),
-        //   new THREE.Vector3(15,3, 20),
-        //   new THREE.Vector3(25,10, 20),
-        // ];
-
-        // let lookatFlow = [
-        //   new THREE.Vector3(0, -1, 0),
- 
-         
-        // ];
-        // mc.UIManager.splinePath.points = contactFlow;   
-        // mc.UIManager.lookatPath = lookatFlow;
-      
-        // mc.UIManager.cubePosition = 0.0;
-        // mc.UIManager.updateScrollbarPosition();
-        // mc.UIManager.updateSplineObject();
-
-        const p = async () => {
-         let ui=await mc.UIManager.CreateDynamicUI("projectsUIé", "../pages/projects.js", new THREE.Vector3(25,0.01, 20) , new THREE.Quaternion().setFromAxisAngle( new THREE.Vector3( 1, 0, 0 ), Math.PI / 2 )) 
-          let dynauicomponent = ui.getComponent("DynamicuiWorkerComponent");
-         //  await ui.Broadcast({ topic :"zoom",  data :{value: 8}});
-
-              let contactFlow = [
-          startpos,
-          new THREE.Vector3( 25, 0.01, 20),
-          new THREE.Vector3( 25, 0.01,  30),
-        ];
-        let lookatFlow = [
-          new THREE.Vector3(0, 0, -1),
-          new THREE.Vector3(0, -1, 0),
-        ];
-        mc.UIManager.splinePath.points = contactFlow;
-        mc.UIManager.lookatPath = lookatFlow;
-          //add a point to the spline path
-          //tween the cubeposition to the new point 
-          
-    
-          mc.UIManager.lookatPath.push(new THREE.Vector3(0, -1, 0));
-         mc.UIManager.updateSplineObject();
-
-         mc.UIManager.updateScrollbarPosition();
-         await tween({
-          from: { shape: 0 },
-          to: { shape: 1 },
-          duration: 2000,
-          easing: "easeOutQuad",
-          render: (state) => {
-            mc.UIManager.cubePosition = state.shape;
-            mc.UIManager.updateScrollbarPosition();
-          },
-        });
-        
- 
-
-          //  mc.UIManager.toggleScrollmode();
-  
-      };
-      p();
-      }
-
-      aboutButton.onclick = () => {
-      let pos =           new THREE.Vector3(15, 10, 2)
+      <div class="static-buttons" id="staticButtons">
+        <button class="send-button" id="sendButton">Send</button>
+      </div>
+    </div>
+  </div>
 
 
-        let aboutFlow = [
-          startpos,
-          pos,
+  `;
+
+  const mc = this._entity._entityManager._mc;
+  const container = this.HtmlElement;
+  let commandHistory = [];
+  let historyIndex = -1;
+  let currentInput = "";
+
+  const initChat = async () => {
+    // Clear container and type out the interface
+    container.innerHTML = "";
+    await StaticCLI.type(container, chatHTML, 1, false);
+
      
-        ];
-        mc.UIManager.splinePath.points = aboutFlow;
-        mc.UIManager.cubePosition = 1;
+const styles = document.createElement('style');
+styles.textContent = `
+  .cli-container {
+    height: 100%;
+    max-width: 80vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+    overflow-y: scroll; /* Enable vertical scrolling */
+    scrollbar-width: none; /* Hide scrollbar for Firefox */    color: #f0f0f0;
+    padding: 20px;
+    font-family: 'Courier New', monospace;
+  }
 
-        mc.UIManager.updateScrollbarPosition();  
-        mc.UIManager.adduiElement("aboutui",interestshtml , pos); 
-        };
-      
-        mc.UIManager.updateScrollbarPosition();
-        mc.UIManager.updateSplineObject();
-      };
+  .underlined-suggestion {
+    text-decoration: underline;
+    cursor: pointer;
+    margin: 0 10px;
+    color: #4CAF50;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0;
+  }
+
+  .cli-cursor {
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1 }
+    50% { opacity: 0 }
+  }
+
+  .console-content {
+    white-space: pre-wrap;
+    min-height: 300px;
+  }
+
+  .send-button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+`;
+    container.appendChild(styles);
+
+    const consoleContent = container.querySelector("#consoleContent");
+    const inputText = container.querySelector("#inputText");
+    const cursor = container.querySelector("#cursor");
+    const sendButton = container.querySelector("#sendButton");
+    const staticButtons = container.querySelector("#staticButtons");
+    await StaticCLI.insertNewLine(consoleContent);
+    await StaticCLI.showPrompt(consoleContent);
+
+    //    console.log(consoleContent, inputText, cursor, sendButton, staticButtons);
+    // Initial suggestions
+    const suggestions = [
+      { cmd: "who_are_you", text: "Who are you?" },
+      { cmd: "education", text: "Education History" },
+      { cmd: "resume", text: "Show Résumé" },
+      { cmd: "projects", text: "Current Projects" },
+    ];
+
+    // Type welcome message
+
+    await StaticCLI.type(
+      consoleContent,
+      "HBH AI : ",
+      1,
+      false, //override what was before,
+      "red"
+    );
+    await StaticCLI.type(
+      consoleContent,
+      "Welcome to my personal assistant!",
+      1,
+      false //override what was before
+    );
+    //show the prompt and type HBH AI:
+
+    await StaticCLI.insertNewLine(consoleContent);
+    await StaticCLI.showPrompt(consoleContent);
+
+    let startpos = new THREE.Vector3(0, 10, 0);
+    let pos = new THREE.Vector3(-0.1, 10, 0);
+    let contactFlow = [
+      startpos,
+      pos,
+      new THREE.Vector3(-0.1, 10, 0),
+      new THREE.Vector3(-0.11, 10, 0),     
+    ];
+    let lookatFlow = [
+      new THREE.Vector3(0, 0, -1),
+      new THREE.Vector3(0.1, 0, -0.98),
+    
+    ];
+    mc.UIManager.lookatPath = lookatFlow;
+    mc.UIManager.splinePath.points = contactFlow;
+    this._entity.Position.set(
+      mc.UIManager.splinePath.points[0].x,
+      mc.UIManager.splinePath.points[0].y,
+      mc.UIManager.splinePath.points[0].z - 2
+    );
+    mc.UIManager.cubePosition = 0.01
+    mc.UIManager.updateScrollbarPosition();
+    mc.UIManager.updateSplineObject();
+  
+    const hiddenInput = document.createElement("input");
+    hiddenInput.id = "inputText";
+
+    staticButtons.appendChild(hiddenInput);
+
+    suggestions.forEach((suggestion) => {
+      const btn = document.createElement("button");
+      btn.className = "underlined-suggestion";
+      btn.textContent = suggestion.text;
+      btn.onclick = () => handleCommand(suggestion.cmd);
+      staticButtons.appendChild(btn);
+      staticButtons.appendChild(document.createTextNode(" "));
+      //append a hidden input element to the staticButtons div
+    });
+
+    // Setup input handling
+    document.addEventListener("keydown", handleKeyDown);
+    sendButton.addEventListener("click", handleSend);
+
+  
+  };
+
+  // const handleKeyDown = async (e) => {
+  //   const inputText = container.querySelector("#inputText");
+  //   const consoleContent = container.querySelector("#consoleContent");
+
+  //   switch (e.key) {
+  //     case "Enter":
+  //       if (currentInput.trim()) {
+  //         await handleCommand(currentInput);
+  //         currentInput = "";
+  //         inputText.textContent = "";
+  //       }
+  //       break;
+
+  //     case "Backspace":
+  //       currentInput = currentInput.slice(0, -1);
+  //       inputText.textContent = currentInput;
+  //       break;
+
+  //     case "ArrowUp":
+  //       if (historyIndex < commandHistory.length - 1) {
+  //         historyIndex++;
+  //         currentInput = commandHistory[historyIndex];
+  //         inputText.textContent = currentInput;
+  //       }
+  //       break;
+
+  //     case "ArrowDown":
+  //       if (historyIndex > 0) {
+  //         historyIndex--;
+  //         currentInput = commandHistory[historyIndex];
+  //         inputText.textContent = currentInput;
+  //       } else if (historyIndex === 0) {
+  //         historyIndex = -1;
+  //         currentInput = "";
+  //         inputText.textContent = "";
+  //       }
+  //       break;
+
+  //     default:
+  //       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+  //         currentInput += e.key;
+  //         inputText.textContent = currentInput;
+  //       }
+  //   }
+  // };
+
+  const handleSend = async () => {
+    if (currentInput.trim()) {
+      await handleCommand(currentInput).bind(this);
+      container.querySelector("#inputText").textContent = "";
+    }
+  };
+
+  const handleCommand = async (command) => {
+    // Add to history if not from suggestions
+    if (!command.includes("_")) {
+      commandHistory.unshift(command);
+      historyIndex = -1;
+    }
+
+    // Show user input
+
+    await StaticCLI.type(
+      consoleContent,
+      "You : ",
+      1,
+      false, //override what was before
+      "green"
+    );
+    await StaticCLI.type(
+      consoleContent,
+      command,
+      1,
+      false //override what was before
+    );
+    await StaticCLI.insertNewLine(consoleContent);
+
+    const response = getAIResponse(command);
+    await StaticCLI.type(
+      consoleContent,
+      " HBH AI : ",
+      1,
+      false, //override what was before
+      "red"
+    );
+    await StaticCLI.type(
+      consoleContent,
+      response,
+      1,
+      false //override what was before
+    );
+    await StaticCLI.insertNewLine(consoleContent);
+    await StaticCLI.showPrompt(consoleContent);
+  };
+
+  const getAIResponse = (command) => {
+    const responses = {
+      who_are_you:
+        "I'm Hamza Ben Hassen, an Electrical Engineer specializing in embedded systems and automation.",
+      education:
+        "Master's in Electrical Engineering from XYZ University (2022)\nBachelor's in Electrical Engineering from ABC University (2018)",
+      resume:
+        "You can download my resume from:\nhttps://example.com/resume.pdf",
+      projects:
+        "Current projects:\n1. Smart Home Automation System\n2. Industrial IoT Monitoring\n3. AI-assisted Embedded Development",
+      default:
+        "I can answer questions about:\n- My background\n- Education\n- Projects\n- Technical skills",
     };
- 
- 
-postMessage({ type: 'freshhtml' , html : fronthtml });
-postMessage({ type: 'size', width: 1500, height: 1000 });
 
+    const normalizedCmd = command.toLowerCase().replace(/\s+/g, "_");
+    return responses[normalizedCmd] || responses["default"];
+  };
 
+  if (mc) {
+    initChat();
+  }
+};
 
-self.postMessage({ type: 'jssetup', js: `(${cb.toString()})` });
- 
+postMessage({ type: "freshhtml", html: "" });
+postMessage({ type: "size", width: 800, height: 700 });
+self.postMessage({ type: "jssetup", js: `(${cb.toString()})` });

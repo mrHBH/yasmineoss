@@ -115,63 +115,55 @@ class GeneratedPositionalAudio extends THREE.PositionalAudio {
       this.speed = 0.0;
    }
 
-   updateDelayAndDopplerEffect (listenerPosition, estimatedNewPositionListener, dt) {
+   updateDelayAndDopplerEffect(listenerPosition, estimatedNewPositionListener, dt) {
       this.getWorldPosition(this.currentPosition);
-      //Current Listener position
-      let currentListenerPosition = listenerPosition 
+      let currentListenerPosition = listenerPosition;
       
       if (!this.lastPosition) {
-          this.lastPosition = this.currentPosition.clone();
-          return;
+        this.lastPosition = this.currentPosition.clone();
+        return;
       }
       if (!this.lastListenerPosition) {
-          this.lastListenerPosition = currentListenerPosition.clone();
-          return;
+        this.lastListenerPosition = currentListenerPosition.clone();
+        return;
       }
-      // calculate the current and previous distances
-            let currentDistance = currentListenerPosition.distanceTo(this.currentPosition);
-            let previousDistance = this.lastListenerPosition.distanceTo(this.lastPosition);
-            let speed = currentDistance - previousDistance;
- 
-            if(this.lastdistance !== null) {
-               // Changing this so that a positive speed indicates the observer and listener are getting closer
-               speed = this.lastdistance - currentDistance;
-           //     console.log(speed);
-                // Calculate the relative 1 when velocity is 0 , down to 0.8 when velocity is negative , up to 1.2 when velocity is positive
-                  let dopplerShift = 1 + 0.15 * Math.sign(speed) *  Math.abs(speed)   ;
-                  //
-                //  console.log(dopplerShift);
-               try{
-        this.source.playbackRate.value  = THREE.MathUtils.clamp( Number(dopplerShift)  , 0.95, 1.05);
-             //convert the doppler shift to a detune value , 0 when velocity is 0 , down to -500 when velocity is negative , up to 1200 when velocity is positive
-             let detune =  2300 * Math.log2(dopplerShift); 
-             detune = THREE.MathUtils.clamp(detune, -140, 140);
-               this.setDetune(  detune)
-               }
-               catch(e){
-                  console.log(e);
-               }
-
-                  // THREE.MathUtils.lerp(
-                  //    0,
-                  //    1200 * Math.log2(dopplerShift),
-                  //    THREE.MathUtils.clamp(relativeVelocity / 10, -1, 1)
-                  // )
-                  
-             
-               // Update last position
-               this.lastPosition = this.currentPosition.clone();
-             
-            }
-
-            // Store data for the next frame
-            this.lastdistance = currentDistance;
-
- 
       
- 
+      let currentDistance = currentListenerPosition.distanceTo(this.currentPosition);
+      
+      // If lastdistance is null, initialize it and exit this frame.
+      if (this.lastdistance === null) {
+        this.lastdistance = currentDistance;
+        return;
       }
-    
+      
+      // Now that lastdistance is defined, calculate speed safely.
+      let speed = this.lastdistance - currentDistance;
+      let dopplerShift = 1 + 0.15 * Math.sign(speed) * Math.abs(speed);
+      
+      // Optional: double-check that dopplerShift is finite
+      if (!isFinite(dopplerShift)) {
+        dopplerShift = 1;
+      }
+      
+      try {
+        this.source.playbackRate.value = THREE.MathUtils.clamp(dopplerShift, 0.95, 1.05);
+        let detune = 2300 * Math.log2(dopplerShift);
+        detune = THREE.MathUtils.clamp(detune, -140, 140);
+        
+        // Optional: ensure detune is finite before setting it
+        if (!isFinite(detune)) {
+          detune = 0;
+        }
+        
+        this.setDetune(detune);
+      } catch (e) {
+        console.log(e);
+      }
+      
+      // Update positions for the next frame.
+      this.lastPosition = this.currentPosition.clone();
+      this.lastdistance = currentDistance;
+    }
    playSound () {
       this.active = true;
    }

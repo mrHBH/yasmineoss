@@ -21,7 +21,6 @@ import {
 } from "../sound_generator.js";
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import SimpleBar from "simplebar";
-let CE = new CodeEditor();
 let uva= uv( 0 );
 let vec2a= vec2( 0.0, 0.0 );
 let dist = distance(  vec2a, vec2a );
@@ -37,6 +36,7 @@ let b = sub( a, 0.5 );
   transparent: true
 });
 tslFn( material, 'color', vec3( 1.0, 0.0, 0.0 ) );
+let ce = new CodeEditor();
 
 let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
  class CharacterComponent extends Component {

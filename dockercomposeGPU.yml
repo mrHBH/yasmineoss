@@ -94,23 +94,23 @@ services:
       - yasminenet
 
   
-  ollamabackend:
-    image: ollama/ollama:latest
-    tty: true
+  # ollamabackend:
+  #   image: ollama/ollama:latest
+  #   tty: true
 
-    container_name: ollamabackend
-    volumes:
-      - ./ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
-    # entrypoint: 
-    #       - bash
-    #       - -c
-    #       - |
-    #         sleep 5           
-    #       - ollama pull phi3:3.8b     
-    networks:
-      - yasminenet
+  #   container_name: ollamabackend
+  #   volumes:
+  #     - ./ollama_data:/root/.ollama
+  #   ports:
+  #     - "11434:11434"
+  #   # entrypoint: 
+  #   #       - bash
+  #   #       - -c
+  #   #       - |
+  #   #         sleep 5           
+  #   #       - ollama pull phi3:3.8b     
+  #   networks:
+  #     - yasminenet
      
   #   deploy:
   #       resources:

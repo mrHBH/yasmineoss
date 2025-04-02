@@ -34,19 +34,11 @@ import { LoadingManager } from "./LoadingManager.js";
 import { AIInput } from "./Components/AIInput.js";
 // import { BoxLineGeometry } from "three/examples/jsm/Addons.js";
 // let customcursor = new CustomCursor();
-const stats = new Stats();
 
-stats.showPanel(2); // Panel 2
-
-document.body.appendChild(stats.dom);
-stats.dom.setAttribute(
-  "style",
-  "position: absolute; bottom: 0; left: 0; cursor: pointer; opacity: 0.4; z-index: 10000"
-);
-// stats.dom.style.zIndex = "1000";
-// stats.dom.style.position = "absolute";
-// stats.dom.style.left = "
-// stats.dom.style.top = "10px";
+// this.stats.dom.style.zIndex = "1000";
+// this.stats.dom.style.position = "absolute";
+// this.stats.dom.style.left = "
+// this.stats.dom.style.top = "10px";
 
 CameraControls.install({ THREE: THREE });
 
@@ -65,6 +57,7 @@ class MainController {
   clock: THREE.Clock;
   grid: any;
   fpsGraph: any;
+  memGraph: any;
   html3dRenderer: CSS3DRenderer;
   UIManager: UIManager;
   mainEntity: Entity;
@@ -109,6 +102,7 @@ class MainController {
     { url: "animations/gltf/ybot2@TurningLeft.glb" },
     { url: "animations/gltf/ybot2@TurningRight.glb" },
   ];
+  stats: any;
 
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
@@ -170,10 +164,10 @@ class MainController {
     // document.body.appendChild(this.webgpu.domElement);
 
     this.camera = new THREE.PerspectiveCamera(
-      80,
+      45,
       window.innerWidth / window.innerHeight,
       0.005,
-      10000
+      1000
     );
 
     // this.camera.position.set(2.5, 20, 5);
@@ -181,30 +175,197 @@ class MainController {
     //this.camera.lookAt(0, 5, 0);
 
     this.webgpuscene.add(this.camera);
-
+    
     const pane = new Pane({});
-    //makesure the pane is at the bottom left corner
-    pane.element.style.position = "fixed";
-    pane.element.style.zIndex = "3";
-    pane.element.style.bottom = "0px";
-    pane.element.style.left = "0px";
-    pane.element.style.width = "150px";
-    pane.element.style.pointerEvents = "none";
-    //not selectable
-    pane.element.style.userSelect = "none";
+pane.element.style.position = "fixed";
+pane.element.style.zIndex = "3";
+pane.element.style.bottom = "0px";
+pane.element.style.left = "0px";
+pane.element.style.width = "100px";
+pane.element.style.pointerEvents = "none";
+pane.element.style.userSelect = "none";
+pane.element.style.opacity = "0.5";
+pane.registerPlugin(EssentialsPlugin);
 
-    //opacity
-    pane.element.style.opacity = "0.5";
-    pane.registerPlugin(EssentialsPlugin);
+// Create FPS graph
+this.fpsGraph = pane.addBlade({
+  view: "fpsgraph",
+  lineCount: 8,
+  min: 0,
+  max: 244,
+});
 
-    this.fpsGraph = pane.addBlade({
-      view: "fpsgraph",
-      lineCount: 8,
+// Modify FPS graph container
+const fpsContainer = this.fpsGraph.element;
+fpsContainer.style.display = "flex";
+fpsContainer.style.alignItems = "center";
+fpsContainer.style.marginBottom = "4px";
 
-      min: 0,
-      max: 244,
-    });
+// Add fade gradient to FPS graph
+const fpsSvg = fpsContainer.querySelector("svg");
+fpsSvg.style.width = "100px";
+fpsSvg.style.height = "20px";
+fpsSvg.style.flexShrink = "0";
 
+// Get the FPS label container for layout reference
+const fpsLabelContainer = fpsContainer.querySelector(".tp-fpsv_l");
+const fpsValueElement = fpsContainer.querySelector(".tp-fpsv_v");
+const fpsUnitElement = fpsContainer.querySelector(".tp-fpsv_u");
+
+// Create gradient for FPS line
+const fpsGradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+fpsGradient.setAttribute("id", "fpsGradient");
+fpsGradient.setAttribute("x1", "0%");
+fpsGradient.setAttribute("y1", "0%");
+fpsGradient.setAttribute("x2", "100%");
+fpsGradient.setAttribute("y2", "0%");
+fpsGradient.innerHTML = `
+  <stop offset="70%" stop-color="#808080" stop-opacity="1"/>
+  <stop offset="100%" stop-color="#808080" stop-opacity="0"/>
+`;
+const fpsDefs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+fpsDefs.appendChild(fpsGradient);
+fpsSvg.insertBefore(fpsDefs, fpsSvg.firstChild);
+
+// Apply gradient to FPS line
+const fpsLine = fpsSvg.querySelector("polyline");
+fpsLine.setAttribute("stroke", "url(#fpsGradient)");
+
+// Create heap graph container with exact same structure as FPS container
+const heapContainer = document.createElement("div");
+heapContainer.style.display = "flex";
+heapContainer.style.alignItems = "center";
+heapContainer.style.marginBottom = "4px";
+heapContainer.className = fpsContainer.className; // Copy the same class if any
+
+// Create SVG for heap graph
+const heapSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+heapSvg.setAttribute("width", "100px");
+heapSvg.setAttribute("height", "20px");
+heapSvg.style.flexShrink = "0";
+heapSvg.style.marginRight = getComputedStyle(fpsSvg).marginRight;
+
+// Create dark background for heap graph
+const heapBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+heapBg.setAttribute("width", "100%");
+heapBg.setAttribute("height", "100%");
+heapBg.setAttribute("fill", "#1a1a1a");
+heapSvg.appendChild(heapBg);
+
+// Create horizontal lines for heap graph
+for (let i = 0; i < 8; i++) {
+  const lineY = (i + 1) * (20 / 8);
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line.setAttribute("x1", "0");
+  line.setAttribute("y1", lineY);
+  line.setAttribute("x2", "100%");
+  line.setAttribute("y2", lineY);
+  line.setAttribute("stroke", "#333333");
+  line.setAttribute("stroke-width", "0.5");
+  heapSvg.appendChild(line);
+}
+
+// Create gradient for heap line
+const heapGradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+heapGradient.setAttribute("id", "heapGradient");
+heapGradient.setAttribute("x1", "0%");
+heapGradient.setAttribute("y1", "0%");
+heapGradient.setAttribute("x2", "100%");
+heapGradient.setAttribute("y2", "0%");
+heapGradient.innerHTML = `
+  <stop offset="70%" stop-color="#ff7d7d" stop-opacity="1"/>
+  <stop offset="100%" stop-color="#ff7d7d" stop-opacity="0"/>
+`;
+const heapDefs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+heapDefs.appendChild(heapGradient);
+heapSvg.appendChild(heapDefs);
+
+// Create heap line
+const heapLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+heapLine.setAttribute("fill", "none");
+heapLine.setAttribute("stroke", "url(#heapGradient)");
+heapLine.setAttribute("stroke-width", "1");
+heapSvg.appendChild(heapLine);
+
+// Create heap label container with exact same structure as FPS label
+const heapLabelContainer = document.createElement("div");
+heapLabelContainer.className = fpsLabelContainer.className;
+heapLabelContainer.style.display = getComputedStyle(fpsLabelContainer).display;
+heapLabelContainer.style.flexDirection = getComputedStyle(fpsLabelContainer).flexDirection;
+heapLabelContainer.style.alignItems = getComputedStyle(fpsLabelContainer).alignItems;
+heapLabelContainer.style.justifyContent = getComputedStyle(fpsLabelContainer).justifyContent;
+heapLabelContainer.style.marginLeft = getComputedStyle(fpsLabelContainer).marginLeft;
+heapLabelContainer.style.padding = getComputedStyle(fpsLabelContainer).padding;
+
+// Create heap value with exact same styling as FPS value
+const heapValue = document.createElement("span");
+heapValue.className = fpsValueElement.className;
+heapValue.style.color = "#ff7d7d";
+heapValue.style.fontSize = getComputedStyle(fpsValueElement).fontSize;
+heapValue.style.fontWeight = getComputedStyle(fpsValueElement).fontWeight;
+heapValue.style.lineHeight = getComputedStyle(fpsValueElement).lineHeight;
+heapValue.style.margin = getComputedStyle(fpsValueElement).margin;
+heapValue.style.padding = getComputedStyle(fpsValueElement).padding;
+heapValue.textContent = "80.0";
+
+// Create heap unit with exact same styling as FPS unit
+const heapUnit = document.createElement("span");
+heapUnit.className = fpsUnitElement.className;
+heapUnit.style.color = "#ff7d7d";
+heapUnit.style.fontSize = getComputedStyle(fpsUnitElement).fontSize;
+heapUnit.style.fontWeight = getComputedStyle(fpsUnitElement).fontWeight;
+heapUnit.style.lineHeight = getComputedStyle(fpsUnitElement).lineHeight;
+heapUnit.style.margin = getComputedStyle(fpsUnitElement).margin;
+heapUnit.style.padding = getComputedStyle(fpsUnitElement).padding;
+heapUnit.style.opacity = getComputedStyle(fpsUnitElement).opacity;
+heapUnit.textContent = "MB";
+
+// Assemble the components
+heapLabelContainer.appendChild(heapValue);
+heapLabelContainer.appendChild(heapUnit);
+heapContainer.appendChild(heapSvg);
+heapContainer.appendChild(heapLabelContainer);
+
+// Add heap container to pane right after FPS container
+fpsContainer.parentNode.insertBefore(heapContainer, fpsContainer.nextSibling);
+
+// Heap tracking variables
+let heapPoints = [];
+const maxPoints = 70; // Number of points to match FPS graph
+const minHeapMB = 10;
+const maxHeapMB = 250;
+
+function updateHeapGraph(usedHeapMB) {
+  // Calculate scaled Y position (inverted)
+  const scaledY = 20 - (
+    ((Math.max(minHeapMB, Math.min(maxHeapMB, usedHeapMB)) - minHeapMB) / 
+    (maxHeapMB - minHeapMB)) * 20
+  );
+
+  // Update points array
+  heapPoints.push(scaledY);
+  if (heapPoints.length > maxPoints) heapPoints.shift();
+
+  // Create points string with exact same spacing as FPS graph
+  const points = heapPoints.map((y, i) => `${i * (100 / maxPoints)},${y}`).join(" ");
+  heapLine.setAttribute("points", points);
+  
+  // Update label
+  heapValue.textContent = usedHeapMB.toFixed(1);
+}
+
+// Update heap graph every second
+setInterval(() => {
+  if (performance.memory) {
+    const usedHeapMB = performance.memory.usedJSHeapSize / (1024 * 1024);
+    updateHeapGraph(usedHeapMB);
+  } else {
+    // For browsers that don't support performance.memory
+    const randomMB = 50 + Math.random() * 50;
+    updateHeapGraph(randomMB);
+  }
+}, 1000);
+ 
     this.CameraControls = new CameraControls(
       this.camera,
       this.html2dRenderer.domElement
@@ -573,8 +734,8 @@ class MainController {
     await this.webgpu.renderAsync(this.webgpuscene, this.camera);
     //  TWEEN.update();
     this.fpsGraph?.begin();
-    stats.begin();
-    //   stats.begin();
+  //  this.stats.begin();
+    //   this.stats.begin();
     this.annotationRenderer.render(this.annoationsScene, this.camera);
     this.html2dRenderer.render(this.html2dScene, this.camera);
     //  this.html3dRenderer.render(this.html3dScene, this.camera);
@@ -583,7 +744,7 @@ class MainController {
     this.CameraControls?.update(delta / 2);
     this.fpsGraph?.end();
 
-    stats.end();
+   // this.stats.end();
 
     this.updateLight();
   }
