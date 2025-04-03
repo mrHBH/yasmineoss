@@ -9,6 +9,8 @@ class StaticCLI {
   private static lastScrollPosition: number = 0;
   static container: HTMLElement;
   static isAtBottom: boolean;
+  static currentPromptElement: HTMLElement;
+  static inlineInputCallback: (promptElement: HTMLElement) => void;
 
   private static createPrompt(container: HTMLElement): HTMLElement {
     const prompt = document.createElement('span');
@@ -41,6 +43,15 @@ class StaticCLI {
       cursor.scrollIntoView({ block: 'end', inline: 'nearest' });
     
   }
+
+ public static getCursor(container: HTMLElement): HTMLElement {
+    const cursor = container.querySelector('span[data-cli-cursor]') as HTMLElement;
+    if (!cursor) {
+      throw new Error('Cursor not found');
+    }
+    return cursor;
+  }
+
   public static async typeInside(
     container: HTMLElement,
     textelementtag: string,
@@ -340,12 +351,15 @@ class StaticCLI {
     cursor.style.visibility = 'hidden';
   }
 
-  public static showPrompt(container: HTMLElement , elementtagorid: string= ""): void {
+  public static async showPrompt(
+    container: HTMLElement,
+    elementtagorid: string = "",
+    inlineInputCallback?: (promptElement: HTMLElement) => void
+  ): Promise<void> {
     const prompt = this.ensurePrompt(container);
     const cursor = this.ensureCursor(container);
 
     if (elementtagorid != "") {
-    
       let textelement = container.querySelector(elementtagorid) as HTMLElement;
       if (!textelement) {
         textelement = container.querySelector(`.${elementtagorid}`) as HTMLElement;
@@ -356,13 +370,20 @@ class StaticCLI {
       }
       textelement.appendChild(prompt);
       textelement.appendChild(cursor);
-
     }
     else {
-    container.appendChild(prompt);
-    container.appendChild(cursor);
+      container.appendChild(prompt);
+      container.appendChild(cursor);
     }
+    
     prompt.style.visibility = 'visible';
+    this.currentPromptElement = prompt;
+    
+    // If an inline input callback is provided, call it with the prompt element
+    if (inlineInputCallback) {
+      this.inlineInputCallback = inlineInputCallback;
+      inlineInputCallback(prompt);
+    }
   }
 
   public static hidePrompt(container: HTMLElement): void {

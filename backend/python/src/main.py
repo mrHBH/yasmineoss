@@ -40,8 +40,14 @@ print("Current working directory:", os.getcwd())
      
  
  
+try:
+    from fastapi import WebSocket
+    from fastapi.responses import HTMLResponse
+    from fastapi.staticfiles import StaticFiles
 
-
+except Exception as e:
+    print(f"Error importing FastAPI: {e}")
+    print("Make sure you have FastAPI installed in your environment.")
 load_dotenv()
 app = FastAPI()
 llm_lock = asyncio.Lock()
@@ -135,11 +141,15 @@ async def websocket_endpointy(websocket: WebSocket):
         import logging
 
         logging.error(e)
+        await websocket.close(code=1011, reason=f"Internal server error: {str(e)}")
     finally:
         try:
             await websocket.close()
         except:
             pass
+
+
+
 
 @app.websocket("/ws/guidanceagent/")
 async def websocket_endpointy(websocket: WebSocket):
@@ -200,6 +210,7 @@ async def websocket_endpointy(websocket: WebSocket):
         import logging
 
         logging.error(e)
+        await websocket.close(code=1011, reason=f"Internal server error: {str(e)}")
     finally:
         try:
             await websocket.close()
@@ -207,6 +218,7 @@ async def websocket_endpointy(websocket: WebSocket):
             pass
 
 
+ 
 
 @app.websocket("/ws/workspace/create/")
 async def create_workspace(websocket: WebSocket):
@@ -368,10 +380,50 @@ async def load_file(websocket: WebSocket, workspace_name: str):
     await websocket.close()
 
 
+# Add this new endpoint
 
- 
+@app.websocket("/ws/hbhai/")
+async def websocket_hbhai(websocket: WebSocket):
+    """WebSocket endpoint for the Hamza Ben Hassen AI assistant."""
+    try:
+        await websocket.accept()
+        global llm, generator
 
- 
+        if llm is None:
+            # Initialize the model if not already done
+            modelpath = "models/qwen2.5-coder-1.5b-instruct-q8_0.gguf"
+            tokenizerpath = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+
+            llm = llama_cpp.Llama(
+                model_path=modelpath,
+                verbose=False,
+                tokenizer=llama_cpp.llama_tokenizer.LlamaHFTokenizer.from_pretrained(
+                    tokenizerpath
+                ),
+                n_gpu_layers=-1,
+                n_ctx=2048,
+                logits_all=False,
+            )
+            
+        # Import and reload to ensure latest version
+        import ais.HBH_AI as HBH
+        importlib.reload(HBH)
+        
+        # Create and run the agent
+        agent = HBH.HBH_AI(llm=llm, llm_lock=llm_lock, websocket=websocket, generator=generator)
+        await agent.run()
+        
+    except Exception as e:
+        logging.error(f"Error in HBH_AI websocket: {str(e)}")
+        try:
+            await websocket.send_json({"command": "error", "text": f"Error: {str(e)}"})
+        except:
+            pass
+    finally:
+        try:
+            await websocket.close()
+        except:
+            pass
 
 
 # load the module

@@ -100,15 +100,14 @@ class Main {
     await letterCounterBot.AddComponent(new KeyboardInput());
 
     //  await environmentbot2.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(letterCounterBot, "uitester");
+    await this.entityManager.AddEntity(letterCounterBot, "lca");
     letterCounterBot.Broadcast({
       topic: "walk",
-      data: { position: new THREE.Vector3(5, 0, 0) },
+      data: { position: new THREE.Vector3(0, 0, 0) },
     });
     //add script entity environmentbot to the scene
     const uitesterbot = new Entity();
-    uitesterbot.Position = new THREE.Vector3(5, 1, 15);
-    const uitester6 = new CharacterComponent({
+     const uitester6 = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
       animationspathslist: this.maincController.animations,
       behaviourscriptname: "uitester6.js",
