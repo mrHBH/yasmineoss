@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import * as CANNON from "cannon-es";
 import { MeshPhysicalNodeMaterial, mod, WebGPURenderer } from "three/webgpu";
+import { ThreePerf } from 'three-perf';
 
 // import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
 import { InfiniteGridHelper } from "./InfiniteGridHelper";
@@ -27,7 +28,7 @@ import { DynamicuiComponent } from "./Components/DynamicuiComponent.js";
 // // import { MeshPhongNodeMaterial,MeshBasicNodeMaterial, MeshPhysicalNodeMaterial, MeshStandardNodeMaterial } from 'three/tsl';
 import Stats from "three/addons/libs/stats.module.js";
 // // import { t } from "xstate";
-import { CharacterComponent } from "./Components/CharacterComponent.js";
+import { CharacterComponent } from "./Components/CharacterComponentRefactored.js";
 // // import {  VolumeNodeMaterial, vec3, materialReference, smoothstep, If, Break, tslFn } from 'three/tsl';
 // import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import { LoadingManager } from "./LoadingManager.js";
@@ -45,7 +46,7 @@ CameraControls.install({ THREE: THREE });
 class MainController {
   camera: THREE.PerspectiveCamera;
   //  CameraControls: OrbitControls;
-  webgpu: WebGPURenderer;
+  webgpu: THREE.WebGLRenderer;
   annotationRenderer: CSS2DRenderer;
   annoationsScene: THREE.Scene = new THREE.Scene();
   entitymanager: EntityManager;
@@ -103,17 +104,25 @@ class MainController {
     { url: "animations/gltf/ybot2@TurningRight.glb" },
   ];
   stats: any;
+  #stats_: ThreePerf;
 
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
     this.walls = [];
 
-    this.webgpu = new THREE.WebGPURenderer({
+    // this.webgpu = new THREE.WebGPURenderer({
+    //   antialias: true,
+    //   logarithmicDepthBuffer: false,
+    //   powerPreference: "high-performance",
+    // }) as THREE.WebGPURenderer;
+    //webgl
+    this.webgpu =  new  THREE.WebGLRenderer({
       antialias: true,
       logarithmicDepthBuffer: false,
       powerPreference: "high-performance",
-    }) as THREE.WebGPURenderer;
+    })  
 
+ 
     this.webgpu.setPixelRatio(window.devicePixelRatio);
 
     this.webgpu.setClearColor(new THREE.Color(0x202020));
@@ -169,7 +178,15 @@ class MainController {
       0.005,
       1000
     );
-
+       
+   this.#stats_ = new ThreePerf({
+      anchorX: 'left',
+      anchorY: 'top',
+      domElement: this.annotationRenderer.domElement,
+      renderer: this.webgpu,
+     showGraph: true,
+    });
+    
     // this.camera.position.set(2.5, 20, 5);
     // this.camera.position.multiplyScalar(0.8);
     //this.camera.lookAt(0, 5, 0);
@@ -477,9 +494,17 @@ setInterval(() => {
 
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(50, 50),
-      new THREE.MeshPhongNodeMaterial({
+      // new THREE.MeshPhongNodeMaterial({
+      //   color: new THREE.Color(0x888888),
+      //   side: THREE.FrontSide,
+      // })
+      new MeshPhysicalNodeMaterial({
         color: new THREE.Color(0x888888),
         side: THREE.FrontSide,
+        roughness: 0.5,
+        metalness: 0.1,
+        clearcoat: 0.1,
+        clearcoatRoughness: 0.1,
       })
     );
 
@@ -731,10 +756,11 @@ setInterval(() => {
   }
 
   async update(delta: number) {
-    await this.webgpu.renderAsync(this.webgpuscene, this.camera);
+  this.webgpu.render(this.webgpuscene, this.camera);
     //  TWEEN.update();
     this.fpsGraph?.begin();
   //  this.stats.begin();
+   this.#stats_.begin();
     //   this.stats.begin();
     this.annotationRenderer.render(this.annoationsScene, this.camera);
     this.html2dRenderer.render(this.html2dScene, this.camera);
@@ -743,7 +769,7 @@ setInterval(() => {
     this.UIManager?.Update();
     this.CameraControls?.update(delta / 2);
     this.fpsGraph?.end();
-
+ this.#stats_.end();
    // this.stats.end();
 
     this.updateLight();

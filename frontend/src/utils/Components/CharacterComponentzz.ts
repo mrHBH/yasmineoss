@@ -7,9 +7,7 @@ import { createMachine, interpret, t } from "xstate";
 import * as CANNON from "cannon-es";
 import { StaticCLI } from "../../SimpleCLI";
  
-import { MeshPhongNodeMaterial,PointsNodeMaterial ,  uniform, skinning , MeshPhysicalNodeMaterial, MeshBasicNodeMaterial ,MeshStandardNodeMaterial , LineBasicNodeMaterial, vec2, distance, NodeMaterial, smoothstep, Break, materialReference, float, sub, VolumeNodeMaterial, vec3, tslFn, all   } from 'three/tsl';
-import {   reflector, uv, texture, color , mix } from 'three/tsl';
- 
+  
 import { CodeEditor } from "./CodeEditor";
 import {
   SoundGeneratorAudioListener,
@@ -21,24 +19,7 @@ import {
 } from "../sound_generator.js";
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import SimpleBar from "simplebar";
-let uva= uv( 0 );
-let vec2a= vec2( 0.0, 0.0 );
-let dist = distance(  vec2a, vec2a );
-let nm = new NodeMaterial();
- const st=  smoothstep( 0.0, 1.0, 0.5 );
- const breaknode = Break( 0.5 );
-const perlin = new ImprovedNoise();
-const range = materialReference('range', 'float');
-let a = float( 1.0 );
-let b = sub( a, 0.5 );
- const material = new VolumeNodeMaterial({
-  side: THREE.BackSide,
-  transparent: true
-});
-tslFn( material, 'color', vec3( 1.0, 0.0, 0.0 ) );
-let ce = new CodeEditor();
 
-let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
  class CharacterComponent extends Component {
     _model: THREE.Object3D;
   private _modelpath: string;
@@ -93,12 +74,8 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
 
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
     super();
-    let mat =       new MeshPhongNodeMaterial( { color: "rgb(200, 200, 200)", shininess: 150 } )
-    console.log("mat", mat)
-    const mirrorReflector = reflector();
-    const fogColor = color(0xcccccc);  // Light grey fog
-    const foggyReflection = mix(mirrorReflector, fogColor, 150);
-
+   
+    // Ensure we're storing the complete path to the model for later cleanup
     this._modelpath = modelpath;
     this.task = "N";
     this._animationspathslist = animationspathslist;
@@ -124,71 +101,40 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
   }
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
+    
+    // Use LoadingManager to load the character model
     this._model = await LoadingManager.loadGLTF(this._modelpath);
-
 
     this.decceleration_ = new THREE.Vector3(-0.005, -0.001, -7.0);
     this.acceleration_ = new THREE.Vector3(1, 0.125, 5.0);
     this.velocity_ = new THREE.Vector3(0, 0, 0);
 
-    // this._animation = await LoadingManager.loadGLTFAnimation(
-    //   "animations/gltf/ybot2@walking.glb"
-    // );
+    // Use LoadingManager to load animations
     this.animations_ = await LoadingManager.loadGLTFFirstAnimations(
       this._animationspathslist
     );
-    //pick a random animation
+    
+    // Default to Ideling animation
     const keys = Object.keys(this.animations_);
-    const randomIndex = Math.floor(Math.random() * keys.length);
-    const randomKey = keys[randomIndex];
-    // //console.log(this.animations_);
-    this._animation = this.animations_["Ideling"];
+    this._animation = this.animations_["Ideling"] || this.animations_[keys[0]];
 
     this._model.userData.entity = this._entity;
     this._webgpugroup.add(this._model);
 
     this._mixer = new THREE.AnimationMixer(this._model);
-    //this._mixer.clipAction(this._animations[ 7]).play();
-
     this._mixer.clipAction(this._animation).play();
+    
+    // Process model for shadows, etc.
     this._model.traverse(
       function (child: any) {
         if (child.isMesh) {
-          child.userData.component = this;
-          //cast and receive shadows
-           child.castShadow = true;
-        child.receiveShadow = true;
-        //  //get current color of the mesh
-        //  let color = child.material.color;
-        //   let material2 = new MeshPhysicalNodeMaterial( { color: color, roughness: 0.02, clearcoat:0.1, clearcoatRoughness: 0.09 , metalness: 0.89 , flatShading: true ,side : THREE.FrontSide ,   reflectivity : 0.1 , transmission : 0.0095 , opacity: 1, transparent: false , sheen: 50  , depthWrite: true, depthTest: true,  } );
-        //  child.material =   Math.random() > 0.99 ? material : material2;
-       
-          //hide the mesh
-         //  child.visible = false;
-        //  const materialPoints = new PointsNodeMaterial({ size: 0.05, color: new THREE.Color(0x0011ff) });
-      //    child.updateMatrixWorld(true); // Force update matrix and children
-        //  // create a skinning node
-        //      const animatedskinning =  skinning( child ) ;
-        //     materialPoints.positionNode = animatedskinning;
-        //   child.geometry.computeBoundsTree();
-        //   let boundsViz = new MeshBVHHelper( child );
-          //this._group.attach(materialPoints);
-
-          //set scale and rotation of the points
-
-          //adjust scale and rotation of the points
-        //  materialPoints.positionNode = uniform( child.scale );
-
-        //    materialPoints.positionNode = skinningReference( child );
-        //    //materialPoints.positionNode = uniform( child.position );
-
-        //      child.updateMatrixWorld(true); // Force update matrix and children
-        //  this._pointCloud = new THREE.Points(child.geometry, materialPoints);
-
-         //  this._webgpugroup.add(this._pointCloud);
+          child.castShadow = true;
+          child.receiveShadow = true;
         }
       }.bind(this)
     );
+
+    // Set up physics
     const colliderShape = new CANNON.Sphere(0.24);
     const colliderShapeTop = new CANNON.Cylinder(0.1, 0.1, 0.9, 8);
 
@@ -199,7 +145,8 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     });
     this.body.addShape(colliderShape, new CANNON.Vec3(0, 0.24, 0.2));
     this.body.addShape(colliderShapeTop, new CANNON.Vec3(0, 1.2, 0));
-    //set initial position
+    
+    // Set initial position
     this.body.position.set(
       this._entity.Position.x,
       this._entity.Position.y,
@@ -217,9 +164,7 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
     this.taskintervals = [];
     this.CreateFSM_();
 
-    this.setupCollisionDetection()
-
-    // this.walktopos( new THREE.Vector3( Math.random() * 150, 0, Math.random() * 190));
+    this.setupCollisionDetection();
   }
 
   CreateFSM_() {
@@ -1609,7 +1554,14 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
       }
       let arrow = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), locationPosition.clone().add(new THREE.Vector3(0,1,0)), 1, 0xff0000 , 1.0, 0.65);
       //assign a physics material to the arrow
-      let material = new  MeshStandardNodeMaterial({ color: 0xff0000 });
+      let material = new  THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        emissive: 0xff0000,
+        emissiveIntensity: 0.5,
+        roughness: 0.5,
+
+        metalness: 0.5,
+      });
       // arrow.line.material = material;
         arrow.cone.material = material;
       arrow.castShadow = true;
@@ -2444,29 +2396,244 @@ let mat= new MeshBasicNodeMaterial( { color: "rgb(200, 200, 200)" } )
 
 
 
+  // Make sure to clear all references to help the GC
   async Destroy() {
+    console.log(`CharacterComponent: Destroying ${this._entity.name}`);
+    
+    // Clear all intervals to prevent any lingering callbacks
+    if (this.taskintervals) {
+      for (let i = 0; i < this.taskintervals.length; i++) {
+        clearInterval(this.taskintervals[i]);
+      }
+      this.taskintervals = [];
+    }
+    
+    // Stop any worker if running
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+    
+    // Clear animation mixer
+    if (this._mixer) {
+      this._mixer.stopAllAction();
+      this._mixer.uncacheRoot(this._model);
+      this._mixer = null;
+    }
+    
+    // Remove event listeners if any
+    this._model?.traverse((object: any) => {
+      if (object.userData && object.userData.listeners) {
+        for (const event in object.userData.listeners) {
+          if (typeof object.removeEventListener === 'function') {
+            object.removeEventListener(event as any, object.userData.listeners[event]);
+          }
+        }
+      }
+    });
+    
+    // Dispose of the 3D model with all its resources
+    if (this._model) {
+      // Let the LoadingManager know we're done with this model
+      // This is important for proper caching and cleanup
+      if (this._modelpath) {
+        LoadingManager.disposeAsset(this._modelpath);
+      }
+      this._model = null;
+    }
+    
+    // Unregister all entity handlers
+    // If Entity doesn't have a built-in method for this, we'll need to
+    // leave the handlers in place, they should be garbage collected when
+    // the entity is destroyed;
+    
+    // Clean up CSS2D objects
     for (let i = this._webgpugroup.children.length - 1; i >= 0; i--) {
-      //find all instances of css2dobject and remove them
       if (this._webgpugroup.children[i] instanceof CSS2DObject) {
         this._webgpugroup.remove(this._webgpugroup.children[i]);
       }
-    }
+    } 
 
-    this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+    // Dispose of all meshes in the webgpugroup; recursive: materials, geometries, textures
+    this._webgpugroup.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach((material) => {
+              // Dispose of all textures in the material
+              for (const key in material) {
+                const value = material[key];
+                if (value && value.isTexture) {
+                  value.dispose();
+                }
+              }
+              material.dispose();
+            });
+          } else {
+            // Dispose of all textures in the material
+            for (const key in child.material) {
+              const value = child.material[key];
+              if (value && value.isTexture) {
+                value.dispose();
+              }
+            }
+            child.material.dispose();
+          }
+        }
+        if (child.geometry) {
+          child.geometry.dispose();
+        }
+      }
+    });
+    
+    // Remove groups from scenes
+    if (this._entity._entityManager._mc.webgpuscene) {
+      this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+    }
+    
     for (let i = this._css2dgroup.children.length - 1; i >= 0; i--) {
-      //find all instances of css2dobject and remove them
       if (this._css2dgroup.children[i] instanceof CSS2DObject) {
         this._css2dgroup.remove(this._css2dgroup.children[i]);
       }
     }
 
-    // for (let i = this._css3dgroup.children.length - 1; i >= 0; i--) {
-    //   //find all instances of css2dobject and remove them
-    //   if (this._css3dgroup.children[i] instanceof CSS2DObject) {
-    //     this._css3dgroup.remove(this._css3dgroup.children[i]);
-    //   }
-    // }
-    this._entity._entityManager._mc.annoationsScene.remove(this._css2dgroup);
+    if (this._entity._entityManager._mc.annoationsScene) {
+      this._entity._entityManager._mc.annoationsScene.remove(this._css2dgroup);
+    }
+    
+    // Clean up physics body if it exists
+    if (this.body && this._entity._entityManager._mc.physicsmanager?.world) {
+      this._entity._entityManager._mc.physicsmanager.world.removeBody(this.body);
+      this.body = null;
+    }
+    
+    // Clean up audio resources
+    if (this.positionalAudio) {
+      this.positionalAudio.disconnect();
+      this.positionalAudio = null;
+    }
+    
+    if (this.SoundGenerator) {
+      this.SoundGenerator.dispose();
+      this.SoundGenerator = null;
+    }
+    
+    // Clear any FSM services
+    if (this.AnimationFSMService_) {
+      this.AnimationFSMService_.stop();
+      this.AnimationFSMService_ = null;
+    }
+    
+    if (this.BehaviourFSM_Service_) {
+      this.BehaviourFSM_Service_.stop();
+      this.BehaviourFSM_Service_ = null;
+    }
+    
+    // Clear any UI elements and event listeners
+    if (this._titlebar) {
+      // Remove any event listeners from UI elements
+      const dropIcon = this._titlebar.querySelector("#dropIcon");
+      if (dropIcon) {
+        dropIcon.removeAttribute("uk-icon");
+        const newDropIcon = dropIcon.cloneNode(true);
+        if (dropIcon.parentNode) {
+          dropIcon.parentNode.replaceChild(newDropIcon, dropIcon);
+        }
+      }
+      
+      const resetIcon = this._titlebar.querySelector("#resetIcon");
+      if (resetIcon) {
+        resetIcon.removeAttribute("uk-icon");
+        const newResetIcon = resetIcon.cloneNode(true);
+        if (resetIcon.parentNode) {
+          resetIcon.parentNode.replaceChild(newResetIcon, resetIcon);
+        }
+      }
+      
+      const killIcon = this._titlebar.querySelector("#killicon");
+      if (killIcon) {
+        killIcon.removeAttribute("uk-icon");
+        const newKillIcon = killIcon.cloneNode(true);
+        if (killIcon.parentNode) {
+          killIcon.parentNode.replaceChild(newKillIcon, killIcon);
+        }
+      }
+      
+      // Remove button event listeners
+      const loadButton = this.uiElement?.querySelector("#loadEnvironment");
+      if (loadButton) {
+        const newButton = loadButton.cloneNode(true);
+        if (loadButton.parentNode) {
+          loadButton.parentNode.replaceChild(newButton, loadButton);
+        }
+      }
+      
+      // Remove the title bar from its parent
+      if (this._titlebar.parentNode) {
+        this._titlebar.parentNode.removeChild(this._titlebar);
+      }
+      this._titlebar = null;
+    }
+    
+    if (this.uiElement) {
+      // Remove event listeners
+      this.uiElement.removeEventListener('update', this.updatePosition);
+      
+      // Clear any HTML content to release potential memory
+      this.uiElement.innerHTML = '';
+      
+      // Remove from DOM if it's still there
+      if (this.uiElement.parentNode) {
+        this.uiElement.parentNode.removeChild(this.uiElement);
+      }
+      this.uiElement = null;
+    }
+    
+    if (this.htmldialogueelement && this.htmldialogueelement.parentNode) {
+      this.htmldialogueelement.parentNode.removeChild(this.htmldialogueelement);
+      this.htmldialogueelement = null;
+    }
+    
+    // Dispose of activation circle if it exists
+    if (this.activationCircle) {
+      if (this.activationCircle.geometry) {
+        this.activationCircle.geometry.dispose();
+      }
+      if (this.activationCircle.material) {
+        this.activationCircle.material.dispose();
+      }
+      if (this.activationCircle.parent) {
+        this.activationCircle.parent.remove(this.activationCircle);
+      }
+      this.activationCircle = null;
+    }
+    
+    // Clear arrows array
+    if (this.arrows && this.arrows.length) {
+      for (const arrow of this.arrows) {
+        const arrowObj = arrow as unknown as THREE.Object3D;
+        if ((arrowObj as any).geometry) {
+          (arrowObj as any).geometry.dispose();
+        }
+        if ((arrowObj as any).material) {
+          if (Array.isArray((arrowObj as any).material)) {
+            (arrowObj as any).material.forEach((m: THREE.Material) => m.dispose());
+          } else {
+            (arrowObj as any).material.dispose();
+          }
+        }
+        if (arrowObj.parent) {
+          arrowObj.parent.remove(arrowObj);
+        }
+      }
+      this.arrows = [];
+    }
+    
+    // Clear references
+    this._model = null;
+    this._animation = null;
+    this._mixer = null;
+    this.animations_ = null;
   }
 
   getAcceleration(state: string) {

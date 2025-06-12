@@ -6,32 +6,42 @@ UIkit.use(Icons);
 
 import * as THREE from "three";
 import { Entity } from "./utils/Entity";
-import { CharacterComponent } from "./utils/Components/CharacterComponent";
+import { CharacterComponent } from "./utils/Components/CharacterComponentRefactored";
 
 import { EntityManager } from "./utils/EntityManager";
 import { MainController } from "./utils/MainController";
 import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
- 
+// Add this import statement
+import { LoadingManager } from "./utils/LoadingManager";
 
 class Main {
   private entityManager: EntityManager;
   private maincController: MainController;
   private clock = new THREE.Clock();
+  private bobCounter = 0; // Counter for unique Bob names
  
   constructor() {
     this.init().catch((error) => {
       console.error("Failed to initialize the scene:", error);
     });
   }
-
-  private async init(): Promise<void> {
-    this.entityManager = new EntityManager();
-    this.maincController = new MainController(this.entityManager);
-    //  this.maincController.physicsmanager.debug = true;
-
+  // Function to create and add Bob to the scene
+  private async createBob(): Promise<void> {
     const bob = new Entity();
-    bob.Position = new THREE.Vector3(0, 1, 9);
+    bob.Position = new THREE.Vector3(Math.random() * 10 - 5, 1, Math.random() * 10 - 5);
+
+    // Make sure LoadingManager is initialized before using it
+    if (!LoadingManager.assets) {
+      console.warn("LoadingManager not initialized before creating Bob");
+      LoadingManager.initialize(
+        this.maincController.webgpu, 
+        {
+          scene: this.maincController.webgpuscene,
+          camera: this.maincController.camera
+        }
+      );
+    }
 
     const bobcontroller = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
@@ -42,9 +52,34 @@ class Main {
     await bob.AddComponent(bobcontroller);
     await bob.AddComponent(new AIInput());
     // await bob.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(bob, "Bob");
+    
+    // Give Bob a unique name
+    this.bobCounter++;
+    const bobName = `Bob-${this.bobCounter}`;
+    await this.entityManager.AddEntity(bob, bobName);
+    
+    console.log(`${bobName} has been added to the scene!`);
+  }
+  
+  private async init(): Promise<void> {
+    this.entityManager = new EntityManager();
+    this.maincController = new MainController(this.entityManager);
+    
+    // Initialize LoadingManager with renderer and scene 
+    // This needs to happen before any assets are loaded
+    LoadingManager.initialize(
+      this.maincController.webgpu, 
+      {
+        scene: this.maincController.webgpuscene,
+        camera: this.maincController.camera
+      }
+    );
+      this.maincController.initSound() 
+    console.log("LoadingManager initialized successfully");
 
-    this.maincController.MainEntity = bob;
+        // Initialize the scene without Bob initially
+
+
 
     //add script entity environmentbot to the scene
     const hamza = new Entity();
@@ -80,53 +115,64 @@ class Main {
 
     //  await environmentbot2.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(uitester2, "uitester6");
-    uitestercontroller3.face();
-    this.maincController.MainEntity = uitester2;
-
-    this.maincController.UIManager.toggleScrollmode();
-
-    //add script entity environmentbot to the scene
-    const letterCounterBot = new Entity();
-    letterCounterBot.Position = new THREE.Vector3(0, 1, 39);
-    const letterCounterBotcontroller2 = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: this.maincController.animations,
-      behaviourscriptname: "letterCounterBot.js",
-    });
-
-    await letterCounterBot.AddComponent(letterCounterBotcontroller2);
-
-    await letterCounterBot.AddComponent(new AIInput());
-    await letterCounterBot.AddComponent(new KeyboardInput());
-
-    //  await environmentbot2.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(letterCounterBot, "lca");
-    letterCounterBot.Broadcast({
-      topic: "walk",
-      data: { position: new THREE.Vector3(0, 0, 0) },
-    });
-    //add script entity environmentbot to the scene
-    const uitesterbot = new Entity();
-     const uitester6 = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: this.maincController.animations,
-      behaviourscriptname: "uitester6.js",
-    });
-
-    await uitesterbot.AddComponent(uitester6);
-
-    await uitesterbot.AddComponent(new AIInput());
-    await uitesterbot.AddComponent(new KeyboardInput());
-
-    //  await environmentbot2.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(uitesterbot, "uitester66");
- 
+        const musicstreamerenity = new Entity();
+        const musicstreamerenitycontrol = new CharacterComponent({
+          modelpath: "models/gltf/Xbot.glb",
+          animationspathslist: this.maincController.animations,
+          behaviourscriptname: "musicStreamer.js",
+        });
+        musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
+        await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
+        await musicstreamerenity.AddComponent(new AIInput());
+        await musicstreamerenity.AddComponent(new KeyboardInput());
+        await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
     
+
    // this.maincController.UIManager.toggleScrollmode();
 
-    this.animate();
+    
+    // Add event listener for 'b' key press to create Bob
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'b' || event.key === 'B') {
+        this.createBob();
+      }
+      
+      // Add 'm' key to check memory stats
+      if (event.key === 'm' || event.key === 'M') {
+        const stats = LoadingManager.getMemoryStats();
+        console.log('=== MEMORY STATS ===');
+        console.log(`WebGL Textures: ${stats.textures}`);
+        console.log(`WebGL Geometries: ${stats.geometries}`);
+        console.log(`Cached GLTF Assets: ${stats.assets}`);
+        console.log(`Cached Animations: ${stats.animations}`);
+        console.log(`Total entities: ${this.entityManager.Entities.length}`);
+        console.log('Asset Reference Counts:', stats.assetRefCounts);
+        console.log('Animation Reference Counts:', stats.animationRefCounts);
+        console.log('===================');
+      }
+      
+      // Add 'c' key to force cleanup
+      if (event.key === 'c' || event.key === 'C') {
+        console.log('Forcing cleanup...');
+        LoadingManager.forceCleanup();
+        const stats = LoadingManager.getMemoryStats();
+        console.log('Memory Stats after cleanup:', stats);
+      }
+      
+      // Add 'd' key to delete the most recent Bob entity
+      if (event.key === 'd' || event.key === 'D') {
+        const bobEntities = this.entityManager.Entities.filter(e => e.name.includes('Bob'));
+        if (bobEntities.length > 0) {
+          const lastBob = bobEntities[bobEntities.length - 1];
+          console.log(`Deleting entity: ${lastBob.name}`);
+          this.entityManager.RemoveEntity(lastBob);
+        } else {
+          console.log('No Bob entities to delete');
+        }
+      }
+    });
 
-    //for every animation frame
+    this.animate();
   }
 
   private async animate(): Promise<void> {

@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2021-2022 Antonio-R1
  * License: https://github.com/Antonio-R1/engine-sound-generator/blob/main/LICENSE | MIT
@@ -35,7 +34,6 @@ class SoundGenerator {
       if (!this.listenerLastPosition) {
 
          for(let i=0; i<this.sounds.length; i++) {
- 
             this.sounds[i].update(this.listenerPosition, undefined, dt);
          }
 
@@ -98,6 +96,8 @@ class GeneratedPositionalAudio extends THREE.PositionalAudio {
       this.source = null;
       this.lastPosition = null;
       this.currentPosition = new THREE.Vector3();
+      this.lastListenerPosition = null; // ADDED
+      this.lastdistance = null; // ADDED
 
       // this.delayNode = this.context.createDelay(150);
       // this.delayNode.delayTime.linearRampToValueAtTime(0, this.context.currentTime);
@@ -117,52 +117,59 @@ class GeneratedPositionalAudio extends THREE.PositionalAudio {
 
    updateDelayAndDopplerEffect(listenerPosition, estimatedNewPositionListener, dt) {
       this.getWorldPosition(this.currentPosition);
-      let currentListenerPosition = listenerPosition;
+      // listenerPosition is currentListenerPosition
       
-      if (!this.lastPosition) {
+      // Initialize last positions if they are null
+      if (this.lastPosition === null) {
         this.lastPosition = this.currentPosition.clone();
-        return;
       }
-      if (!this.lastListenerPosition) {
-        this.lastListenerPosition = currentListenerPosition.clone();
-        return;
+      if (this.lastListenerPosition === null) {
+        this.lastListenerPosition = listenerPosition.clone();
       }
+      // After this point, lastPosition and lastListenerPosition are Vector3 objects.
+
+      let currentDistance = listenerPosition.distanceTo(this.currentPosition);
       
-      let currentDistance = currentListenerPosition.distanceTo(this.currentPosition);
-      
-      // If lastdistance is null, initialize it and exit this frame.
       if (this.lastdistance === null) {
         this.lastdistance = currentDistance;
+        // Update positions for the next frame and return
+        this.lastPosition.copy(this.currentPosition);
+        this.lastListenerPosition.copy(listenerPosition);
         return;
       }
       
-      // Now that lastdistance is defined, calculate speed safely.
-      let speed = this.lastdistance - currentDistance;
-      let dopplerShift = 1 + 0.15 * Math.sign(speed) * Math.abs(speed);
+      // Calculate speed: change in distance. Positive if distance decreased (closer).
+      let speed = this.lastdistance - currentDistance; // This is delta_distance for the frame.
       
-      // Optional: double-check that dopplerShift is finite
-      if (!isFinite(dopplerShift)) {
+      const dopplerSensitivity = 0.5; // Increased from 0.15 for more noticeable effect
+      let dopplerShift = 1 + dopplerSensitivity * speed;
+
+      if (!isFinite(dopplerShift) || dopplerShift <= 0) { // Ensure shift is positive and finite
         dopplerShift = 1;
       }
       
       try {
-        this.source.playbackRate.value = THREE.MathUtils.clamp(dopplerShift, 0.95, 1.05);
-        let detune = 2300 * Math.log2(dopplerShift);
-        detune = THREE.MathUtils.clamp(detune, -140, 140);
+        // Widen clamps for playbackRate for a more pronounced effect
+        this.source.playbackRate.value = THREE.MathUtils.clamp(dopplerShift, 0.75, 1.25); // Was 0.95, 1.05
+
+        // Adjust detune calculation and clamps
+        // Use the clamped playbackRate for log2 calculation
+        let detune = 1200 * Math.log2(this.source.playbackRate.value); // 1200 cents per octave
+        detune = THREE.MathUtils.clamp(detune, -400, 400); // Clamp to +/- 4 semitones (was -140, 140)
         
-        // Optional: ensure detune is finite before setting it
         if (!isFinite(detune)) {
-          detune = 0;
+          detune = 0; // Corrected empty block
         }
         
         this.setDetune(detune);
       } catch (e) {
-        console.log(e);
+        console.warn('Error applying Doppler effect:', e); // Changed to warn
       }
       
       // Update positions for the next frame.
-      this.lastPosition = this.currentPosition.clone();
+      this.lastPosition.copy(this.currentPosition);
       this.lastdistance = currentDistance;
+      this.lastListenerPosition.copy(listenerPosition); // Correctly update lastListenerPosition
     }
    playSound () {
       this.active = true;
@@ -253,6 +260,7 @@ class AudioSoundGenerator extends GeneratedPositionalAudio {
    constructor (listener, buffer) {
        super(listener);
        this.buffer = buffer;
+       this.active = false; // Start inactive, only activate when audio is actually playing
        
 
        // Initialize source, delayNode, and gainNode
@@ -267,21 +275,24 @@ class AudioSoundGenerator extends GeneratedPositionalAudio {
          return;
       }
 
-  
+      this.active = true; // Only set active when actually playing
       super.play();
    }
        play () {
         super.playSound ();
         this.playSound ();
+        this.active = true; // Only set active when actually playing
     }
 
     update (listenerPosition, estimatedNewPositionListener, dt) {
-      if (!this.lastPosition) { 
-          this.lastPosition = this.currentPosition.clone();
-          return;
-      }
+      console.log("AudioSoundGenerator update called with dt:", dt);
+      // Removed redundant and potentially problematic block:
+      // if (!this.lastPosition) { 
+      //     this.lastPosition = this.currentPosition.clone();
+      //     return;
+      // }
       
-   //    // Calculate observer's and source's velocity
+      //    // Calculate observer's and source's velocity
    //    const velocityOfObserver = this.currentPosition.clone().sub(this.lastPosition).length() / dt;
    //    const velocityOfSource = this.estimatedNewPosition.clone().sub(estimatedNewPositionListener).length() / dt;
    //   console.log(velocityOfObserver , velocityOfSource  );
@@ -307,57 +318,10 @@ class AudioSoundGenerator extends GeneratedPositionalAudio {
        this.updateDelayAndDopplerEffect(listenerPosition, estimatedNewPositionListener, dt);
     }
 
-
- 
-
-  
-  
-//   setBuffer(buffer) {
-//       if(!buffer) {
-//           throw new Error("buffer is not defined.");
-//       }
-
-//       	// PositionalAudio.position.set( this.Parent.Position.x, this.Parent.Position.y, this.Parent.Position.z );
-// 				// PositionalAudio.setBuffer( buffer );
-// 				// PositionalAudio.setRefDistance( 5 );
-// 				// PositionalAudio.play();
-//      //  super.setBuffer(buffer);
-
-//          this.gainNode = this.context.createGain();
-//          this.gainNode.gain.setValueAtTime(0.1, this.context.currentTime);
-//          this.source = this.context.createBufferSource(); 
-//          this.source.connect(this.gainNode);
-//           this.delayNode = this.context.createDelay(1 );
-//          this.gainNode.connect(this.delayNode);
-  
-//         this.source.buffer = buffer;
-//       // this.source.loop = true;
-//         this.source.start(0);
-//         //
-      
-//         super.setNodeSource( 
-//          this.delayNode);
-//       // //connect the source to the gain node
-    
-
-
-//       // this.source.connect(this.gainNode).connect(this.delayNode).connect(this.context.destination);
-//       // if (this.delayNode) {
-//       //    this.source.connect(this.gainNode).connect(this.delayNode).connect(this.context.destination); // add connection to destination here
-//       // }     
-
-//    //   this.gainNode.connect(this.delayNode).connect(this.context.destination); // add connection to destination here
-  
-//       // Use the gain node as the output source
-   
-//   }
-  
-//   play () {
-//       // super.play();
-      
-//   }
-
-
+    stop() {
+        this.active = false;
+        super.stop();
+    }
 }
 
-export {SoundGenerator, GeneratedPositionalAudio, SoundSineWave, LowpassFilter , AudioSoundGenerator};
+export {SoundGenerator, GeneratedPositionalAudio, SoundSineWave, LowpassFilter, AudioSoundGenerator};

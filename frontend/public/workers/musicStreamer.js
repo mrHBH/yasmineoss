@@ -6,10 +6,27 @@ let cb = function (e) {
   } else {
     this.hostname = "speech.ben-hassen.com";
   }
-  let mc = this._entity._entityManager._mc;
 
-  mc.initSound();
-  this.initTTS();
+  // Initialize audio manager when the user interacts with TTS
+  const initializeAudioManager = () => {
+    if (!this.getAudioManager) {
+      console.error("musicStreamer.js: getAudioManager method not found on character component");
+      return null;
+    }
+    
+    const audioManager = this.getAudioManager();
+    if (!audioManager || (audioManager && audioManager.isDummyAudioManager)) {
+      console.error("musicStreamer.js: Failed to initialize real audio manager");
+      return null;
+    }
+    
+    if (typeof audioManager.initTTS === 'function') {
+      audioManager.initTTS();
+    }
+    
+    return audioManager;
+  };
+
   this.activeSources = new Set();
   
   renderBotWelcome.call(this).then(() => {
@@ -17,11 +34,27 @@ let cb = function (e) {
   });
 
   async function renderBotWelcome() {
+    // Check if audio can be initialized before showing welcome
+    const audioManager = initializeAudioManager();
+    if (!audioManager) {
+      let errorHtml = `
+      <div class="uk-container uk-container-small" style="background: rgba(139, 0, 0, 0.5); border-radius: 10px; padding: 20px;">
+        <div class="uk-card-title">Audio System Error</div>
+        <div class="uk-margin-small">
+          <p>3D positional audio could not be initialized. Please ensure your browser supports WebAudio and that an audio listener is available.</p>
+        </div>
+      </div>
+      `;
+      await StaticCLI.typeWithCallbacks(this.uiElement, errorHtml, {}, 2, true);
+      return;
+    }
+
     let html1 = `
     <div class="uk-container uk-container-small" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; padding: 20px;">
       <div class="uk-card-title">3D Positional TTS Bot</div>
       <div class="uk-margin-small">
         <p>This is a 3D positional TTS bot. Type text, pick a voice, and the audio will play from the entity's position.</p>
+        <p><em>Click the music icon (🎵) in the character's name tag to test positional audio!</em></p>
       </div>
       <button id="welcome-btn" class="uk-button uk-button-primary uk-width-1-1">Let's Go</button>
     </div>
@@ -101,29 +134,40 @@ let cb = function (e) {
         if (isStopped) return false;
         
         try {
-          if (!this.positionalAudio) {
-            console.error('Positional audio not initialized');
+          // Initialize audio manager when first needed
+          const audioManager = initializeAudioManager();
+          if (!audioManager || !audioManager.positionalAudio || typeof audioManager.positionalAudio.play !== 'function') {
+            console.error('Failed to initialize audio manager or positional audio in createAndPlayAudio');
+            status.textContent = 'Audio system initialization failed.';
+            resetUI();
             return false;
           }
 
-          const audioContext = this.positionalAudio.context;
+          const audioContext = audioManager.positionalAudio.context;
           const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
           
           if (isStopped) return false;
 
-          this.positionalAudio.setBuffer(audioBuffer);
-          this.positionalAudio.play();
+          audioManager.positionalAudio.setBuffer(audioBuffer);
+          audioManager.positionalAudio.play();
           return true;
         } catch (error) {
-          console.error('Error playing positional audio:', error);
+          console.error('Error playing positional audio via audioManager:', error);
           return false;
         }
       }
 
       async function generateAndPlaySpeech(text, voice) {
-   
-        
         try {
+          // Initialize audio manager when first needed
+          const audioManager = initializeAudioManager();
+          if (!audioManager || !audioManager.positionalAudio || typeof audioManager.positionalAudio.play !== 'function') {
+            console.error("Failed to initialize audio manager for speech generation.");
+            status.textContent = 'Audio system initialization failed.';
+            resetUI();
+            return;
+          }
+
           isProcessingAudio = true;
           status.textContent = 'Generating speech...';
           speakBtn.disabled = true;
@@ -131,37 +175,54 @@ let cb = function (e) {
           stopBtn.hidden = false;
           isStopped = false;
 
+          // The example used a local sound file. If you intend to fetch TTS from a server:
+          const response = await fetch(`${protocol}${hostname}/v1/audio/tts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, voice_name: voice }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const audioArrayBuffer = await response.arrayBuffer();
+          await createAndPlayAudio.call(this, audioArrayBuffer); // Use the updated createAndPlayAudio
+          // If createAndPlayAudio handles UI reset on success/failure, otherwise:
+          // resetUI(); // Or handle based on playback events
+
+          // The following block for loading "viridian.mp3" seems like a placeholder or test.
+          // If you want to play a specific local file instead of TTS, this is where you'd do it.
+          // For actual TTS, the server response (audioArrayBuffer) should be used.
+          /*
           let audioLoader = new THREE.AudioLoader();
           audioLoader.load("sounds/viridian.mp3", function(buffer) {
-           //this.positionalAudio = new AudioSoundGenerator( mc.listener, buffer);
-           this.positionalAudio.setBuffer( buffer );
-          //  this.positionalAudio .setRefDistance( 20 );
-           this.positionalAudio .play();
-             
-          //  this.SoundGenerator.add(  this.positionalAudio);
-          //  this._webgpugroup.add(this.positionalAudio);
-
-          
-
+           if (this.audioManager && this.audioManager.positionalAudio) {
+             this.audioManager.positionalAudio.setBuffer( buffer );
+             // this.audioManager.positionalAudio.setRefDistance( 20 ); // Configure via CharacterAudioManager if needed
+             this.audioManager.positionalAudio.play();
+             // SoundGenerator management is handled by CharacterAudioManager
+           } else {
+             console.error("AudioManager not available for local sound playback.");
+           }
           }.bind(this));
-        }
-          catch (error) {
+          */
+        } catch (error) {
           console.error('Error generating speech:', error);
           status.textContent = 'Error generating speech';
           resetUI();
-          }
-
-         
-
-     
+        }
       }
 
       const stopPlayback = () => {
         isStopped = true;
-        if (this.positionalAudio && this.positionalAudio.isPlaying) {
-          this.positionalAudio.stop();
+        // Try to get the audio manager to stop playback
+        if (this.getAudioManager) {
+          const audioManager = this.getAudioManager();
+          if (audioManager && audioManager.positionalAudio && audioManager.positionalAudio.isPlaying) {
+            audioManager.positionalAudio.stop();
+          }
         }
-        setTimeout(resetUI, 100);
+        setTimeout(resetUI, 100); 
       };
 
       speakBtn.addEventListener("click", () => {
