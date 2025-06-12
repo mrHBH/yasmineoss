@@ -60,8 +60,8 @@ export class CharacterPhysicsController {
       if (contact.bi === this.body || contact.bj === this.body) {
         // Get the collision normal
         const normal = contact.ni.clone();
-        if (contact.bi !== this.body) {
-          normal.negate(); // Ensure the normal is pointing from our body to the other body
+        if (contact.bi === this.body) {
+          normal.negate(); // Ensure an upward-pointing normal for ground collisions
         }
         
         let forwardDirection: CANNON.Vec3 = new CANNON.Vec3(0, 0, -1);
@@ -80,11 +80,9 @@ export class CharacterPhysicsController {
         // Check if this is a ground collision for jumping
         const upAxis = new CANNON.Vec3(0, 1, 0);
         if (normal.dot(upAxis) > 0.7) {
-          if (!this.canJump) {
-            // Character can jump again
-          }
+          // Character is touching ground - can jump again
           this.canJump = true;
-        }
+         }
       }
     });
   }
@@ -96,7 +94,7 @@ export class CharacterPhysicsController {
     acceleration: number
   ): void {
     if (!input) return;
-
+    console.log(this.canJump, this.isColliding_);
     const velocity = this.velocity_;
     const frameDecceleration = new THREE.Vector3(
       velocity.x * this.decceleration_.x,
@@ -167,7 +165,8 @@ export class CharacterPhysicsController {
     this.body.velocity.x = ((forwardDir.x * acc.z) / this.body.mass) * 10;
     this.body.velocity.z = ((forwardDir.z * acc.z) / this.body.mass) * 10;
 
-    if (this.body.velocity.y > 0.1 && this.canJump == true) {
+    if ( Math.abs(velocity.y) < 0.001  && !this.canJump) {
+      this.canJump = true; // Allow jumping again if not in air
       // Handle in-air state
     }
 
@@ -219,5 +218,15 @@ export class CharacterPhysicsController {
       this.body.removeEventListener("collide", this.setupCollisionDetection);
       this.body = null;
     }
+  }
+
+  public isInAir(): boolean {
+    // Check if character has significant downward velocity and can't jump
+    return !this.canJump ;
+  }
+
+  public isOnGround(): boolean {
+    // Character is on ground if they can jump and have minimal vertical velocity
+    return this.canJump 
   }
 }
