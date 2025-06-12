@@ -94,7 +94,6 @@ export class CharacterPhysicsController {
     acceleration: number
   ): void {
     if (!input) return;
-    console.log(this.canJump, this.isColliding_);
     const velocity = this.velocity_;
     const frameDecceleration = new THREE.Vector3(
       velocity.x * this.decceleration_.x,
