@@ -38,6 +38,10 @@ export default defineConfig({
       // themes: ['vs-dark', 'hc-black']
     }
   )],
+  
+  server: {
+    allowedHosts: ['hamza.ben-hassen.com']
+  }
  
 });
 
