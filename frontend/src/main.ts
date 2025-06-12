@@ -14,6 +14,7 @@ import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
 // Add this import statement
 import { LoadingManager } from "./utils/LoadingManager";
+import { CarComponent } from "./utils/Components/CarComponent";
 
 class Main {
   private entityManager: EntityManager;
@@ -46,7 +47,7 @@ class Main {
     const bobcontroller = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
       animationspathslist: this.maincController.animations,
-      //  behaviourscriptname: "botbasicbehavior.js",
+        behaviourscriptname: "botbasicbehavior.js",
     });
 
     await bob.AddComponent(bobcontroller);
@@ -113,6 +114,19 @@ class Main {
     await uitester2.AddComponent(new AIInput());
     await uitester2.AddComponent(new KeyboardInput());
 
+    //     const car = new Entity();
+    // const carcontroller = new CarComponent({
+
+    // });
+    // car.Position = new THREE.Vector3(0, 1, 0);
+    // await car.AddComponent(carcontroller);
+    // // const keyboardinput = new KeyboardInput();
+    // await car.AddComponent( new KeyboardInput());
+
+    // await this.entityManager.AddEntity(car, "Car");
+
+     
+
     //  await environmentbot2.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(uitester2, "uitester6");
         const musicstreamerenity = new Entity();
@@ -171,6 +185,54 @@ class Main {
         }
       }
     });
+
+    
+ 
+    //  await environmentbot2.AddComponent(new KeyboardInput());
+    await this.entityManager.AddEntity(uitester2, "uitester6");
+    uitestercontroller3.face();
+    this.maincController.MainEntity = uitester2;
+
+   // this.maincController.UIManager.toggleScrollmode();
+
+    //add script entity environmentbot to the scene
+    const letterCounterBot = new Entity();
+    letterCounterBot.Position = new THREE.Vector3(0, 1, 39);
+    const letterCounterBotcontroller2 = new CharacterComponent({
+      modelpath: "models/gltf/ybot2.glb",
+      animationspathslist: this.maincController.animations,
+      behaviourscriptname: "letterCounterBot.js",
+    });
+
+    await letterCounterBot.AddComponent(letterCounterBotcontroller2);
+
+    await letterCounterBot.AddComponent(new AIInput());
+    await letterCounterBot.AddComponent(new KeyboardInput());
+
+    //  await environmentbot2.AddComponent(new KeyboardInput());
+    await this.entityManager.AddEntity(letterCounterBot, "lca");
+    letterCounterBot.Broadcast({
+      topic: "walk",
+      data: { position: new THREE.Vector3(0, 0, 0) },
+    });
+    //add script entity environmentbot to the scene
+    const uitesterbot = new Entity();
+     const uitester6 = new CharacterComponent({
+      modelpath: "models/gltf/ybot2.glb",
+      animationspathslist: this.maincController.animations,
+      behaviourscriptname: "uitester6.js",
+    });
+
+    await uitesterbot.AddComponent(uitester6);
+
+    await uitesterbot.AddComponent(new AIInput());
+    await uitesterbot.AddComponent(new KeyboardInput());
+
+    //  await environmentbot2.AddComponent(new KeyboardInput());
+    await this.entityManager.AddEntity(uitesterbot, "uitester66");
+ 
+    
+   // this.maincController.UIManager.toggleScrollmode();
 
     this.animate();
   }

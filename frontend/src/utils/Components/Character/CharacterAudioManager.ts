@@ -137,11 +137,11 @@ export class CharacterAudioManager {
     if (this.SoundGenerator && this.SoundGenerator.sounds.length > 0) {
       const hasActiveSounds = this.SoundGenerator.sounds.some(sound => sound.active);
       if (hasActiveSounds) {
-        console.log("CharacterAudioManager.update called with deltaTime:", deltaTime, "active sounds:", this.SoundGenerator.sounds.filter(s => s.active).length);
+       // console.log("CharacterAudioManager.update called with deltaTime:", deltaTime, "active sounds:", this.SoundGenerator.sounds.filter(s => s.active).length);
         this.SoundGenerator.updateSounds(deltaTime);
         
         // Update audio volume based on distance
-        this.updateAudioVolume();
+     //   this.updateAudioVolume();
       }
     }
   }

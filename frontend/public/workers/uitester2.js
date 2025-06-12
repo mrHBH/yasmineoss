@@ -59,9 +59,9 @@ let cb = function (e) {
 
 
 
-  //this.uielement holds a floating div that follows the character. it should drive a dialogue with character.
+  //this.uiManager.uiElement holds a floating div that follows the character. it should drive a dialogue with character.
   const initializeui = async () => {
-    let initializeButton = this.uiElement.querySelector("#loadworkspace");
+    let initializeButton = this.uiManager.uiElement.querySelector("#loadworkspace");
     if (initializeButton) {
       initializeButton.disabled = true;
       initializeButton.innerHTML = "Loading...";
@@ -82,7 +82,7 @@ let cb = function (e) {
     //get the button
     initializeButton.addEventListener("click", async () => {
       let res = await this.editor.loadworkspace(
-        this.uiElement.querySelector("#workspace").value
+        this.uiManager.uiElement.querySelector("#workspace").value
       );
       console.log(res);
 
@@ -257,7 +257,7 @@ let cb = function (e) {
   </div>
 `;
 
-  StaticCLI.typeWithCallbacks(this.uiElement, html0, {}, 0, true).then(() => {
+  StaticCLI.typeWithCallbacks(this.uiManager.uiElement, html0, {}, 0, true).then(() => {
     initializeui();
   });
 

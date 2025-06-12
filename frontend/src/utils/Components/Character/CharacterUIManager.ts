@@ -22,32 +22,32 @@ export class CharacterUIManager {
     this._entity = entity;
     this._css2dgroup = css2dgroup;
     this.behaviourscriptname = behaviourscriptname;
-    this.createNameTag();
   }
 
   createNameTag() {
     const nameTag = document.createElement("div");
     nameTag.className = "name-tag";
   
-    const namet = document.createElement("div");
-    namet.className = "name";
-    namet.style.fontSize = "16px";
-    namet.style.fontWeight = "bold";
-    namet.style.color = "#333";
-    namet.textContent = this._entity.name;
-    namet.id = "name";
-    namet.style.cursor = "pointer";
-  
     const status = document.createElement("div");
-    status.className = "status";
+    status.className = "name";
     status.style.fontSize = "12px";
-    status.style.fontWeight = "regular";
-    status.style.color = "#666";
-    status.style.marginTop = "-2px";
-    status.textContent = "Online";
+    // nameElement.style.fontWeight = "bold";
+    status.style.color = "white";
+    status.textContent =  "status";
+    status.id = "name";
+    // status.style.cursor = "pointer";
   
-    nameTag.appendChild(namet);
+    const Name = document.createElement("div");
+    Name.className = "status";
+    Name.style.fontSize = "12px";
+    Name.style.fontWeight = "regular";
+    Name.style.color = "#666";
+    Name.style.marginTop = "-2px";
+    Name.textContent =  this._entity.name;
+      Name.style.cursor = "pointer";
+
     nameTag.appendChild(status);
+   nameTag.appendChild(Name);
 
     this._titlebar = document.createElement("div");
     this._titlebar.style.display = "flex";
@@ -107,13 +107,13 @@ export class CharacterUIManager {
     killicon.style.cursor = "pointer";
     killicon.style.color = "red";
 
-    const nameElement = document.createElement("div");
-    nameElement.id = "name";
-    nameElement.style.cursor = "pointer";
-    nameElement.style.fontSize = "smaller";
-    nameElement.textContent = this._entity.name;
+    // const nameElement = document.createElement("div");
+    // nameElement.id = "name";
+    // nameElement.style.cursor = "pointer";
+    // nameElement.style.fontSize = "smaller";
+    // nameElement.textContent = this._entity.name;
     inlineContainer.appendChild(killicon);
-    inlineContainer.appendChild(nameElement);
+    inlineContainer.appendChild(status);
     this._titlebar.appendChild(inlineContainer);
     this._titlebar.appendChild(cliContainer);
 
@@ -124,8 +124,8 @@ export class CharacterUIManager {
     label.position.set(0, 2, -1.5);
     this._css2dgroup.add(label);
   
-    if (nameElement && dropIcon && resetIcon && musicIcon) {
-      nameElement.addEventListener("click", () => {
+    if (Name && dropIcon && resetIcon && musicIcon) {
+      Name.addEventListener("click", () => {
         if (this.onFace) {
           this.onFace();
         }

@@ -285,7 +285,6 @@ class AudioSoundGenerator extends GeneratedPositionalAudio {
     }
 
     update (listenerPosition, estimatedNewPositionListener, dt) {
-      console.log("AudioSoundGenerator update called with dt:", dt);
       // Removed redundant and potentially problematic block:
       // if (!this.lastPosition) { 
       //     this.lastPosition = this.currentPosition.clone();

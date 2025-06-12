@@ -10,7 +10,9 @@ import { CharacterAudioManager } from "./Character/CharacterAudioManager";
 import { CharacterUIManager } from "./Character/CharacterUIManager";
 import { CharacterBehaviorController } from "./Character/CharacterBehaviorController";
 import { CharacterMovementController } from "./Character/CharacterMovementController";
-
+import { StaticCLI } from "../../SimpleCLI";
+import { CodeEditor } from "./CodeEditor";
+ 
 class CharacterComponent extends Component {
   _model: THREE.Object3D;
   private _modelpath: string;
@@ -294,7 +296,7 @@ class CharacterComponent extends Component {
       this.physicsController.jump(5, 150);
     }
 
-    if (input._keys.space && currentState == "Running") {
+    if (input._keys.space && currentState == "Running" && this.physicsController.canJump) {
       this.animationManager.sendEvent("JUMP");
       this.physicsController.jump(25, 150);
     }
@@ -363,7 +365,9 @@ class CharacterComponent extends Component {
   }
 
   // Public methods for external use
-  async playPositionalMusic(audioUrl: string = "sounds/viridian.mp3"): Promise<boolean> {
+  //random default between sounds/viridian.mp3 and sounds/viri.wav
+
+  async playPositionalMusic(audioUrl: string = (Math.random() < 0.5 ? "sounds/viridian.mp3" : "sounds/viri.wav")): Promise<boolean> {
     try {
       console.log("Attempting to play positional music:", audioUrl);
       
@@ -508,11 +512,12 @@ class CharacterComponent extends Component {
   }
 
   async InitEntity(): Promise<void> {
-    // Don't call createNameTag again - it's already called in the UIManager constructor
-    
+     
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
     this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
     this.physicsController.addToWorld(this._entity._entityManager._mc.physicsmanager.world);
+    // camm     this.createNameTag(); from ui 
+    this.uiManager.createNameTag();
 
     // Register entity handlers
     this._entity._RegisterHandler("walk", async (data: any) => {
@@ -608,9 +613,9 @@ class CharacterComponent extends Component {
     }
 
     // Debug: log animation state occasionally
-    if (Math.random() < 0.01) { // Log 1% of the time to avoid spam
-      console.log("Animation state:", this.animationManager.getCurrentState());
-    }
+    // if (Math.random() < 0.01) { // Log 1% of the time to avoid spam
+    //   console.log("Animation state:", this.animationManager.getCurrentState());
+    // }
 
     this.animationManager.update(deltaTime);
 
@@ -621,9 +626,9 @@ class CharacterComponent extends Component {
       this.updateFSM(this.Input);
 
       // Check for falling/landing
-      if (!this.physicsController.canJump && this.animationManager.getCurrentState() != "Falling") {
+      if (!this.physicsController.canJump && this.animationManager.getCurrentState() != "Falling" && this.animationManager.getCurrentState() != "Jumping") {
         this.animationManager.sendEvent("FALL");
-      } else if (this.physicsController.canJump && this.animationManager.getCurrentState() == "Falling") {
+      } else if (this.physicsController.canJump && (this.animationManager.getCurrentState() == "Falling" || this.animationManager.getCurrentState() == "Jumping")) {
         this.animationManager.sendEvent("LAND");
       }
 
