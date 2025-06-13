@@ -118,7 +118,7 @@ class MainController {
     //webgl
     this.webgpu =  new  THREE.WebGLRenderer({
       antialias: true,
-     // logarithmicDepthBuffer: true,
+       logarithmicDepthBuffer: true,
       // alpha: true,
       // depth: true,
 

@@ -91,7 +91,7 @@ class CharacterComponent extends Component {
     this._model.traverse((child: any) => {
       if (child.isMesh) {
         child.castShadow = true;
-        child.receiveShadow = true;
+         child.receiveShadow = false;
       }
 
 
