@@ -119,8 +119,8 @@ class MainController {
     this.webgpu =  new  THREE.WebGLRenderer({
       antialias: true,
      // logarithmicDepthBuffer: true,
-      alpha: true,
-      depth: true,
+      // alpha: true,
+      // depth: true,
 
 
      // powerPreference: "high-performance",
@@ -499,7 +499,7 @@ setInterval(() => {
     );
     this.grid.castShadow = false;
     this.grid.position.y = -0.025;
-   // this.webgpuscene.add(this.grid);
+    this.webgpuscene.add(this.grid);
 
    
    
@@ -511,6 +511,8 @@ setInterval(() => {
       color: 0x808080,
       metalness: 0.0,
       roughness: 0.8,
+      transparent: true,
+      opacity: 0.8,
     });
     
     groundGeometry.computeVertexNormals();
@@ -519,7 +521,7 @@ setInterval(() => {
     ground.receiveShadow = true;
    
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.00025;
+    ground.position.y = 0;
 
     this.webgpuscene.add(ground);
 
