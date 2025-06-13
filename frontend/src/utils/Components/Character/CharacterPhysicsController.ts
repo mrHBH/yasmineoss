@@ -10,16 +10,23 @@ export class CharacterPhysicsController {
   public decceleration_: THREE.Vector3;
   public velocity_: THREE.Vector3;
 
-  private _entity: Entity;
+  // Left leg physics tracking
+  private leftLegPhysicsBox: CANNON.Body;
+  private leftLegBone: THREE.Bone;
 
-  constructor(entity: Entity) {
+  private _entity: Entity;
+  private _model: THREE.Object3D;
+
+  constructor(entity: Entity, model: THREE.Object3D = null) {
     this._entity = entity;
+    this._model = model;
     this.decceleration_ = new THREE.Vector3(-0.005, -0.001, -7.0);
     this.acceleration_ = new THREE.Vector3(1, 0.125, 5.0);
     this.velocity_ = new THREE.Vector3(0, 0, 0);
 
     this.setupPhysicsBody();
     this.setupCollisionDetection();
+ 
   }
 
   private setupPhysicsBody() {
@@ -84,6 +91,90 @@ export class CharacterPhysicsController {
         }
       }
     });
+  }
+
+  setupLeftLegPhysicsBox() {
+    if (!this._model) {
+      console.log("Model not available for left leg physics box setup");
+      return;
+    }
+
+ 
+
+    // Find the mixamorigLeftLeg bone
+    this._model.traverse((child: any) => {
+      if (child.isSkinnedMesh && child.skeleton) {
+        child.skeleton.bones.forEach((bone: THREE.Bone) => {
+          if (bone.name === "mixamorigRightToeBase") {
+            this.leftLegBone = bone;
+            console.log("Found mixamorigLeftLeg bone:", bone.name);
+          }
+        });
+      }
+    });
+
+    if (!this.leftLegBone) {
+      console.warn("mixamorigLeftLeg bone not found!");
+      return;
+    }
+
+    // Create physics box shape
+    const boxSize = new CANNON.Vec3(0.1, 0.2, 0.1); // width, height, depth
+    const boxShape = new CANNON.Box(boxSize);
+
+    // Create physics body
+    this.leftLegPhysicsBox = new CANNON.Body({
+      mass: 0,
+      material: new CANNON.Material({ friction: 0.3, restitution: 0.1 }),
+    });
+    this.leftLegPhysicsBox.addShape(boxShape);
+    //disable collision with the character body
+    this.leftLegPhysicsBox.collisionFilterGroup = 0; // Disable collision with everything
+    this.leftLegPhysicsBox.collisionFilterMask = 0; // Disable collision with everything
+    this.leftLegPhysicsBox.allowSleep = true; // Allow the box to sleep when not in use
+
+    // Get bone world position and set physics box position
+    const boneWorldPosition = new THREE.Vector3();
+    this.leftLegBone.getWorldPosition(boneWorldPosition);
+    this.leftLegPhysicsBox.position.set(
+      boneWorldPosition.x,
+      boneWorldPosition.y,
+      boneWorldPosition.z
+    );
+
+
+
+     if (this.body.world) {
+       this.body.world.addBody(this.leftLegPhysicsBox);
+     } else {
+       console.warn("World not available to add left leg physics box");
+     }
+  }
+
+  updateLeftLegPhysicsBox() {
+    if (!this.leftLegPhysicsBox || !this.leftLegBone) {
+      return;
+    }
+
+    // Update physics box position to follow the bone
+    const boneWorldPosition = new THREE.Vector3();
+    this.leftLegBone.getWorldPosition(boneWorldPosition);
+
+    this.leftLegPhysicsBox.position.set(
+      boneWorldPosition.x,
+      boneWorldPosition.y,
+      boneWorldPosition.z
+    );
+
+    // Update rotation to match bone
+    const boneWorldQuaternion = new THREE.Quaternion();
+    this.leftLegBone.getWorldQuaternion(boneWorldQuaternion);
+    this.leftLegPhysicsBox.quaternion.set(
+      boneWorldQuaternion.x,
+      boneWorldQuaternion.y,
+      boneWorldQuaternion.z,
+      boneWorldQuaternion.w
+    );
   }
 
   updatePhysics(
@@ -177,6 +268,10 @@ export class CharacterPhysicsController {
 
     this._entity.Position = controlObject.position;
     this._entity.Quaternion = controlObject.quaternion;
+    // Update left leg physics box if it exists
+    if (this.leftLegPhysicsBox) {
+      this.updateLeftLegPhysicsBox();
+    }
   }
 
   jump(force: number = 5, delay: number = 750) {
@@ -205,6 +300,13 @@ export class CharacterPhysicsController {
   }
 
   destroy() {
+    // Cleanup left leg physics box
+    if (this.leftLegPhysicsBox && this._entity._entityManager?._mc?.physicsmanager?.world) {
+      this._entity._entityManager._mc.physicsmanager.world.removeBody(this.leftLegPhysicsBox);
+      this.leftLegPhysicsBox = null;
+    }
+    this.leftLegBone = null;
+
     // Cleanup physics body if needed
     if (this.body) {
       // Remove event listeners
@@ -261,5 +363,10 @@ export class CharacterPhysicsController {
     // Also reset velocity to prevent unwanted movement
     // this.body.velocity.set(0, 0, 0);
     // this.body.angularVelocity.set(0, 0, 0);
+  }
+
+  // Public method to get the left leg physics box for external access
+  public getLeftLegPhysicsBox(): CANNON.Body | null {
+    return this.leftLegPhysicsBox || null;
   }
 }

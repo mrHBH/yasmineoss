@@ -127,10 +127,11 @@ class MainController {
     })  
 
     this.webgpu.shadowMap.enabled = true;
-        this.webgpu.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
+    this.webgpu.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
+    this.webgpu.outputEncoding = THREE.sRGBEncoding;
+    this.webgpu.physicallyCorrectLights = true;
 
- 
     this.webgpu.setPixelRatio(window.devicePixelRatio);
 
     this.webgpu.setClearColor(new THREE.Color(0x202020));
@@ -501,21 +502,26 @@ setInterval(() => {
     this.webgpuscene.add(this.grid);
 
    
+   
+      
     //add a groud plane that can receive shadows
     const groundGeometry = new THREE.PlaneGeometry(100, 100);
-    const groundMaterial = new  THREE.MeshBasicMaterial({
+   
+    const groundMaterial = new THREE.MeshStandardMaterial({
       color: 0x808080,
-      side: THREE.DoubleSide,
-      
+      metalness: 0.0,
+      roughness: 0.8,
     });
-      
+    
+    groundGeometry.computeVertexNormals();
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = false;
     ground.castShadow = false;
-    ground.position.y =-0.025;
+    ground.receiveShadow = true;
+   
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.025;
 
-   this.webgpuscene.add(ground);
+    this.webgpuscene.add(ground);
 
     this.sunLight = new THREE.DirectionalLight(0xeeeeff, 5);
 
@@ -526,12 +532,15 @@ setInterval(() => {
     this.sunLight.shadow.camera.left = -32;
     this.sunLight.shadow.camera.top = 32;
     this.sunLight.shadow.camera.bottom = -32;
-    this.sunLight.shadow.mapSize.width = 4048;
-    this.sunLight.shadow.mapSize.height = 4048;
-    this.sunLight.shadow.bias = -0.001;
-    this.sunLight.position.set(0, 5, -1); // This positions the light slightly in front of the camera
+    this.sunLight.shadow.mapSize.width = 4096;
+    this.sunLight.shadow.mapSize.height = 4096;
+    this.sunLight.shadow.bias = -0.0005;
+    this.sunLight.shadow.normalBias = 0.02;
+    this.sunLight.position.set(5, 15, 5); // Position light at an angle for better shadows
 
-    // this.camera.attach(this.sunLight);
+    // Helper to visualize the shadow camera (useful for debugging)
+    // const helper = new THREE.CameraHelper(this.sunLight.shadow.camera);
+    // this.webgpuscene.add(helper);
 
     this.webgpuscene.add(this.sunLight);
 
@@ -920,29 +929,25 @@ setInterval(() => {
   }
 
   updateLight() {
-    // Get the camera's position
-    const cameraPosition = this.CameraControls.getPosition(new THREE.Vector3());
-    const cameraOffset = this.CameraControls.getTarget(new THREE.Vector3());
-    // Set the light's position to match the camera's position
-    //   this.sunLight.position.copy(cameraPosition.clone().add(new THREE.Vector3(0, 0, -0)));
-
-    // Get the camera's target (assuming CameraControls has a getTarget method)
+    // Get the camera's target
     const target = this.CameraControls.getTarget(new THREE.Vector3());
-
-    // Calculate the direction from the camera to the target
-    const direction = new THREE.Vector3()
-      .subVectors(target, cameraPosition)
-      .normalize();
 
     // Set the light's target
     this.sunLight.target.position.copy(target);
-
-    this.sunLight.position.copy(
-      cameraPosition.clone().add(new THREE.Vector3(0, 4, 0))
+    
+    // Position the light at an offset from the target for better shadows
+    // This creates more stable and realistic shadows
+    const lightOffsetY = 10; // Height above the scene
+    const lightOffsetX = 5;  // Offset to the side
+    const lightOffsetZ = -5; // Offset forward/back
+    
+    this.sunLight.position.set(
+      target.x + lightOffsetX,
+      target.y + lightOffsetY,
+      target.z + lightOffsetZ
     );
-
-    // Update the light's matrix
-    this.sunLight.updateMatrixWorld();
+    
+    // Make sure to update the light target
     this.sunLight.target.updateMatrixWorld();
   }
 
@@ -1000,57 +1005,6 @@ setInterval(() => {
         },
       });
     }
-  }
-
-  async createworkspace(
-    name: string,
-    position: THREE.Vector3,
-    quatertnion: THREE.Quaternion
-  ): Promise<{ entity: Entity; htmlelement: HTMLElement }> {
-    const dynamicuicomponent = new DynamicuiComponent();
-
-    dynamicuicomponent.sticky = true;
-
-    let introui = new Entity();
-
-    await introui.AddComponent(dynamicuicomponent);
-    introui.Position = position;
-    introui.Quaternion = quatertnion;
-    let res = await this.entitymanager.AddEntity(introui, name);
-    dynamicuicomponent.Size = new THREE.Vector2(10, 1000);
-
-    if (res == -1) {
-      console.log(
-        this.entitymanager.Entities.filter((e) => e._name === name)[0]
-      );
-      let entity = this.entitymanager.Entities.filter(
-        (e) => e._name === name
-      )[0];
-      entity.Position = position;
-      entity.Quaternion = quatertnion;
-      let htmlelement = (
-        entity._components.find(
-          (c) => c instanceof DynamicuiComponent
-        ) as DynamicuiComponent
-      ).HtmlElement;
-      return { entity: entity, htmlelement: htmlelement };
-    }
-
-    return { entity: introui, htmlelement: dynamicuicomponent.HtmlElement };
-  }
-
-  spwancar() {
-    const car = new Entity();
-    const carcontroller = new CarComponent({});
-    const keyboardinput = new KeyboardInput();
-
-    car.Position = new THREE.Vector3(0, 1, 0);
-    car.AddComponent(carcontroller).then(() => {
-      car.AddComponent(keyboardinput);
-      this.entitymanager.AddEntity(car, "Car" + Math.random()).then(() => {
-        this.mainEntity = car;
-      });
-    });
   }
 }
 

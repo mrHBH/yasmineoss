@@ -10,6 +10,8 @@ import { CharacterAudioManager } from "./Character/CharacterAudioManager";
 import { CharacterUIManager } from "./Character/CharacterUIManager";
 import { CharacterBehaviorController } from "./Character/CharacterBehaviorController";
 import { CharacterMovementController } from "./Character/CharacterMovementController";
+import { CharacterVehicleController } from "./Character/CharacterVehicleController";
+import { CharacterFSMController } from "./Character/CharacterFSMController";
 
 
 class CharacterComponent extends Component {
@@ -28,6 +30,8 @@ class CharacterComponent extends Component {
   private uiManager: CharacterUIManager;
   private behaviorController: CharacterBehaviorController;
   private movementController: CharacterMovementController;
+  private vehicleController: CharacterVehicleController;
+  private fsmController: CharacterFSMController;
 
   // Current input and state
   public Input: any;
@@ -36,18 +40,8 @@ class CharacterComponent extends Component {
   public currentStep: number;
   public document: { htmltext: string };
 
-  // Vehicle related properties
-  public isDriving: any;
-  public vehicle: any;
-  public carcomponent: any;
-
   // Activation circle for visual feedback
-  public activationCircle: THREE.Line<THREE.CircleGeometry, THREE.LineBasicMaterial, THREE.Object3DEventMap>;
-
-  // Physics box for left leg
-  private leftLegPhysicsBox: CANNON.Body;
-  private leftLegBone: THREE.Bone;
-  private leftLegBoxMesh: THREE.Mesh; // For visualization
+  public activationCircle: THREE.Line;
 
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
     super();
@@ -104,12 +98,13 @@ class CharacterComponent extends Component {
     });
 
 
-    // Initialize managers (excluding audioManager, which is now lazy-loaded)
+    // Initialize managers
     this.animationManager = new CharacterAnimationManager(this._model, animations);
-    this.physicsController = new CharacterPhysicsController(this._entity);
-    // audioManager is NOT initialized here anymore.
+    this.physicsController = new CharacterPhysicsController(this._entity, this._model);
     this.uiManager = new CharacterUIManager(this._entity, this._css2dgroup, this.behaviorController.behaviourscriptname);
     this.movementController = new CharacterMovementController(this._entity);
+    this.vehicleController = new CharacterVehicleController(this._entity);
+    this.fsmController = new CharacterFSMController(this.animationManager, this.physicsController);
 
     // Setup callbacks between managers
     this.setupManagerCallbacks();
@@ -185,10 +180,12 @@ class CharacterComponent extends Component {
       this.physicsController.body.position.set(newPosition.x, newPosition.y, newPosition.z);
     };
     this.animationManager.onMounting = () => {
-      this.handleMounting();
+      // Mounting animation state change - handled by vehicle controller
+      console.log("Character mounting vehicle");
     };
     this.animationManager.onUnmounting = () => {
-      this.handleUnmounting();
+      // Unmounting animation state change - handled by vehicle controller  
+      console.log("Character unmounting vehicle");
     };
     this.animationManager.onResetPhysicsBody = () => {
 
@@ -228,266 +225,37 @@ class CharacterComponent extends Component {
       this.movementController.getCurrentState = () => {
         return this.animationManager ? this.animationManager.getCurrentState() : "Ideling";
       };
-    }
 
-  
-
-  
-
-  private setupLeftLegPhysicsBox() {
-    // Check if entity manager and physics world are available
-    if (!this._entity._entityManager || !this._entity._entityManager._mc || !this._entity._entityManager._mc.physicsmanager) {
-      console.log("Entity manager or physics manager not ready yet, deferring left leg physics box setup");
-      return;
-    }
-
-    // Find the mixamorigLeftLeg bone
-    this._model.traverse((child: any) => {
-      if (child.isSkinnedMesh && child.skeleton) {
-        child.skeleton.bones.forEach((bone: THREE.Bone) => {
-          if (bone.name === "mixamorigRightToeBase") {
-            this.leftLegBone = bone;
-            console.log("Found mixamorigLeftLeg bone:", bone.name);
-          }
-        });
-      }
-    });
-
-    if (!this.leftLegBone) {
-      console.warn("mixamorigLeftLeg bone not found!");
-      return;
-    }
-
-    // Create physics box shape
-    const boxSize = new CANNON.Vec3(0.1, 0.2, 0.1); // width, height, depth
-    const boxShape = new CANNON.Box(boxSize);
-    //disable collision 
-
-
-    // Create physics body
-    this.leftLegPhysicsBox = new CANNON.Body({
-      mass: 0,
-      material: new CANNON.Material({ friction: 0.3, restitution: 0.1 }),
-    });
-    this.leftLegPhysicsBox.addShape(boxShape);
-    //disable collision with the character body
-    this.leftLegPhysicsBox.collisionFilterGroup = 0; // Disable collision with everything
-    this.leftLegPhysicsBox.collisionFilterMask = 0; // Disable collision with everything
-    this.leftLegPhysicsBox.allowSleep = true; // Allow the box to sleep when not in use
-
-    // Get bone world position and set physics box position
-    const boneWorldPosition = new THREE.Vector3();
-    this.leftLegBone.getWorldPosition(boneWorldPosition);
-    this.leftLegPhysicsBox.position.set(
-      boneWorldPosition.x,
-      boneWorldPosition.y,
-      boneWorldPosition.z
-    );
-
-    // Add to physics world
-    this._entity._entityManager._mc.physicsmanager.world.addBody(this.leftLegPhysicsBox);
-
-
-  }
-
-  private updateLeftLegPhysicsBox() {
-    if (!this.leftLegPhysicsBox || !this.leftLegBone) {
-      return;
-    }
-
-    // Update physics box position to follow the bone
-    const boneWorldPosition = new THREE.Vector3();
-    this.leftLegBone.getWorldPosition(boneWorldPosition);
-
-    this.leftLegPhysicsBox.position.set(
-      boneWorldPosition.x,
-      boneWorldPosition.y,
-      boneWorldPosition.z
-    );
-
-    // Update visual representation position
-    // this.leftLegBoxMesh.position.copy(boneWorldPosition);
-
-    // Update rotation to match bone
-    const boneWorldQuaternion = new THREE.Quaternion();
-    this.leftLegBone.getWorldQuaternion(boneWorldQuaternion);
-    this.leftLegPhysicsBox.quaternion.set(
-      boneWorldQuaternion.x,
-      boneWorldQuaternion.y,
-      boneWorldQuaternion.z,
-      boneWorldQuaternion.w
-    );
-  }
-
-
-
-  // Public method to get the left leg physics box for external access
-  public getLeftLegPhysicsBox(): CANNON.Body | null {
-    return this.leftLegPhysicsBox || null;
-  }
-
-  private handleMounting() {
-    this._entity._entityManager._mc.physicsmanager.world.removeBody(this.physicsController.body);
-    this.isDriving = true;
-
-    // Get the door and its position
-    if (this.vehicle) {
-      let door = this.vehicle.carChassis.getObjectByName("DriverDoor");
-      let doorPosition = new THREE.Vector3();
-      door.updateMatrixWorld(true);
-      door.getWorldPosition(doorPosition);
-
-      this._entity.Position = new THREE.Vector3(
-        doorPosition.x,
-        doorPosition.y,
-        doorPosition.z
-      );
-
-      this.physicsController.body.position.copy(
-        new CANNON.Vec3(
-          doorPosition.x,
-          doorPosition.y + 20,
-          doorPosition.z
-        )
-      );
-
-      setTimeout(() => {
-        this.vehicle.closeDoor();
-      }, this.animationManager.getCurrentClipDuration() - 800);
-
-      setTimeout(() => {
-        this.vehicle.openDoor();
-      }, 400);
-    }
-  }
-
-  private handleUnmounting() {
-    if (this.vehicle) {
-      const door = this.vehicle.carChassis.getObjectByName("DriverDoor");
-      if (door) {
-        const doorQuaternion = door.getWorldQuaternion(new THREE.Quaternion());
-        doorQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), doorQuaternion.y - Math.PI / 2);
-        let doorPosition = new THREE.Vector3();
-        door.updateMatrixWorld(true);
-        door.getWorldPosition(doorPosition);
-
-        doorPosition.add(
-          new THREE.Vector3(2, 0, 0).applyQuaternion(doorQuaternion)
-        );
-
-        this._entity.Position = new THREE.Vector3(
-          doorPosition.x,
-          doorPosition.y,
-          doorPosition.z
-        );
-
-        this.physicsController.setPosition(doorPosition);
-        this._webgpugroup.position.copy(doorPosition);
+      // Vehicle controller callbacks
+      this.vehicleController.onMounting = () => {
+        this.animationManager.sendEvent("MOUNT");
+      };
+      this.vehicleController.onUnmounting = () => {
+        this.animationManager.sendEvent("UNMOUNT");
+      };
+      this.vehicleController.onRemovePhysicsBody = () => {
+        this._entity._entityManager._mc.physicsmanager.world.removeBody(this.physicsController.body);
+      };
+      this.vehicleController.onAddPhysicsBody = () => {
         this._entity._entityManager._mc.physicsmanager.world.addBody(this.physicsController.body);
-        this.isDriving = false;
-      }
-
-      setTimeout(() => {
-        this.vehicle.closeDoor();
-      }, this.animationManager.getCurrentClipDuration() - 1700);
-
-      setTimeout(() => {
-        this.vehicle.openDoor();
-      }, 900);
+      };
+      this.vehicleController.onSetPosition = (position: THREE.Vector3) => {
+        this._entity.Position = position;
+        this._webgpugroup.position.copy(position);
+      };
+      this.vehicleController.onSetPhysicsPosition = (position: THREE.Vector3) => {
+        this.physicsController.body.position.copy(new CANNON.Vec3(position.x, position.y, position.z));
+      };
+      this.vehicleController.onGetAnimationDuration = () => {
+        return this.animationManager.getCurrentClipDuration();
+      };
     }
-  }
 
   updateFSM(input: any) {
-    if (!input._keys || !this.animationManager) {
-      //return;
-    }
-
-    const currentState = this.animationManager.getCurrentState();
-
-    // Jump logic
-    if (input._keys.space && currentState == "Ideling" && this.physicsController.canJump) {
-      this.animationManager.sendEvent("JUMP");
-      this.physicsController.jump(5, 750);
-    }
-
-    if (input._keys.space &&
-      (currentState == "Walking" || currentState == "SlowWalking") &&
-      this.physicsController.canJump) {
-      this.animationManager.sendEvent("JUMP");
-      this.physicsController.jump(5, 150);
-    }
-
-    if (input._keys.space && currentState == "Running" && this.physicsController.canJump) {
-      this.animationManager.sendEvent("JUMP");
-      this.physicsController.jump(25, 150);
-    }
-
-    // Movement logic
-    if (input._keys.forward && this.physicsController.isColliding_) {
-      this.animationManager.sendEvent("PUSH");
-    }
-    if (input._keys.left) {
-      this.animationManager.sendEvent("TURNLEFT");
-    }
-    if (input._keys.right) {
-      this.animationManager.sendEvent("TURNRIGHT");
-    }
-    if (!input._keys.left && !input._keys.right &&
-      (currentState == "TurningLeft" || currentState == "TurningRight")) {
-      this.animationManager.sendEvent("STOP");
-    }
-
-    // Running and walking logic
-    if (input._keys.forward && input._keys.shift && currentState == "Walking") {
-      this.animationManager.sendEvent("RUN");
-    }
-    if (input._keys.forward && input._keys.shift && currentState == "Ideling") {
-      this.animationManager.sendEvent("SLOWWALK");
-    }
-    if (input._keys.forward &&
-      (currentState == "Ideling" || currentState == "SlowWalking" ||
-        currentState == "Pushing" || currentState == "Executing") &&
-      !input._keys.shift && !this.physicsController.isColliding_) {
-      this.animationManager.sendEvent("WALK");
-    } else if (input._keys.forward && currentState !== "Pushing" && this.physicsController.isColliding_) {
-      this.animationManager.sendEvent("STOP");
-    }
-
-    if (input._keys.forward && currentState == "Pushing" && input._keys.shift) {
-      this.animationManager.sendEvent("WALK");
-    }
-
-    if (!input._keys.forward && currentState == "Pushing") {
-      this.animationManager.sendEvent("STAND");
-    }
-
-    if (input._keys.forward && currentState == "Running" && !input._keys.shift) {
-      this.animationManager.sendEvent("WALK");
-    }
-
-    if (!input._keys.forward &&
-      (currentState == "Walking" || currentState == "Running" ||
-        currentState == "SlowWalking" || currentState == "Pushing")) {
-      this.animationManager.sendEvent("STOP");
-    }
-
-    if (input._keys.backward) {
-      this.animationManager.sendEvent("BACKWARDWALK");
-    }
-    if (!input._keys.backward && currentState == "BackwardWalking") {
-      this.animationManager.sendEvent("STOP");
-    }
-    if (input._keys.forward && currentState == "Executing") {
-      this.animationManager.sendEvent("STOP");
-    }
-
-    // Update state
-    this.state = currentState;
+    this.state = this.fsmController.updateFSM(input);
   }
 
-  // Public methods for external use
-  //random default between sounds/viridian.mp3 and sounds/viri.wav
-
+  // Public methods for external use  
   async playPositionalMusic(audioUrl: string = (Math.random() < 0.5 ? "sounds/viridian.mp3" : "sounds/viri.wav")): Promise<boolean> {
     try {
       console.log("Attempting to play positional music:", audioUrl);
@@ -581,10 +349,29 @@ class CharacterComponent extends Component {
 
   activate() {
     // Create activation circle visual feedback
+    if (!this.activationCircle) {
+      const geometry = new THREE.CircleGeometry(3, 32);
+      const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
+      const edges = new THREE.EdgesGeometry(geometry);
+      this.activationCircle = new THREE.Line(edges, material);
+      this.activationCircle.position.set(0, 0.1, 0);
+      this.activationCircle.rotation.x = -Math.PI / 2;
+      this._webgpugroup.add(this.activationCircle);
+    }
   }
 
   deactivate() {
-    this._webgpugroup.remove(this.activationCircle);
+    if (this.activationCircle) {
+      this._webgpugroup.remove(this.activationCircle);
+      this.activationCircle.geometry.dispose();
+      const material = this.activationCircle.material;
+      if (material instanceof THREE.Material) {
+        material.dispose();
+      } else if (Array.isArray(material)) {
+        material.forEach(mat => mat.dispose());
+      }
+      this.activationCircle = null;
+    }
   }
 
   async zoom(radius = 8) {
@@ -604,12 +391,11 @@ class CharacterComponent extends Component {
   }
 
   async mountvehicle(vehicle: any) {
-    this.vehicle = vehicle;
-    this.animationManager.sendEvent("DRIVE");
+    return this.vehicleController.mountVehicle(vehicle);
   }
 
   async unmountvehicle() {
-    this.animationManager.sendEvent("STOPDRIVING");
+    return this.vehicleController.unmountVehicle();
   }
 
   Reset() {
@@ -632,6 +418,23 @@ class CharacterComponent extends Component {
     this.task = "notask";
   }
 
+  // Getter methods for backward compatibility
+  public get isDriving(): boolean {
+    return this.vehicleController.isCurrentlyDriving();
+  }
+
+  public get vehicle(): any {
+    return this.vehicleController.getCurrentVehicle();
+  }
+
+  public get carcomponent(): any {
+    return this.vehicleController.getCurrentVehicle();
+  }
+
+  public getLeftLegPhysicsBox(): CANNON.Body | null {
+    return this.physicsController.getLeftLegPhysicsBox();
+  }
+
   async InitEntity(): Promise<void> {
 
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
@@ -639,7 +442,7 @@ class CharacterComponent extends Component {
     this.physicsController.addToWorld(this._entity._entityManager._mc.physicsmanager.world);
     // camm     this.createNameTag(); from ui 
     this.uiManager.createNameTag();
-
+    this.physicsController.setupLeftLegPhysicsBox();
     // Register entity handlers
     this._entity._RegisterHandler("walk", async (data: any) => {
       await this.walkToPos(data.position);
@@ -680,104 +483,62 @@ class CharacterComponent extends Component {
       await this.face();
     });
 
-    // Setup left leg physics box (defer if entity manager not ready)
-    this.setupLeftLegPhysicsBox();
+    // The physics controller will setup the left leg physics box automatically when the model is available
   }
 
   async Update(deltaTime: number): Promise<void> {
-    // Ensure animation and physics managers are initialized
-
-
-
-
-
     // Update audio manager only if it's the real one (not dummy)
     if (this.audioManager && !this.audioManager.isDummyAudioManager) {
       this.audioManager.update(deltaTime);
     }
 
+    // Handle driving state
     if (this.isDriving) {
-      if (this.Input?._keys.attack1 && this.carcomponent) {
-        this.unmountvehicle();
-      }
-
-      if (this.animationManager.getCurrentState() == "Driving" ||
-        this.animationManager.getCurrentState() == "Unmounting") {
-        // Position the player on the vehicle
-        let offset = new THREE.Vector3(0.1, -0.75, 0.5);
-        this._webgpugroup.position.copy(this.vehicle._entity.Position);
-        this._webgpugroup.quaternion.copy(this.vehicle._entity.Quaternion);
-        offset.applyQuaternion(this.vehicle._entity.Quaternion);
-        this._webgpugroup.position.add(offset);
-        this._webgpugroup.rotateY(-Math.PI / 2);
-        this._entity.Position = this._webgpugroup.position;
-        this._entity.Quaternion = this._webgpugroup.quaternion;
-      }
-
-      if (this.animationManager.getCurrentState() == "Mounting") {
-        let offset = new THREE.Vector3(0.1, -1.25, 0.9);
-        this._webgpugroup.position.copy(this.vehicle._entity.Position);
-        this._webgpugroup.quaternion.copy(this.vehicle._entity.Quaternion);
-        offset.applyQuaternion(this.vehicle._entity.Quaternion);
-        this._webgpugroup.position.add(offset);
-        this._webgpugroup.rotateY(Math.PI);
-        this._entity.Position = this._webgpugroup.position;
-        this._entity.Quaternion = this._webgpugroup.quaternion;
-      }
-
-      this.animationManager.update(deltaTime);
-      if (this.behaviorController.workerloop) {
-        this.behaviorController.workerloop();
-      }
-      if (this.Input) {
-        this.updateFSM(this.Input);
-      }
+      this.updateDrivingState(deltaTime);
       return;
     }
 
-    // Regular update for non-driving state
+    // Handle normal (non-driving) state
+    this.updateNormalState(deltaTime);
+  }
+
+  private updateDrivingState(deltaTime: number): void {
+    // Check for unmounting input
+    if (this.vehicleController.checkForUnmountingInput(this.Input)) {
+      this.unmountvehicle();
+    }
+
+    // Update vehicle positioning
+    const currentState = this.animationManager.getCurrentState();
+    this.vehicleController.updateVehiclePositioning(currentState, this._entity, this._webgpugroup);
+
+    // Update animation and behavior
+    this.animationManager.update(deltaTime);
+    if (this.behaviorController.workerloop) {
+      this.behaviorController.workerloop();
+    }
+    if (this.Input) {
+      this.updateFSM(this.Input);
+    }
+  }
+
+  private updateNormalState(deltaTime: number): void {
+    // Update behavior worker
     if (this.behaviorController.workerloop) {
       this.behaviorController.workerloop();
     }
 
-    // Debug: log animation state occasionally
-    // if (Math.random() < 0.01) { // Log 1% of the time to avoid spam
-    //   console.log("Animation state:", this.animationManager.getCurrentState());
-    // }
-
+    // Update animation
     this.animationManager.update(deltaTime);
 
-    // Update physics
+    // Update physics and handle state transitions
     if (this.Input) {
-      const acceleration = this.animationManager.getAcceleration(this.animationManager.getCurrentState());
-      this.physicsController.updatePhysics(deltaTime, this._webgpugroup, this.Input, acceleration);
+      this.fsmController.handlePhysicsStateTransitions(this.Input, deltaTime, this._webgpugroup);
       this.updateFSM(this.Input);
 
-      // Update left leg physics box position
-    //  this.updateLeftLegPhysicsBox();
-
-      // Check for falling/landing - but NOT while jumping!
-      if (!this.physicsController.canJump &&
-        this.animationManager.getCurrentState() != "Falling" &&
-        !this.animationManager.isInJumpingState()) { // Don't fall while jumping!
-        this.animationManager.sendEvent("FALL");
-      } else if (this.physicsController.canJump &&
-        this.animationManager.getCurrentState() == "Falling") {
-        this.animationManager.sendEvent("LAND");
-      }
-
-      // Check for collision pushing
-      if (this.physicsController.isColliding_ &&
-        this.animationManager.getCurrentState() != "Pushing" &&
-        this.animationManager.getCurrentState() != "Executing" &&
-        this.animationManager.getCurrentState() != "Kicking") {
-        this.animationManager.sendEvent("PUSH");
-      }
-
-      // Vehicle mounting
-      if (this.Input._keys.attack1 && this.carcomponent &&
-        this.animationManager.getCurrentState() != "Driving" &&
-        this.animationManager.getCurrentState() != "Mounting") {
+      // Check for vehicle mounting
+      const currentState = this.animationManager.getCurrentState();
+      if (this.vehicleController.checkForMountingInput(this.Input, currentState)) {
         this.mountvehicle(this.carcomponent);
       }
     }
@@ -818,32 +579,19 @@ class CharacterComponent extends Component {
     this.movementController?.destroy();
     this.behaviorController?.destroy();
     this.uiManager?.destroy();
+    this.vehicleController?.destroy();
+    this.fsmController?.destroy();
+    
     // audioManager might be the real one or the dummy. Both should have a destroy method or be safely optional-chained.
     if (this.audioManager && typeof this.audioManager.destroy === 'function') {
       this.audioManager.destroy();
     }
     this.animationManager?.destroy();
 
-    // Clean up physics
+    // Clean up physics (including left leg physics box)
     if (this.physicsController && this._entity._entityManager._mc.physicsmanager?.world) {
       this.physicsController.removeFromWorld(this._entity._entityManager._mc.physicsmanager.world);
       this.physicsController.destroy();
-    }
-
-    // Clean up left leg physics box
-    if (this.leftLegPhysicsBox && this._entity._entityManager?._mc?.physicsmanager?.world) {
-      this._entity._entityManager._mc.physicsmanager.world.removeBody(this.leftLegPhysicsBox);
-      console.log("Left leg physics box removed from physics world");
-    }
-
-    // Clean up left leg visual representation
-    if (this.leftLegBoxMesh) {
-      this._webgpugroup.remove(this.leftLegBoxMesh);
-      this.leftLegBoxMesh.geometry.dispose();
-      if (this.leftLegBoxMesh.material instanceof THREE.Material) {
-        this.leftLegBoxMesh.material.dispose();
-      }
-      console.log("Left leg physics box visual representation cleaned up");
     }
 
     // Dispose of the per-entity cloned skeleton's bone textures FIRST
@@ -908,7 +656,12 @@ class CharacterComponent extends Component {
         this.activationCircle.geometry.dispose();
       }
       if (this.activationCircle.material) {
-        this.activationCircle.material.dispose();
+        const material = this.activationCircle.material;
+        if (material instanceof THREE.Material) {
+          material.dispose();
+        } else if (Array.isArray(material)) {
+          material.forEach(mat => mat.dispose());
+        }
       }
       if (this.activationCircle.parent) {
         this.activationCircle.parent.remove(this.activationCircle);

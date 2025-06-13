@@ -14,7 +14,7 @@ import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
 // Add this import statement
 import { LoadingManager } from "./utils/LoadingManager";
-import { CarComponent } from "./utils/Components/CarComponent";
+import {  CarComponent } from "./utils/Components/CarComponent";
 
 class Main {
   private entityManager: EntityManager;
@@ -171,13 +171,19 @@ class Main {
         LoadingManager.forceCleanup();
         const stats = LoadingManager.getMemoryStats();
         //resetphysics debug if active
-        if (this.maincController.physicsmanager.debug) {
-          this.maincController.physicsmanager.debug = false;
-          this.maincController.physicsmanager.debug = true;
-        }
+    
         console.log('Memory Stats after cleanup:', stats);
       }
       
+      //if f1 key is pressed,     if (this.maincController.physicsmanager.debug) {
+        //   this.maincController.physicsmanager.debug = false;
+        //   this.maincController.physicsmanager.debug = true;
+        // }
+
+        if (event.key === 'F1') {
+          this.maincController.physicsmanager.debug = !this.maincController.physicsmanager.debug;
+          console.log(`Physics debug mode: ${this.maincController.physicsmanager.debug}`);
+        }
       // Add 'd' key to delete the most recent Bob entity
       if (event.key === 'd' || event.key === 'D') {
         const bobEntities = this.entityManager.Entities.filter(e => e.name.includes('Bob'));
@@ -191,6 +197,28 @@ class Main {
       }
     });
 
+    //if i is pressed ; spawn car
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'i' || event.key === 'I') {
+           const car = new Entity();
+
+    const carcontroller = new CarComponent({
+
+    });
+    car.Position = new THREE.Vector3(0, 1, 0);
+    const h = async () => {
+      await car.AddComponent(carcontroller);
+       
+      // const keyboardinput = new KeyboardInput();
+      await car.AddComponent(new KeyboardInput());
+      await this.entityManager.AddEntity(car, "Car");
+
+     
+    };
+    h();
+
+      }
+    });
     
  
     //  await environmentbot2.AddComponent(new KeyboardInput());
