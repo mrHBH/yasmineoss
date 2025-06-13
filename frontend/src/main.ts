@@ -184,6 +184,50 @@ class Main {
           this.maincController.physicsmanager.debug = !this.maincController.physicsmanager.debug;
           console.log(`Physics debug mode: ${this.maincController.physicsmanager.debug}`);
         }
+        
+      // Add 'v' key to test visualizer
+      if (event.key === 'v' || event.key === 'V') {
+        console.log('Testing audio visualizer...');
+        const mainEntity = this.maincController.MainEntity;
+        if (mainEntity) {
+          const characterComponent = mainEntity.getComponent('CharacterComponent') as any;
+          if (characterComponent && characterComponent.getAudioManager) {
+            const audioManager = characterComponent.getAudioManager();
+            if (audioManager && typeof audioManager.testVisualizer === 'function') {
+              audioManager.testVisualizer();
+              console.log('Visualizer test triggered!');
+            } else {
+              console.log('AudioManager or testVisualizer method not available');
+            }
+          } else {
+            console.log('Character component not found');
+          }
+        } else {
+          console.log('No main entity found');
+        }
+      }
+      
+      // Add 'p' key to play music and test visualizer
+      if (event.key === 'p' || event.key === 'P') {
+        console.log('Playing music to test visualizer...');
+        const mainEntity = this.maincController.MainEntity;
+        if (mainEntity) {
+          const characterComponent = mainEntity.getComponent('CharacterComponent') as any;
+          if (characterComponent && typeof characterComponent.playPositionalMusic === 'function') {
+            characterComponent.playPositionalMusic().then((success: boolean) => {
+              if (success) {
+                console.log('Music playing! Visualizer should be active now.');
+              } else {
+                console.log('Failed to play music');
+              }
+            });
+          } else {
+            console.log('Character component or playPositionalMusic method not found');
+          }
+        } else {
+          console.log('No main entity found');
+        }
+      }
       // Add 'd' key to delete the most recent Bob entity
       if (event.key === 'd' || event.key === 'D') {
         const bobEntities = this.entityManager.Entities.filter(e => e.name.includes('Bob'));

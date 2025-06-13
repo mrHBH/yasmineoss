@@ -112,7 +112,18 @@ class CharacterComponent extends Component {
 
   }
 
-  public getAudioManager(): CharacterAudioManager | { isDummyAudioManager: boolean; initTTS: () => void; update: () => void; destroy: () => void; positionalAudio: undefined | any; SoundGenerator: any } {
+  public getAudioManager(): CharacterAudioManager | { 
+    isDummyAudioManager: boolean; 
+    initTTS: () => void; 
+    update: () => void; 
+    destroy: () => void; 
+    positionalAudio: undefined | any; 
+    SoundGenerator: any;
+    onAudioStart: (buffer?: AudioBuffer) => void;
+    onAudioStop: () => void;
+    hasVisualizer: () => boolean;
+    isVisualizationActive: () => boolean;
+  } {
     if (this.audioManager && (this.audioManager instanceof CharacterAudioManager || this.audioManager.isDummyAudioManager)) {
       return this.audioManager;
     }
@@ -166,6 +177,10 @@ class CharacterComponent extends Component {
       destroy: () => { },
       positionalAudio: undefined,
       SoundGenerator: undefined,
+      onAudioStart: () => console.warn("Dummy AudioManager: onAudioStart called - real audio manager not available."),
+      onAudioStop: () => console.warn("Dummy AudioManager: onAudioStop called - real audio manager not available."),
+      hasVisualizer: () => false,
+      isVisualizationActive: () => false,
     };
     return this.audioManager;
   }
@@ -308,8 +323,24 @@ class CharacterComponent extends Component {
             try {
               audioManager.positionalAudio.setBuffer(buffer);
               audioManager.positionalAudio.setRefDistance(20);
+              
+              // Start the visualizer before playing audio
+              if (audioManager.onAudioStart) {
+                audioManager.onAudioStart(buffer);
+              }
+              
               audioManager.positionalAudio.play();
-              console.log(`Successfully playing positional music: ${audioUrl}`);
+              
+              // Set up event listener for when audio ends to stop visualizer
+              if (audioManager.positionalAudio.source) {
+                audioManager.positionalAudio.source.onended = () => {
+                  if (audioManager.onAudioStop) {
+                    audioManager.onAudioStop();
+                  }
+                };
+              }
+              
+              console.log(`Successfully playing positional music with visualizer: ${audioUrl}`);
               resolve(true);
             } catch (error) {
               console.error("Error playing positional music:", error);
@@ -348,10 +379,22 @@ class CharacterComponent extends Component {
   }
 
   activate() {
-    // Create activation circle visual feedback
+    // Check if audio visualizer is active - if so, don't show regular activation circle
+    const audioManager = this.getAudioManager();
+    if (audioManager && 'hasVisualizer' in audioManager && 
+        audioManager.hasVisualizer() && audioManager.isVisualizationActive()) {
+      // Audio visualizer is active, no need for activation circle
+      return;
+    }
+
+    // Create activation circle visual feedback only if no visualizer is active
     if (!this.activationCircle) {
       const geometry = new THREE.CircleGeometry(3, 32);
-      const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
+      const material = new THREE.LineBasicMaterial({ 
+        color: 0xffff00,
+        transparent: true,
+        opacity: 0.7
+      });
       const edges = new THREE.EdgesGeometry(geometry);
       this.activationCircle = new THREE.Line(edges, material);
       this.activationCircle.position.set(0, 0.1, 0);
@@ -361,7 +404,12 @@ class CharacterComponent extends Component {
   }
 
   deactivate() {
-    if (this.activationCircle) {
+    // Only remove activation circle if no audio visualizer is active
+    const audioManager = this.getAudioManager();
+    const hasActiveVisualizer = audioManager && 'hasVisualizer' in audioManager && 
+                               audioManager.hasVisualizer() && audioManager.isVisualizationActive();
+
+    if (!hasActiveVisualizer && this.activationCircle) {
       this._webgpugroup.remove(this.activationCircle);
       this.activationCircle.geometry.dispose();
       const material = this.activationCircle.material;
