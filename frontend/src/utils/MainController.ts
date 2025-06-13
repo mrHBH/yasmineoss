@@ -492,8 +492,8 @@ setInterval(() => {
 
     this.grid = new InfiniteGridHelper(
       this.camera,
-      150,
-      155,
+      100,
+      100,
       new THREE.Color(0x888888),
       new THREE.Color(0x444444)
     );
