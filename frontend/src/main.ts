@@ -79,7 +79,7 @@ class Main {
 
         // Initialize the scene without Bob initially
 
-    this.maincController.physicsmanager.debug = true;
+   // this.maincController.physicsmanager.debug = false;
 
 
     //add script entity environmentbot to the scene
@@ -170,6 +170,11 @@ class Main {
         console.log('Forcing cleanup...');
         LoadingManager.forceCleanup();
         const stats = LoadingManager.getMemoryStats();
+        //resetphysics debug if active
+        if (this.maincController.physicsmanager.debug) {
+          this.maincController.physicsmanager.debug = false;
+          this.maincController.physicsmanager.debug = true;
+        }
         console.log('Memory Stats after cleanup:', stats);
       }
       

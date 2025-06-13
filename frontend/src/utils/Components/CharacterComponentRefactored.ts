@@ -10,9 +10,8 @@ import { CharacterAudioManager } from "./Character/CharacterAudioManager";
 import { CharacterUIManager } from "./Character/CharacterUIManager";
 import { CharacterBehaviorController } from "./Character/CharacterBehaviorController";
 import { CharacterMovementController } from "./Character/CharacterMovementController";
-import { StaticCLI } from "../../SimpleCLI";
-import { CodeEditor } from "./CodeEditor";
- 
+
+
 class CharacterComponent extends Component {
   _model: THREE.Object3D;
   private _modelpath: string;
@@ -52,12 +51,12 @@ class CharacterComponent extends Component {
 
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
     super();
-   
+
     this._modelpath = modelpath;
     this.task = "N";
     this._animationspathslist = animationspathslist;
     this.document = { htmltext: "" };
-    
+
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
     this._css3dgroup = new THREE.Group();
@@ -84,7 +83,7 @@ class CharacterComponent extends Component {
 
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
-    
+
     // Load the character model
     this._model = await LoadingManager.loadGLTF(this._modelpath);
     this._model.userData.entity = this._entity;
@@ -101,40 +100,9 @@ class CharacterComponent extends Component {
         child.receiveShadow = true;
       }
 
-     
+
     });
 
-    //after 5 seconds ; print the name of the bone with absolute position closest to entity position
-    setTimeout(() => {
-      let closestBone: THREE.Bone | null = null;
-      let closestDistance = Infinity;
-
-      this._model.traverse((child: any) => {
-        if (child.isSkinnedMesh && child.skeleton) {
-          child.skeleton.bones.forEach((bone: THREE.Bone) => {
-            const distance = bone.getWorldPosition(new THREE.Vector3()).distanceTo(this._entity.Position);
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              closestBone = bone;
-            }
-          });
-        }
-
-        //get offset vector from entity position to bone position
-        let offsetVector = new THREE.Vector3();
-        if (closestBone) {
-          closestBone.getWorldPosition(offsetVector);
-          offsetVector.sub(this._entity.Position);
-          console.log("Offset vector from entity to closest bone:", offsetVector);
-        }
-      });
-
-      if (closestBone) {
-        console.log("Closest bone to entity position:", closestBone.name);
-      } else {
-        console.log("No bones found in the model.");
-      }
-    }, 5000);
 
     // Initialize managers (excluding audioManager, which is now lazy-loaded)
     this.animationManager = new CharacterAnimationManager(this._model, animations);
@@ -145,9 +113,8 @@ class CharacterComponent extends Component {
 
     // Setup callbacks between managers
     this.setupManagerCallbacks();
-    
-    // Setup left leg physics box (defer if entity manager not ready)
-   ///  this.setupLeftLegPhysicsBox();
+
+
   }
 
   public getAudioManager(): CharacterAudioManager | { isDummyAudioManager: boolean; initTTS: () => void; update: () => void; destroy: () => void; positionalAudio: undefined | any; SoundGenerator: any } {
@@ -200,8 +167,8 @@ class CharacterComponent extends Component {
     this.audioManager = {
       isDummyAudioManager: true,
       initTTS: () => console.warn("Dummy AudioManager: initTTS called - real audio manager not available."),
-      update: () => {},
-      destroy: () => {},
+      update: () => { },
+      destroy: () => { },
       positionalAudio: undefined,
       SoundGenerator: undefined,
     };
@@ -223,52 +190,49 @@ class CharacterComponent extends Component {
     this.animationManager.onUnmounting = () => {
       this.handleUnmounting();
     };
-    this.animationManager.onResetPhysicsBody = () => { 
-      console.log("Resetting physics body position to match mesh world position");
+    this.animationManager.onResetPhysicsBody = () => {
 
-// Find the mixamorigLeftLeg bone
-    this._model.traverse((child: any) => {
-      if (child.isSkinnedMesh && child.skeleton) {
-        child.skeleton.bones.forEach((bone: THREE.Bone) => {
-          if (bone.name === "mixamorigRightToeBase") {
-           
-            //get world position of the bone
-            const boneWorldPosition = new THREE.Vector3();
-            bone.getWorldPosition(boneWorldPosition);
-            //adjust for offset 
-          const offset = new THREE.Vector3(-0.09115546846935242,0, -0.04163782688943089);
 
-          this.physicsController.resetPhysicsBody(boneWorldPosition.sub(offset));
-          }
-        });
-      }
-    });
+      const spine2Bone = this._model.getObjectByName("mixamorigSpine2");
+      const rightToeBaseBone = this._model.getObjectByName("mixamorigRightToeBase");
+      const rightHandMiddle4Bone = this._model.getObjectByName("mixamorigSpine2");
 
-    // UI callbacks
-    this.uiManager.onFace = () => this.face();
-    this.uiManager.onReset = () => this.Reset();
-    this.uiManager.onLoadWorker = (scriptname) => this.behaviorController.LoadWorker(scriptname);
-    this.uiManager.onKillEntity = () => this._entity.kill();
-    this.uiManager.onPlayMusic = () => this.playPositionalMusic();
+      const pos = new THREE.Vector3(
+        spine2Bone?.getWorldPosition(new THREE.Vector3()).x ?? this._entity.Position.x,
+        rightToeBaseBone?.getWorldPosition(new THREE.Vector3()).y ?? this._entity.Position.y,
+        rightHandMiddle4Bone?.getWorldPosition(new THREE.Vector3()).z ?? this._entity.Position.z
+      );
+      this.physicsController.resetPhysicsBody(pos.add(new THREE.Vector3(-0.0017684019097760815, -0.03283674009230393, 0.048088878150204226)), 0.5);
 
-    // Movement callbacks
-    this.movementController.onInputUpdate = (input) => {
-      if (this.Input && this.Input._keys) {
-        Object.assign(this.Input._keys, input);
-      }
-    };
-    this.movementController.onAddArrow = (arrow) => {
-      this._entity._entityManager._mc.webgpuscene.add(arrow);
-    };
-    this.movementController.onRemoveArrow = (arrow) => {
-      this._entity._entityManager._mc.webgpuscene.remove(arrow);
-    };
-    this.movementController.getCurrentState = () => {
-      return this.animationManager ? this.animationManager.getCurrentState() : "Ideling";
-    };
-  }
+    }
 
-}
+      // UI callbacks
+      this.uiManager.onFace = () => this.face();
+      this.uiManager.onReset = () => this.Reset();
+      this.uiManager.onLoadWorker = (scriptname) => this.behaviorController.LoadWorker(scriptname);
+      this.uiManager.onKillEntity = () => this._entity.kill();
+      this.uiManager.onPlayMusic = () => this.playPositionalMusic();
+
+      // Movement callbacks
+      this.movementController.onInputUpdate = (input) => {
+        if (this.Input && this.Input._keys) {
+          Object.assign(this.Input._keys, input);
+        }
+      };
+      this.movementController.onAddArrow = (arrow) => {
+        this._entity._entityManager._mc.webgpuscene.add(arrow);
+      };
+      this.movementController.onRemoveArrow = (arrow) => {
+        this._entity._entityManager._mc.webgpuscene.remove(arrow);
+      };
+      this.movementController.getCurrentState = () => {
+        return this.animationManager ? this.animationManager.getCurrentState() : "Ideling";
+      };
+    }
+
+  
+
+  
 
   private setupLeftLegPhysicsBox() {
     // Check if entity manager and physics world are available
@@ -298,7 +262,7 @@ class CharacterComponent extends Component {
     const boxSize = new CANNON.Vec3(0.1, 0.2, 0.1); // width, height, depth
     const boxShape = new CANNON.Box(boxSize);
     //disable collision 
-    
+
 
     // Create physics body
     this.leftLegPhysicsBox = new CANNON.Body({
@@ -323,18 +287,18 @@ class CharacterComponent extends Component {
     // Add to physics world
     this._entity._entityManager._mc.physicsmanager.world.addBody(this.leftLegPhysicsBox);
 
- 
+
   }
 
   private updateLeftLegPhysicsBox() {
-    if (!this.leftLegPhysicsBox || !this.leftLegBone  ) {
+    if (!this.leftLegPhysicsBox || !this.leftLegBone) {
       return;
     }
 
     // Update physics box position to follow the bone
     const boneWorldPosition = new THREE.Vector3();
     this.leftLegBone.getWorldPosition(boneWorldPosition);
-    
+
     this.leftLegPhysicsBox.position.set(
       boneWorldPosition.x,
       boneWorldPosition.y,
@@ -342,7 +306,7 @@ class CharacterComponent extends Component {
     );
 
     // Update visual representation position
-   // this.leftLegBoxMesh.position.copy(boneWorldPosition);
+    // this.leftLegBoxMesh.position.copy(boneWorldPosition);
 
     // Update rotation to match bone
     const boneWorldQuaternion = new THREE.Quaternion();
@@ -353,17 +317,9 @@ class CharacterComponent extends Component {
       boneWorldQuaternion.z,
       boneWorldQuaternion.w
     );
-   }
-
-  // Public method to toggle visibility of left leg physics box (for debugging)
-  public toggleLeftLegPhysicsBoxVisibility(): void {
-    if (this.leftLegBoxMesh) {
-      this.leftLegBoxMesh.visible = !this.leftLegBoxMesh.visible;
-      console.log(`Left leg physics box visibility: ${this.leftLegBoxMesh.visible ? 'ON' : 'OFF'}`);
-    } else {
-      console.warn("Left leg physics box mesh not found!");
-    }
   }
+
+
 
   // Public method to get the left leg physics box for external access
   public getLeftLegPhysicsBox(): CANNON.Body | null {
@@ -424,7 +380,7 @@ class CharacterComponent extends Component {
           doorPosition.y,
           doorPosition.z
         );
-        
+
         this.physicsController.setPosition(doorPosition);
         this._webgpugroup.position.copy(doorPosition);
         this._entity._entityManager._mc.physicsmanager.world.addBody(this.physicsController.body);
@@ -443,7 +399,7 @@ class CharacterComponent extends Component {
 
   updateFSM(input: any) {
     if (!input._keys || !this.animationManager) {
-      return;
+      //return;
     }
 
     const currentState = this.animationManager.getCurrentState();
@@ -454,9 +410,9 @@ class CharacterComponent extends Component {
       this.physicsController.jump(5, 750);
     }
 
-    if (input._keys.space && 
-        (currentState == "Walking" || currentState == "SlowWalking") && 
-        this.physicsController.canJump) {
+    if (input._keys.space &&
+      (currentState == "Walking" || currentState == "SlowWalking") &&
+      this.physicsController.canJump) {
       this.animationManager.sendEvent("JUMP");
       this.physicsController.jump(5, 150);
     }
@@ -476,8 +432,8 @@ class CharacterComponent extends Component {
     if (input._keys.right) {
       this.animationManager.sendEvent("TURNRIGHT");
     }
-    if (!input._keys.left && !input._keys.right && 
-        (currentState == "TurningLeft" || currentState == "TurningRight")) {
+    if (!input._keys.left && !input._keys.right &&
+      (currentState == "TurningLeft" || currentState == "TurningRight")) {
       this.animationManager.sendEvent("STOP");
     }
 
@@ -488,15 +444,15 @@ class CharacterComponent extends Component {
     if (input._keys.forward && input._keys.shift && currentState == "Ideling") {
       this.animationManager.sendEvent("SLOWWALK");
     }
-    if (input._keys.forward && 
-        (currentState == "Ideling" || currentState == "SlowWalking" || 
-         currentState == "Pushing" || currentState == "Executing") &&
-        !input._keys.shift && !this.physicsController.isColliding_) {
+    if (input._keys.forward &&
+      (currentState == "Ideling" || currentState == "SlowWalking" ||
+        currentState == "Pushing" || currentState == "Executing") &&
+      !input._keys.shift && !this.physicsController.isColliding_) {
       this.animationManager.sendEvent("WALK");
     } else if (input._keys.forward && currentState !== "Pushing" && this.physicsController.isColliding_) {
       this.animationManager.sendEvent("STOP");
     }
-    
+
     if (input._keys.forward && currentState == "Pushing" && input._keys.shift) {
       this.animationManager.sendEvent("WALK");
     }
@@ -508,13 +464,13 @@ class CharacterComponent extends Component {
     if (input._keys.forward && currentState == "Running" && !input._keys.shift) {
       this.animationManager.sendEvent("WALK");
     }
-    
-    if (!input._keys.forward && 
-        (currentState == "Walking" || currentState == "Running" || 
-         currentState == "SlowWalking" || currentState == "Pushing")) {
+
+    if (!input._keys.forward &&
+      (currentState == "Walking" || currentState == "Running" ||
+        currentState == "SlowWalking" || currentState == "Pushing")) {
       this.animationManager.sendEvent("STOP");
     }
-    
+
     if (input._keys.backward) {
       this.animationManager.sendEvent("BACKWARDWALK");
     }
@@ -535,25 +491,25 @@ class CharacterComponent extends Component {
   async playPositionalMusic(audioUrl: string = (Math.random() < 0.5 ? "sounds/viridian.mp3" : "sounds/viri.wav")): Promise<boolean> {
     try {
       console.log("Attempting to play positional music:", audioUrl);
-      
+
       // Try to initialize audio manager
       let audioManager = this.getAudioManager();
-      
+
       // If we got a dummy manager, wait a bit and try again (entity might still be initializing)
       if (!audioManager || (audioManager as any).isDummyAudioManager) {
         console.log("Audio manager not ready, waiting for entity initialization...");
-        
+
         // Wait for up to 3 seconds for the entity to be fully initialized
         for (let i = 0; i < 30; i++) {
           await new Promise(resolve => setTimeout(resolve, 100));
           audioManager = this.getAudioManager();
-          
+
           if (audioManager && !(audioManager as any).isDummyAudioManager) {
             console.log("Audio manager became available after waiting");
             break;
           }
         }
-        
+
         // Final check
         if (!audioManager || (audioManager as any).isDummyAudioManager) {
           console.error("Cannot play positional music: Audio manager initialization failed after waiting");
@@ -576,7 +532,7 @@ class CharacterComponent extends Component {
 
       // Load and play the audio file
       const audioLoader = new THREE.AudioLoader();
-      
+
       return new Promise((resolve) => {
         audioLoader.load(
           audioUrl,
@@ -640,7 +596,7 @@ class CharacterComponent extends Component {
   async face(radius = 8) {
     let p = this._entity.Position.clone();
     p.y += 1.5;
-    
+
     let quat = this._entity.Quaternion.clone();
     quat.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 1), 20 * (-Math.PI / 180)));
     quat.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
@@ -648,7 +604,7 @@ class CharacterComponent extends Component {
   }
 
   async mountvehicle(vehicle: any) {
-    this.vehicle = vehicle;   
+    this.vehicle = vehicle;
     this.animationManager.sendEvent("DRIVE");
   }
 
@@ -677,7 +633,7 @@ class CharacterComponent extends Component {
   }
 
   async InitEntity(): Promise<void> {
-     
+
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
     this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
     this.physicsController.addToWorld(this._entity._entityManager._mc.physicsmanager.world);
@@ -723,27 +679,30 @@ class CharacterComponent extends Component {
     this._entity._RegisterHandler("face", async () => {
       await this.face();
     });
+
+    // Setup left leg physics box (defer if entity manager not ready)
+    this.setupLeftLegPhysicsBox();
   }
 
   async Update(deltaTime: number): Promise<void> {
     // Ensure animation and physics managers are initialized
-   
-   
-    
- 
+
+
+
+
 
     // Update audio manager only if it's the real one (not dummy)
     if (this.audioManager && !this.audioManager.isDummyAudioManager) {
       this.audioManager.update(deltaTime);
     }
-    
+
     if (this.isDriving) {
       if (this.Input?._keys.attack1 && this.carcomponent) {
-        this.unmountvehicle(); 
+        this.unmountvehicle();
       }
 
-      if (this.animationManager.getCurrentState() == "Driving" || 
-          this.animationManager.getCurrentState() == "Unmounting") {
+      if (this.animationManager.getCurrentState() == "Driving" ||
+        this.animationManager.getCurrentState() == "Unmounting") {
         // Position the player on the vehicle
         let offset = new THREE.Vector3(0.1, -0.75, 0.5);
         this._webgpugroup.position.copy(this.vehicle._entity.Position);
@@ -754,7 +713,7 @@ class CharacterComponent extends Component {
         this._entity.Position = this._webgpugroup.position;
         this._entity.Quaternion = this._webgpugroup.quaternion;
       }
-      
+
       if (this.animationManager.getCurrentState() == "Mounting") {
         let offset = new THREE.Vector3(0.1, -1.25, 0.9);
         this._webgpugroup.position.copy(this.vehicle._entity.Position);
@@ -795,31 +754,31 @@ class CharacterComponent extends Component {
       this.updateFSM(this.Input);
 
       // Update left leg physics box position
-     // this.updateLeftLegPhysicsBox();
+    //  this.updateLeftLegPhysicsBox();
 
       // Check for falling/landing - but NOT while jumping!
-      if (!this.physicsController.canJump && 
-          this.animationManager.getCurrentState() != "Falling" &&
-          !this.animationManager.isInJumpingState()) { // Don't fall while jumping!
+      if (!this.physicsController.canJump &&
+        this.animationManager.getCurrentState() != "Falling" &&
+        !this.animationManager.isInJumpingState()) { // Don't fall while jumping!
         this.animationManager.sendEvent("FALL");
-      } else if (this.physicsController.canJump && 
-                this.animationManager.getCurrentState() == "Falling") {
+      } else if (this.physicsController.canJump &&
+        this.animationManager.getCurrentState() == "Falling") {
         this.animationManager.sendEvent("LAND");
       }
 
       // Check for collision pushing
-      if (this.physicsController.isColliding_ && 
-          this.animationManager.getCurrentState() != "Pushing" &&
-          this.animationManager.getCurrentState() != "Executing" &&
-          this.animationManager.getCurrentState() != "Kicking") {
+      if (this.physicsController.isColliding_ &&
+        this.animationManager.getCurrentState() != "Pushing" &&
+        this.animationManager.getCurrentState() != "Executing" &&
+        this.animationManager.getCurrentState() != "Kicking") {
         this.animationManager.sendEvent("PUSH");
       }
 
       // Vehicle mounting
-      if (this.Input._keys.attack1 && this.carcomponent && 
-          this.animationManager.getCurrentState() != "Driving" && 
-          this.animationManager.getCurrentState() != "Mounting") { 
-        this.mountvehicle(this.carcomponent);          
+      if (this.Input._keys.attack1 && this.carcomponent &&
+        this.animationManager.getCurrentState() != "Driving" &&
+        this.animationManager.getCurrentState() != "Mounting") {
+        this.mountvehicle(this.carcomponent);
       }
     }
 
@@ -849,7 +808,7 @@ class CharacterComponent extends Component {
   async Destroy() {
     console.log(`CharacterComponent: Destroying ${this._entity.name}. Model path: ${this._modelpath}`);
     // Correctly access the WebGLRenderer instance
-    const webGLRenderer = this._entity._entityManager?._mc?.webgpu; 
+    const webGLRenderer = this._entity._entityManager?._mc?.webgpu;
 
     if (webGLRenderer && webGLRenderer.info && webGLRenderer.info.memory) {
       console.log(`[Before Destroy Actions - ${this._entity.name}] WebGL Textures: ${webGLRenderer.info.memory.textures}`);
@@ -861,10 +820,10 @@ class CharacterComponent extends Component {
     this.uiManager?.destroy();
     // audioManager might be the real one or the dummy. Both should have a destroy method or be safely optional-chained.
     if (this.audioManager && typeof this.audioManager.destroy === 'function') {
-        this.audioManager.destroy();
+      this.audioManager.destroy();
     }
     this.animationManager?.destroy();
-    
+
     // Clean up physics
     if (this.physicsController && this._entity._entityManager._mc.physicsmanager?.world) {
       this.physicsController.removeFromWorld(this._entity._entityManager._mc.physicsmanager.world);
@@ -886,7 +845,7 @@ class CharacterComponent extends Component {
       }
       console.log("Left leg physics box visual representation cleaned up");
     }
-    
+
     // Dispose of the per-entity cloned skeleton's bone textures FIRST
     if (this._model) {
       console.log(`CharacterComponent: Model for ${this._entity.name} exists. Traversing for SkinnedMesh.`);
@@ -924,17 +883,17 @@ class CharacterComponent extends Component {
       console.log(`CharacterComponent: No model path for ${this._entity.name}. Cannot release asset.`);
     }
     this._model = null; // Now set the reference to the model to null
-    
+
     // Release animation references
     if (this._loadedAnimationUrls.length > 0) {
       LoadingManager.releaseAnimations(this._loadedAnimationUrls);
       this._loadedAnimationUrls = [];
     }
-    
+
     // Note: Materials, geometries, and textures of the *shared* asset
     // are managed and disposed by LoadingManager based on reference counts.
     // We have already handled the *cloned* skeleton above.
-    
+
     // Remove groups from scenes
     if (this._entity._entityManager._mc.webgpuscene) {
       this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
@@ -942,7 +901,7 @@ class CharacterComponent extends Component {
     if (this._entity._entityManager._mc.annoationsScene) {
       this._entity._entityManager._mc.annoationsScene.remove(this._css2dgroup);
     }
-    
+
     // Dispose of activation circle if it exists
     if (this.activationCircle) {
       if (this.activationCircle.geometry) {
@@ -970,7 +929,7 @@ class CharacterComponent extends Component {
       const entityManager = this._entity?._entityManager;
       const mainController = entityManager?._mc;
       const listener = mainController?.listener;
-      
+
       return !!(this._entity && this._webgpugroup && entityManager && mainController && listener);
     } catch {
       return false;

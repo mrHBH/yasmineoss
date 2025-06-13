@@ -68,7 +68,9 @@ class PhysicsManager {
         if (value) {
             this.debugRenderer = new CannonDebugRenderer(this.scene, this.world);
         } else {
-            this.debugRenderer.Destroy();
+			//dispose of all the physics geometries ; and materials
+			 
+             this.debugRenderer.Destroy();
         }
     }
  

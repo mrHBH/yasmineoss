@@ -118,9 +118,17 @@ class MainController {
     //webgl
     this.webgpu =  new  THREE.WebGLRenderer({
       antialias: true,
-      logarithmicDepthBuffer: false,
-      powerPreference: "high-performance",
+      logarithmicDepthBuffer: true,
+      alpha: true,
+      depth: true,
+
+
+     // powerPreference: "high-performance",
     })  
+
+    this.webgpu.shadowMap.enabled = true;
+        this.webgpu.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
 
  
     this.webgpu.setPixelRatio(window.devicePixelRatio);
@@ -477,7 +485,7 @@ setInterval(() => {
     const light = new THREE.PointLight(0xffffff, 3);
     light.position.set(0, 1, 5);
     light.castShadow = true;
-    light.shadow.camera.near = 0.1;
+    light.shadow.camera.near = 0.001;
     //this.webgpuscene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
     this.webgpuscene.add(light);
 
@@ -492,28 +500,22 @@ setInterval(() => {
     this.grid.position.y = -0.025;
     this.webgpuscene.add(this.grid);
 
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(50, 50),
-      // new THREE.MeshPhongNodeMaterial({
-      //   color: new THREE.Color(0x888888),
-      //   side: THREE.FrontSide,
-      // })
-      new MeshPhysicalNodeMaterial({
-        color: new THREE.Color(0x888888),
-        side: THREE.FrontSide,
-        roughness: 0.5,
-        metalness: 0.1,
-        clearcoat: 0.1,
-        clearcoatRoughness: 0.1,
-      })
-    );
-
+   
+    //add a groud plane that can receive shadows
+    const groundGeometry = new THREE.PlaneGeometry(100, 100);
+    const groundMaterial = new  THREE.MeshBasicMaterial({
+      color: 0x808080,
+      side: THREE.DoubleSide,
+      
+    });
+      
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
+    ground.receiveShadow = false;
     ground.castShadow = false;
-    ground.position.y = -0.01;
+    ground.position.y =-0.025;
 
-    // this.webgpuscene.add(ground);
+   this.webgpuscene.add(ground);
 
     this.sunLight = new THREE.DirectionalLight(0xeeeeff, 5);
 
