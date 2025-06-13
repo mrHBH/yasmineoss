@@ -118,7 +118,7 @@ class MainController {
     //webgl
     this.webgpu =  new  THREE.WebGLRenderer({
       antialias: true,
-      logarithmicDepthBuffer: true,
+     // logarithmicDepthBuffer: true,
       alpha: true,
       depth: true,
 
@@ -127,10 +127,10 @@ class MainController {
     })  
 
     this.webgpu.shadowMap.enabled = true;
-    this.webgpu.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
-    this.webgpu.outputEncoding = THREE.sRGBEncoding;
-    this.webgpu.physicallyCorrectLights = true;
+      this.webgpu.shadowMap.type = THREE.BasicShadowMap ;
+    // this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
+    // this.webgpu.outputEncoding = THREE.sRGBEncoding;
+    // this.webgpu.physicallyCorrectLights = true;
 
     this.webgpu.setPixelRatio(window.devicePixelRatio);
 
@@ -499,7 +499,7 @@ setInterval(() => {
     );
     this.grid.castShadow = false;
     this.grid.position.y = -0.025;
-    this.webgpuscene.add(this.grid);
+   // this.webgpuscene.add(this.grid);
 
    
    
@@ -519,7 +519,7 @@ setInterval(() => {
     ground.receiveShadow = true;
    
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.025;
+    ground.position.y = -0.00025;
 
     this.webgpuscene.add(ground);
 
