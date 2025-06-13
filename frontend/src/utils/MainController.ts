@@ -88,7 +88,7 @@ class MainController {
     // { url: "animations/gltf/ybot2@Jumping.glb" },
     { url: "animations/gltf/ybot2@JumpingFromRun.glb", skipTracks: [0] },
     // { url: "animations/gltf/ybot2@Kickedfall.glb", skipTracks: [1] },
-    { url: "animations/gltf/ybot2@Landing.glb", skipTracks: [0] },
+    { url: "animations/gltf/ybot2@Landing.glb", skipTracks: [0 ] },
     // { url: "animations/gltf/ybot2@Pain.glb", skipTracks: [1] },
     // { url: "animations/gltf/ybot2@PlayingGuitar.glb", skipTracks: [1] },
     // { url: "animations/gltf/ybot2@PlayingPiano.glb", skipTracks: [0] },

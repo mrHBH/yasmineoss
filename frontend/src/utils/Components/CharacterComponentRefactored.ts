@@ -45,6 +45,11 @@ class CharacterComponent extends Component {
   // Activation circle for visual feedback
   public activationCircle: THREE.Line<THREE.CircleGeometry, THREE.LineBasicMaterial, THREE.Object3DEventMap>;
 
+  // Physics box for left leg
+  private leftLegPhysicsBox: CANNON.Body;
+  private leftLegBone: THREE.Bone;
+  private leftLegBoxMesh: THREE.Mesh; // For visualization
+
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
     super();
    
@@ -95,7 +100,41 @@ class CharacterComponent extends Component {
         child.castShadow = true;
         child.receiveShadow = true;
       }
+
+     
     });
+
+    //after 5 seconds ; print the name of the bone with absolute position closest to entity position
+    setTimeout(() => {
+      let closestBone: THREE.Bone | null = null;
+      let closestDistance = Infinity;
+
+      this._model.traverse((child: any) => {
+        if (child.isSkinnedMesh && child.skeleton) {
+          child.skeleton.bones.forEach((bone: THREE.Bone) => {
+            const distance = bone.getWorldPosition(new THREE.Vector3()).distanceTo(this._entity.Position);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestBone = bone;
+            }
+          });
+        }
+
+        //get offset vector from entity position to bone position
+        let offsetVector = new THREE.Vector3();
+        if (closestBone) {
+          closestBone.getWorldPosition(offsetVector);
+          offsetVector.sub(this._entity.Position);
+          console.log("Offset vector from entity to closest bone:", offsetVector);
+        }
+      });
+
+      if (closestBone) {
+        console.log("Closest bone to entity position:", closestBone.name);
+      } else {
+        console.log("No bones found in the model.");
+      }
+    }, 5000);
 
     // Initialize managers (excluding audioManager, which is now lazy-loaded)
     this.animationManager = new CharacterAnimationManager(this._model, animations);
@@ -106,6 +145,9 @@ class CharacterComponent extends Component {
 
     // Setup callbacks between managers
     this.setupManagerCallbacks();
+    
+    // Setup left leg physics box (defer if entity manager not ready)
+   ///  this.setupLeftLegPhysicsBox();
   }
 
   public getAudioManager(): CharacterAudioManager | { isDummyAudioManager: boolean; initTTS: () => void; update: () => void; destroy: () => void; positionalAudio: undefined | any; SoundGenerator: any } {
@@ -170,9 +212,10 @@ class CharacterComponent extends Component {
     // Animation callbacks
     this.animationManager.setCanWalkCallback(() => !this.physicsController.isColliding_);
     this.animationManager.onMoveForward = (direction: THREE.Vector3) => {
-      const controlObject = this._entity.Position;
-      controlObject.add(direction);
-      this._entity.Position = controlObject;
+      // Update both entity position and physics body to stay in sync
+      const newPosition = this._entity.Position.clone().add(direction);
+      this._entity.Position = newPosition;
+      this.physicsController.body.position.set(newPosition.x, newPosition.y, newPosition.z);
     };
     this.animationManager.onMounting = () => {
       this.handleMounting();
@@ -180,6 +223,26 @@ class CharacterComponent extends Component {
     this.animationManager.onUnmounting = () => {
       this.handleUnmounting();
     };
+    this.animationManager.onResetPhysicsBody = () => { 
+      console.log("Resetting physics body position to match mesh world position");
+
+// Find the mixamorigLeftLeg bone
+    this._model.traverse((child: any) => {
+      if (child.isSkinnedMesh && child.skeleton) {
+        child.skeleton.bones.forEach((bone: THREE.Bone) => {
+          if (bone.name === "mixamorigRightToeBase") {
+           
+            //get world position of the bone
+            const boneWorldPosition = new THREE.Vector3();
+            bone.getWorldPosition(boneWorldPosition);
+            //adjust for offset 
+          const offset = new THREE.Vector3(-0.09115546846935242,0, -0.04163782688943089);
+
+          this.physicsController.resetPhysicsBody(boneWorldPosition.sub(offset));
+          }
+        });
+      }
+    });
 
     // UI callbacks
     this.uiManager.onFace = () => this.face();
@@ -203,6 +266,108 @@ class CharacterComponent extends Component {
     this.movementController.getCurrentState = () => {
       return this.animationManager ? this.animationManager.getCurrentState() : "Ideling";
     };
+  }
+
+}
+
+  private setupLeftLegPhysicsBox() {
+    // Check if entity manager and physics world are available
+    if (!this._entity._entityManager || !this._entity._entityManager._mc || !this._entity._entityManager._mc.physicsmanager) {
+      console.log("Entity manager or physics manager not ready yet, deferring left leg physics box setup");
+      return;
+    }
+
+    // Find the mixamorigLeftLeg bone
+    this._model.traverse((child: any) => {
+      if (child.isSkinnedMesh && child.skeleton) {
+        child.skeleton.bones.forEach((bone: THREE.Bone) => {
+          if (bone.name === "mixamorigRightToeBase") {
+            this.leftLegBone = bone;
+            console.log("Found mixamorigLeftLeg bone:", bone.name);
+          }
+        });
+      }
+    });
+
+    if (!this.leftLegBone) {
+      console.warn("mixamorigLeftLeg bone not found!");
+      return;
+    }
+
+    // Create physics box shape
+    const boxSize = new CANNON.Vec3(0.1, 0.2, 0.1); // width, height, depth
+    const boxShape = new CANNON.Box(boxSize);
+    //disable collision 
+    
+
+    // Create physics body
+    this.leftLegPhysicsBox = new CANNON.Body({
+      mass: 0,
+      material: new CANNON.Material({ friction: 0.3, restitution: 0.1 }),
+    });
+    this.leftLegPhysicsBox.addShape(boxShape);
+    //disable collision with the character body
+    this.leftLegPhysicsBox.collisionFilterGroup = 0; // Disable collision with everything
+    this.leftLegPhysicsBox.collisionFilterMask = 0; // Disable collision with everything
+    this.leftLegPhysicsBox.allowSleep = true; // Allow the box to sleep when not in use
+
+    // Get bone world position and set physics box position
+    const boneWorldPosition = new THREE.Vector3();
+    this.leftLegBone.getWorldPosition(boneWorldPosition);
+    this.leftLegPhysicsBox.position.set(
+      boneWorldPosition.x,
+      boneWorldPosition.y,
+      boneWorldPosition.z
+    );
+
+    // Add to physics world
+    this._entity._entityManager._mc.physicsmanager.world.addBody(this.leftLegPhysicsBox);
+
+ 
+  }
+
+  private updateLeftLegPhysicsBox() {
+    if (!this.leftLegPhysicsBox || !this.leftLegBone  ) {
+      return;
+    }
+
+    // Update physics box position to follow the bone
+    const boneWorldPosition = new THREE.Vector3();
+    this.leftLegBone.getWorldPosition(boneWorldPosition);
+    
+    this.leftLegPhysicsBox.position.set(
+      boneWorldPosition.x,
+      boneWorldPosition.y,
+      boneWorldPosition.z
+    );
+
+    // Update visual representation position
+   // this.leftLegBoxMesh.position.copy(boneWorldPosition);
+
+    // Update rotation to match bone
+    const boneWorldQuaternion = new THREE.Quaternion();
+    this.leftLegBone.getWorldQuaternion(boneWorldQuaternion);
+    this.leftLegPhysicsBox.quaternion.set(
+      boneWorldQuaternion.x,
+      boneWorldQuaternion.y,
+      boneWorldQuaternion.z,
+      boneWorldQuaternion.w
+    );
+   }
+
+  // Public method to toggle visibility of left leg physics box (for debugging)
+  public toggleLeftLegPhysicsBoxVisibility(): void {
+    if (this.leftLegBoxMesh) {
+      this.leftLegBoxMesh.visible = !this.leftLegBoxMesh.visible;
+      console.log(`Left leg physics box visibility: ${this.leftLegBoxMesh.visible ? 'ON' : 'OFF'}`);
+    } else {
+      console.warn("Left leg physics box mesh not found!");
+    }
+  }
+
+  // Public method to get the left leg physics box for external access
+  public getLeftLegPhysicsBox(): CANNON.Body | null {
+    return this.leftLegPhysicsBox || null;
   }
 
   private handleMounting() {
@@ -563,6 +728,10 @@ class CharacterComponent extends Component {
   async Update(deltaTime: number): Promise<void> {
     // Ensure animation and physics managers are initialized
    
+   
+    
+ 
+
     // Update audio manager only if it's the real one (not dummy)
     if (this.audioManager && !this.audioManager.isDummyAudioManager) {
       this.audioManager.update(deltaTime);
@@ -625,10 +794,16 @@ class CharacterComponent extends Component {
       this.physicsController.updatePhysics(deltaTime, this._webgpugroup, this.Input, acceleration);
       this.updateFSM(this.Input);
 
-      // Check for falling/landing
-      if (!this.physicsController.canJump && this.animationManager.getCurrentState() != "Falling" && this.animationManager.getCurrentState() != "Jumping") {
+      // Update left leg physics box position
+     // this.updateLeftLegPhysicsBox();
+
+      // Check for falling/landing - but NOT while jumping!
+      if (!this.physicsController.canJump && 
+          this.animationManager.getCurrentState() != "Falling" &&
+          !this.animationManager.isInJumpingState()) { // Don't fall while jumping!
         this.animationManager.sendEvent("FALL");
-      } else if (this.physicsController.canJump && (this.animationManager.getCurrentState() == "Falling" || this.animationManager.getCurrentState() == "Jumping")) {
+      } else if (this.physicsController.canJump && 
+                this.animationManager.getCurrentState() == "Falling") {
         this.animationManager.sendEvent("LAND");
       }
 
@@ -694,6 +869,22 @@ class CharacterComponent extends Component {
     if (this.physicsController && this._entity._entityManager._mc.physicsmanager?.world) {
       this.physicsController.removeFromWorld(this._entity._entityManager._mc.physicsmanager.world);
       this.physicsController.destroy();
+    }
+
+    // Clean up left leg physics box
+    if (this.leftLegPhysicsBox && this._entity._entityManager?._mc?.physicsmanager?.world) {
+      this._entity._entityManager._mc.physicsmanager.world.removeBody(this.leftLegPhysicsBox);
+      console.log("Left leg physics box removed from physics world");
+    }
+
+    // Clean up left leg visual representation
+    if (this.leftLegBoxMesh) {
+      this._webgpugroup.remove(this.leftLegBoxMesh);
+      this.leftLegBoxMesh.geometry.dispose();
+      if (this.leftLegBoxMesh.material instanceof THREE.Material) {
+        this.leftLegBoxMesh.material.dispose();
+      }
+      console.log("Left leg physics box visual representation cleaned up");
     }
     
     // Dispose of the per-entity cloned skeleton's bone textures FIRST

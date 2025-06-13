@@ -43,7 +43,6 @@ class Main {
         }
       );
     }
-
     const bobcontroller = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
       animationspathslist: this.maincController.animations,
@@ -80,6 +79,7 @@ class Main {
 
         // Initialize the scene without Bob initially
 
+    this.maincController.physicsmanager.debug = true;
 
 
     //add script entity environmentbot to the scene

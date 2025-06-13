@@ -58,31 +58,30 @@ export class CharacterPhysicsController {
 
       // Ensure we're detecting collision on the character's body
       if (contact.bi === this.body || contact.bj === this.body) {
-        // Get the collision normal
-        const normal = contact.ni.clone();
-        if (contact.bi === this.body) {
-          normal.negate(); // Ensure an upward-pointing normal for ground collisions
+        // Get the collision normal (like in the original code)
+        const contactNormal = new CANNON.Vec3();
+        if (contact.bi.id === this.body.id) {
+          contact.ni.negate(contactNormal);
+        } else {
+          contactNormal.copy(contact.ni);
         }
         
+        // Check for wall collision
         let forwardDirection: CANNON.Vec3 = new CANNON.Vec3(0, 0, -1);
-        // Check if the collision is roughly in front of the character
         this.body.quaternion.vmult(forwardDirection, forwardDirection);
-        const angle = normal.dot(forwardDirection);
+        const angle = contactNormal.dot(forwardDirection);
 
-        // You can adjust this threshold to fine-tune what's considered "in front"
         if (angle < -0.9) { // Collision is in front if the angle is close to -1
-          console.log("colliding with a wall");
           this.isColliding_ = true;
         } else {
           this.isColliding_ = false;
         }
 
-        // Check if this is a ground collision for jumping
+        // Check if this is a ground collision for jumping (using same logic as original)
         const upAxis = new CANNON.Vec3(0, 1, 0);
-        if (normal.dot(upAxis) > 0.7) {
-          // Character is touching ground - can jump again
+        if (contactNormal.dot(upAxis) > 0.7) {
           this.canJump = true;
-         }
+        }
       }
     });
   }
@@ -164,11 +163,6 @@ export class CharacterPhysicsController {
     this.body.velocity.x = ((forwardDir.x * acc.z) / this.body.mass) * 10;
     this.body.velocity.z = ((forwardDir.z * acc.z) / this.body.mass) * 10;
 
-    if ( Math.abs(velocity.y) < 0.001  && !this.canJump) {
-      this.canJump = true; // Allow jumping again if not in air
-      // Handle in-air state
-    }
-
     // Check if not current front collision
     if (!this.body.collisionResponse) {
       this.isColliding_ = false;
@@ -227,5 +221,45 @@ export class CharacterPhysicsController {
   public isOnGround(): boolean {
     // Character is on ground if they can jump and have minimal vertical velocity
     return this.canJump 
+  }
+
+  resetPhysicsBody(target_position: THREE.Vector3, duration: number = 0.5) {
+    console.log("Resetting physics body position to match mesh world position");
+    // Reset physics body position to match the mesh's actual world position with lerp
+
+    // Store the starting position
+    const startPosition = new THREE.Vector3(
+      this.body.position.x,
+      this.body.position.y,
+      this.body.position.z
+    );
+
+    const startTime = performance.now();
+
+    const lerpPosition = () => {
+      const elapsedTime = (performance.now() - startTime) / 1000; // Convert to seconds
+      const t = Math.min(elapsedTime / duration, 1); // Clamp t between 0 and 1
+
+      // Lerp between start and target positions
+      const currentPosition = new THREE.Vector3().lerpVectors(startPosition, target_position, t);
+
+      this.body.position.set(
+        currentPosition.x,
+        currentPosition.y,
+        currentPosition.z
+      );
+
+      // Continue lerping if not finished
+      if (t < 1) {
+        requestAnimationFrame(lerpPosition);
+      }
+    };
+
+    // Start the lerp animation
+    lerpPosition();
+
+    // Also reset velocity to prevent unwanted movement
+    // this.body.velocity.set(0, 0, 0);
+    // this.body.angularVelocity.set(0, 0, 0);
   }
 }

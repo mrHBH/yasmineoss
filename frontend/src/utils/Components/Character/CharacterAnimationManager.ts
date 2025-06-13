@@ -291,6 +291,9 @@ export class CharacterAnimationManager {
           JumpingFromStill: {
             entry: "StartJumping",
             on: {
+              FALL: {
+                target: "Falling",
+              },
               LAND: {
                 target: "Ideling",
               },
@@ -299,6 +302,9 @@ export class CharacterAnimationManager {
           JumpingFromWalk: {
             entry: "StartJumping2",
             on: {
+              FALL: {
+                target: "Falling",
+              },
               LAND: {
                 target: "Ideling",
               },
@@ -307,6 +313,9 @@ export class CharacterAnimationManager {
           JumpingFromRun: {
             entry: "StartJumping",
             on: {
+              FALL: {
+                target: "Falling",
+              },
               LAND: {
                 target: "Walking",
               },
@@ -398,30 +407,35 @@ export class CharacterAnimationManager {
         const prevAction = this._mixer.clipAction(ac2);
 
         curAction.time = 0.0;
+         curAction.reset();
+
         curAction.enabled = true;
         curAction.setEffectiveTimeScale(1.0);
         curAction.setEffectiveWeight(1.0);
         curAction.crossFadeFrom(prevAction, 0.1, true);
+
+        // clamp when finished
         curAction.play();
+       curAction.clampWhenFinished = true;
+        curAction.setLoop(THREE.LoopOnce, 1);
 
         // Landing animation with forward movement
         const forward = new THREE.Vector3(0, 0, 1);
         forward.applyQuaternion(this._model.quaternion);
         forward.normalize();
 
-        let interval;
-        setTimeout(() => {
+         setTimeout(() => {
+          // Reset physics body to match final mesh position before transitioning
+          if (this.onResetPhysicsBody) {
+            this.onResetPhysicsBody();
+          }
+          
           this.AnimationFSMService_.send("LAND");
-          interval = setInterval(() => {
-            if (this.onMoveForward) {
-              this.onMoveForward(forward.clone().multiplyScalar(1.05));
-            }
-          }, 10);
-        }, curAction.getClip().duration * 1000 - 250);
+          //
+       
+        }, curAction.getClip().duration * 1000    );
 
-        setTimeout(() => {
-          clearInterval(interval);
-        }, curAction.getClip().duration * 1000);
+        
       },
 
       StartWalking: (_context, _event) => {
@@ -453,10 +467,12 @@ export class CharacterAnimationManager {
         curAction.crossFadeFrom(prevAction, 0.25, true);
         curAction.play();
 
+        // Auto-land after jump animation completes (like original)
         setTimeout(() => {
-          curAction.crossFadeFrom(prevAction, 0.25, true);
-          this.AnimationFSMService_.send("LAND");
-        }, (curAction.getClip().duration * 1000) / 1);
+          if (this.AnimationFSMService_.state.value.includes("Jumping")) {
+            this.AnimationFSMService_.send("LAND");
+          }
+        }, (curAction.getClip().duration * 1000) - 100);
       },
 
       StartJumping2: (_context, _event) => {
@@ -473,6 +489,7 @@ export class CharacterAnimationManager {
         curAction.crossFadeFrom(prevAction, 0.25, true);
         curAction.play();
 
+        // Immediately land (like original behavior for walk jump)
         this.AnimationFSMService_.send("LAND");
       },
 
@@ -562,19 +579,31 @@ export class CharacterAnimationManager {
           context.targetRestoreAnimation = "";
 
           if (prevAction !== undefined) {
-            curAction.time = 0.0;
+          
+            // if prev action is landing 
+            if (this.AnimationFSMService_._state.history.value === "Landing") {
+               curAction.time = 0.0;
+            curAction.enabled = true;
+            curAction.setEffectiveTimeScale(1.0);
+            curAction.setEffectiveWeight(1.0);
+            curAction.crossFadeFrom(prevAction, 0.5, true);
+            curAction.play();
+
+            }
+            else {  curAction.time = 0.0;
             curAction.enabled = true;
             curAction.setEffectiveTimeScale(1.0);
             curAction.setEffectiveWeight(1.0);
             curAction.crossFadeFrom(prevAction, 0.35, false);
             curAction.play();
+}
           } else {
             const actionprev = this._mixer.clipAction(this.animations_[context.lastplayedanimation]);
             curAction.time = 0.0;
             curAction.enabled = true;
             curAction.setEffectiveTimeScale(1.0);
             curAction.setEffectiveWeight(1.0);
-            curAction.crossFadeFrom(actionprev, 0.35, false);
+            curAction.crossFadeFrom(actionprev, 0.25, false);
             curAction.play();
           }
         }
@@ -764,6 +793,7 @@ export class CharacterAnimationManager {
   public onMoveForward: (direction: THREE.Vector3) => void;
   public onMounting: () => void;
   public onUnmounting: () => void;
+  public onResetPhysicsBody: () => void;
 
   sendEvent(event: string) {
     if (this.AnimationFSMService_ && this.AnimationFSMService_.send) {
@@ -777,6 +807,11 @@ export class CharacterAnimationManager {
 
   getCurrentState(): string {
     return this.state;
+  }
+
+  isInJumpingState(): boolean {
+    const jumpingStates = ["JumpingFromStill", "JumpingFromWalk", "JumpingFromRun"];
+    return jumpingStates.includes(this.state);
   }
 
   getCurrentClipDuration(): number {
@@ -801,7 +836,7 @@ export class CharacterAnimationManager {
       case "SlowWalking":
         return 1.35;
       case "Landing":
-        return 2;
+        return 0;
       case "JumpingFromWalk":
         return 2;
       case "JumpingFromRun":
