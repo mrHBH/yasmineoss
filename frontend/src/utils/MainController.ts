@@ -71,6 +71,13 @@ class MainController {
   CameraControls: CameraControls;
   //mesh + body
   walls: any[] = [];
+  
+  // Mouse tracking for distinguishing clicks from drags
+  private rightMouseDown: boolean = false;
+  private mouseDownPosition: { x: number; y: number } = { x: 0, y: 0 };
+  private isDragging: boolean = false;
+  private dragThreshold: number = 5; // pixels
+  
   animations: { url: string; skipTracks?: number[] }[] = [
     { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
     //s { url: "animations/gltf/ybot2@BackwardWalkingM.glb", skipTracks: [1] },
@@ -396,6 +403,11 @@ setInterval(() => {
       this.camera,
       this.html2dRenderer.domElement
     );
+
+    //add event listener that prevents context menu from propagating after right button drag
+      
+ 
+      
     this.CameraControls.saveState();
     this.CameraControls.mouseButtons = {
       left: CameraControls.ACTION.TRUCK,
@@ -428,6 +440,11 @@ setInterval(() => {
       (event) => this.onContextMenu(event),
       false
     );
+
+    // Add mouse event listeners for tracking right-click vs drag
+    document.addEventListener("mousedown", (event) => this.onMouseDown(event), false);
+    document.addEventListener("mousemove", (event) => this.onMouseMove(event), false);
+    document.addEventListener("mouseup", (event) => this.onMouseUp(event), false);
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "r") {
@@ -688,6 +705,21 @@ setInterval(() => {
   };
 
   onContextMenu(event: MouseEvent): any {
+    // If this was a drag operation, don't process the context menu
+    if (this.isDragging) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    // Check that camera is not being controlled by CameraControls
+    if (this.CameraControls.currentAction !== CameraControls.ACTION.NONE) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    
+    
     const raycaster = new THREE.Raycaster();
     //@ts-ignore
     raycaster.firstHitOnly = true;
@@ -1006,6 +1038,36 @@ setInterval(() => {
           scriptname: "botbasicbehavior.js",
         },
       });
+    }
+  }
+
+  private onMouseDown(event: MouseEvent): void {
+    if (event.button === 2) { // Right mouse button
+      this.rightMouseDown = true;
+      this.mouseDownPosition = { x: event.clientX, y: event.clientY };
+      this.isDragging = false;
+    }
+  }
+
+  private onMouseMove(event: MouseEvent): void {
+    if (this.rightMouseDown) {
+      const deltaX = Math.abs(event.clientX - this.mouseDownPosition.x);
+      const deltaY = Math.abs(event.clientY - this.mouseDownPosition.y);
+      
+      if (deltaX > this.dragThreshold || deltaY > this.dragThreshold) {
+        this.isDragging = true;
+      }
+    }
+  }
+
+  private onMouseUp(event: MouseEvent): void {
+    if (event.button === 2 && this.rightMouseDown) { // Right mouse button
+      this.rightMouseDown = false;
+      
+      // Reset dragging state after a short delay to ensure context menu gets the correct state
+      setTimeout(() => {
+        this.isDragging = false;
+      }, 10);
     }
   }
 }
