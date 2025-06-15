@@ -134,7 +134,7 @@ class MainController {
     })  
 
     this.webgpu.shadowMap.enabled = true;
-      this.webgpu.shadowMap.type = THREE.BasicShadowMap ;
+      this.webgpu.shadowMap.type = THREE.PCFSoftShadowMap  
     // this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
     // this.webgpu.outputEncoding = THREE.sRGBEncoding;
     // this.webgpu.physicallyCorrectLights = true;
@@ -516,7 +516,7 @@ setInterval(() => {
     );
     this.grid.castShadow = false;
     this.grid.position.y = -0.025;
-    this.webgpuscene.add(this.grid);
+   // this.webgpuscene.add(this.grid);
 
    
    
@@ -525,7 +525,7 @@ setInterval(() => {
     const groundGeometry = new THREE.PlaneGeometry(100, 100);
    
     const groundMaterial = new THREE.MeshStandardMaterial({
-      color: 0x808080,
+      color: 0x666666,
       metalness: 0.0,
       roughness: 0.8,
       transparent: true,
@@ -551,8 +551,8 @@ setInterval(() => {
     this.sunLight.shadow.camera.left = -32;
     this.sunLight.shadow.camera.top = 32;
     this.sunLight.shadow.camera.bottom = -32;
-    this.sunLight.shadow.mapSize.width = 4096;
-    this.sunLight.shadow.mapSize.height = 4096;
+    this.sunLight.shadow.mapSize.width = 2048;
+    this.sunLight.shadow.mapSize.height = 2048;
     this.sunLight.shadow.bias = -0.0005;
     this.sunLight.shadow.normalBias = 0.02;
     this.sunLight.position.set(5, 15, 5); // Position light at an angle for better shadows

@@ -9,9 +9,12 @@ import { threeDUIComponent } from "../utils/Components/3dUIComponent";
 // // import { KeyboardInput } from "./Components/KeyboardInput.js";
   import { DynamicuiWorkerComponent } from "./Components/DynamicuiWorkerComponent.js";
 import { StaticCLI } from "../SimpleCLI.js";
-import { any, call } from "three/webgpu";
-import { TogetherAIEmbeddings } from "@langchain/community/embeddings/togetherai";
- 
+ import {
+  utils,
+  onScroll,
+  animate,
+} from 'animejs';
+
 // //const {MediaPresenter, AudioStreamer , VideoStreamer } = require('sfmediastream');
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.mjs";
@@ -52,7 +55,7 @@ class UIManager {
     this.createUIButtons();
     this.addScrollbar();
     this.moveCubeAlongPath(0);
- //   this.createInitialUI();
+   this.createInitialUI();
   }
 
   private async createInitialUI(): Promise<void> {
@@ -280,35 +283,34 @@ class UIManager {
     Object.assign(this.scrollbarContainer.style, {
       position: "absolute",
       top: "50%",
-      right: "1vw", // Adjust the right position to take up just the gutter space
+      right: "0.5vw", // More subtle positioning
       transform: "translateY(-50%)",
-      width: "18px", // Adjust the width to take up just the gutter space
-      height: "80vh",
+      width: "8px", // Thinner for less intrusion
+      height: "60vh", // Shorter for better proportions
       overflow: "auto",
       cursor: "pointer",
-      zIndex: "5",
-      borderRadius: "4px", // Add rounded corners
-      backgroundColor: "rgba(0, 0, 0, 0.0)", // Transparent background color
-      transition: "background-color 0.3s ease-in-out", // Add hover effect
+      zIndex: "4", // Lower z-index so smooth navigation is on top
+      borderRadius: "8px", // More rounded
+      backgroundColor: "rgba(0, 0, 0, 0.0)", // Transparent background
+      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", // Smooth transitions
+      opacity: "0.3", // More subtle by default
     });
 
-    // this.scrollbarContainer.style.display = "none";
-    //animate opacity when swtiching between display block and none
-    this.scrollbarContainer.style.transition = "opacity 0.5s";
-    this.scrollbarContainer.style.opacity = "0.5";
-
-
-
-
-    // Add hover effect
+    // Enhanced hover effects to work with smooth navigation
     this.scrollbarContainer.addEventListener("mouseover", () => {
-      this.scrollbarContainer.style.backgroundColor = "rgba(0, 0, 0, 0.4)";
-    });
-    this.scrollbarContainer.addEventListener("mouseout", () => {
       this.scrollbarContainer.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
+      this.scrollbarContainer.style.opacity = "0.8";
+      this.scrollbarContainer.style.width = "12px";
+    });
+    
+    this.scrollbarContainer.addEventListener("mouseout", () => {
+      this.scrollbarContainer.style.backgroundColor = "rgba(0, 0, 0, 0.0)";
+      this.scrollbarContainer.style.opacity = "0.3";
+      this.scrollbarContainer.style.width = "8px";
     });
 
-    // Create the scrollbar content
+
+    // Create the scrollbar content with enhanced styling
     this.scrollbarContent = document.createElement("div");
     this.scrollbarContent.classList.add("scrollbar-content");
 
@@ -553,8 +555,12 @@ class UIManager {
       .getElementById("togglemousecontrolsbutton")
       ?.classList.add("uk-text-danger");
    
-//    show the navigation scrollbarq
-    this.scrollbarContainer.style.display = "block";
+    // Don't show the old scrollbar if smooth navigation is present
+    const smoothNavigation = document.querySelector('.smooth-navigation');
+    if (!smoothNavigation) {
+      this.scrollbarContainer.style.display = "block";
+    }
+    
     if (this.currentUIelement) {
       this.currentUIelement.FitToScroll = true;
     }
@@ -900,6 +906,65 @@ class UIManager {
 
     
     return introui;
+  }
+
+  // Method to handle smooth navigation integration
+  updateSmoothNavigation(progress: number, positions: THREE.Vector3[], lookatDirections: THREE.Vector3[] = []) {
+    if (!this.splinePath) return;
+    
+    // Update spline path with new positions
+    this.splinePath.points = positions;
+    
+    // Update lookat path if provided
+    if (lookatDirections.length > 0) {
+      this.lookatPath = lookatDirections;
+    }
+    
+    // Update spline visual representation
+    this.updateSplineObject();
+    
+    // Smoothly update cube position
+    this.cubePosition = progress;
+    this.updateScrollbarPosition();
+    
+    // Move cursor along path
+    this.moveCubeAlongPath(0);
+  }
+
+  // Enhanced method for creating smooth camera transitions
+  async createSmoothTransition(startPos: THREE.Vector3, endPos: THREE.Vector3, duration: number = 2000): Promise<void> {
+    const midPoint = startPos.clone().lerp(endPos, 0.5).add(new THREE.Vector3(0, 5, 0));
+    const controlPoints = [startPos, midPoint, endPos];
+    
+    this.splinePath.points = controlPoints;
+    this.updateSplineObject();
+    
+    // Use tween for smooth transition (assuming tween is available globally)
+    return new Promise((resolve) => {
+      const startProgress = this.cubePosition;
+      // @ts-ignore - tween might be available globally
+      if (typeof tween !== 'undefined') {
+        // @ts-ignore
+        tween({
+          from: { progress: startProgress },
+          to: { progress: 1 },
+          duration: duration,
+          easing: "easeInOutCubic",
+          render: (state: any) => {
+            this.cubePosition = state.progress;
+            this.updateScrollbarPosition();
+            this.moveCubeAlongPath(0);
+          },
+          complete: () => resolve()
+        });
+      } else {
+        // Fallback without animation
+        this.cubePosition = 1;
+        this.updateScrollbarPosition();
+        this.moveCubeAlongPath(0);
+        resolve();
+      }
+    });
   }
 }
 export { UIManager };

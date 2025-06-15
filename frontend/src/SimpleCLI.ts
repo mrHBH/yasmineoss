@@ -1,5 +1,4 @@
-import { color } from "three/webgpu";
-
+ 
 class StaticCLI {
   private static timeouts: { [key: string]: NodeJS.Timeout } = {};
   private static queues: { [key: string]: (() => Promise<void>)[] } = {};

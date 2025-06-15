@@ -20,6 +20,7 @@
     "@langchain/community": "^0.0.53",
     "@langchain/groq": "^0.0.9",
     "@tweakpane/plugin-essentials": "^0.2.1",
+    "animejs": "^4.0.2",
     "bun": "^1.2.15",
     "camera-controls": "^2.10.1",
     "cannon-es": "^0.20.0",

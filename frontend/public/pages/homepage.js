@@ -1,527 +1,354 @@
 let ver = "0.0.306";
 
+  
+const fronthtml = /*html*/ `
+<div class="uk-container">
+ <div class="uk-grid-match uk-child-width-1-2@m" uk-grid>
+   <div>
+     <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+       <article class="uk-comment uk-comment-secondary" role="comment">
+         <header class="uk-comment-header">
+           <div class="uk-grid-medium uk-flex-middle" uk-grid>
+             <div class="uk-width-auto"> <img class="uk-comment-avatar uk-border-circle" src="Hamza012.jpg" width="80"
+                 height="80" alt=""> </div>
+             <div class="uk-width-expand">
+               <h4 class="uk-comment-title uk-margin-remove"><a class="uk-link-reset" href="#">Hamza Ben Hassen</a></h4>
+               <ul class="uk-comment-meta uk-subnav uk-subnav-divider uk-margin-remove-top">
+                 <li><a href="#">Electrical Engineer</a></li>
+               </ul>
+             </div>
+           </div>
+         </header>
+         <div class="uk-comment-body">
+           <p>Welcome to my personal website!</p>            </div>
+       </article>
+     </div>
+   </div>
+   <div>
+     <div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-right; repeat: true">
+       <h3 class="uk-card-title uk-text-center">Navigation</h3> 
+       <div class="uk-child-width-1-2@s uk-child-width-1-3@m uk-grid-match" uk-grid>
+         <div>
+           <div class="uk-card uk-card-secondary uk-card-body uk-card-hover uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+             <span uk-icon="icon: mail; ratio: 2"></span>
+             <div class="uk-grid-small uk-child-width-auto  uk-center" uk-grid>
+                 <div>
+                   <a class="uk-button  uk-button-text  uk-text-center "  id="contactButton" href="#">Contact</a>
+                 </div>
+           
+       </div>
+             
+           </div>
+         </div>
+         <div>
+           <div class="uk-card uk-card-secondary uk-card-body uk-card-hover uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+             <span uk-icon="icon: code; ratio: 2"></span>
+              <a class="uk-button  uk-button-text"  id="projectsButton" href="#">Projects</a>
+
+            </div>
+         </div>
+         <div>
+           <div class="uk-card uk-card-secondary uk-card-body  uk-text-center" uk-scrollspy="cls: uk-animation-scale-up; repeat: true">
+             <span uk-icon="icon: user; ratio: 2"></span>
+              <a class="uk-button  uk-button-text"  id="aboutButton" href="#">About</a>
+
+
+         </div>
+       </div>
+     </div>
+      </div>
+</div>
+`;
 let cb = function (e) {
-  let del = ` // <div class="uk-width-auto">
-  //   <img class="uk-border-circle" src="Hamza012.jpg" width="60" height="60" alt="">
-  // </div> `;
-  const chatHTML = /*html*/ `
-  <div class="cli-container">
-    <div class="cli-header">
-      <div class="uk-grid-medium uk-flex-middle" uk-grid>
-        <div class="uk-width-expand">
-          <h3 class="uk-margin-remove">Hamza Ben Hassen <span id="connection-indicator" class="connection-indicator connection-offline" uk-tooltip="Connection status"></span></h3>
-          <p class="uk-text-meta">Electrical Engineer</p>
+
+// Create fixed smooth navigation on document
+const createFixedSmoothNavigation = () => {
+  // Remove existing navigation if it exists
+  const existingNav = document.getElementById('smoothNavigation');
+  if (existingNav) {
+    existingNav.remove();
+  }
+  
+  // Create CSS link if it doesn't exist
+  if (!document.querySelector('link[href*="smooth-navigation.css"]')) {
+    const cssLink = document.createElement('link');
+    cssLink.rel = 'stylesheet';
+    cssLink.href = '../styles/smooth-navigation.css';
+    document.head.appendChild(cssLink);
+  }
+  
+  // Create the navigation HTML
+  const navHTML = `
+    <div class="smooth-navigation" id="smoothNavigation">
+      <div class="section-indicator">Start</div>
+      <div class="nav-ruler">
+        <div class="nav-progress" id="navProgress"></div>
+        <div class="nav-markers">
+          <div class="nav-marker" data-section="home">
+            <div class="nav-label">🏠 Home</div>
+          </div>
+          <div class="nav-marker" data-section="contact">
+            <div class="nav-label">📧 Contact</div>
+          </div>
+          <div class="nav-marker" data-section="projects">
+            <div class="nav-label">💼 Projects</div>
+          </div>
+          <div class="nav-marker" data-section="about">
+            <div class="nav-label">👤 About</div>
+          </div>
         </div>
       </div>
+      <div class="section-indicator">End</div>
+      <div class="section-indicator" style="font-size: 8px; opacity: 0.6; margin-top: 0.5rem;">scroll or click</div>
     </div>
-
-    <div class="cli-console" id="console">
-      <div id="consoleContent" class="console-content"></div>
-    </div>
-
-    <div class="cli-input-container">
-      <div class="uk-inline uk-width-expand">
-        <div id="inlineInputContainer" class="inline-input-container"></div>
-        <div id="loading-spinner" class="uk-position-right uk-padding-small" hidden>
-          <div uk-spinner="ratio: 0.7"></div>
-        </div>
-      </div>
-      <div class="static-buttons" id="staticButtons">
-        <button class="send-button" id="sendButton" disabled>Send</button>
-        <button class="cancel-button" id="cancelButton" hidden>Cancel</button>
-      </div>
-    </div>
-  </div>
   `;
+  
+  // Create a container and add it to the document body
+  const navContainer = document.createElement('div');
+  navContainer.innerHTML = navHTML;
+  document.body.appendChild(navContainer.firstElementChild);
+  
+  return document.getElementById('smoothNavigation');
+};
 
+// Navigation system state
+const navigationState = {
+  sections: [
+    { name: 'home', position: new THREE.Vector3(0, 15, 0), progress: 0 },
+    { name: 'contact', position: new THREE.Vector3(-15, 10, 0), progress: 0.33 },
+    { name: 'projects', position: new THREE.Vector3(25, 0.01, 20), progress: 0.66 },
+    { name: 'about', position: new THREE.Vector3(15, 10, 2), progress: 1.0 }
+  ],
+  currentSection: 0,
+  isTransitioning: false
+};
+
+// Smooth navigation functions
+const updateNavigationProgress = (progress) => {
+  const navProgress = document.getElementById('navProgress'); // Now reference document directly
+  const markers = document.querySelectorAll('.nav-marker'); // Now reference document directly
+  
+  if (navProgress) {
+    // Clamp progress between 0 and 1
+    const clampedProgress = Math.max(0, Math.min(1, progress));
+    navProgress.style.top = `${clampedProgress * 100}%`;
+  }
+  
+  // Update active marker with smooth transitions
+  markers.forEach((marker, index) => {
+    marker.classList.remove('active');
+    const sectionProgress = navigationState.sections[index]?.progress || 0;
+    if (Math.abs(progress - sectionProgress) < 0.15) {
+      marker.classList.add('active');
+    }
+  });
+};
+
+const getProgressFromCameraPosition = () => {
   const mc = this._entity._entityManager._mc;
-  const container = this.HtmlElement;
-  let commandHistory = [];
-  let historyIndex = -1;
-  let currentInput = "";
-  let ws = null;
-  let isProcessing = false;
-  let inlineInputActive = false;
-  let currentPromptElement = null;
+  if (!mc || !mc.UIManager) return 0;
+  
+  // Convert cube position to navigation progress
+  const totalSections = navigationState.sections.length - 1;
+  return mc.UIManager.cubePosition / totalSections;
+};
 
-  // Setup WebSocket connection
-  const connectWebSocket = () => {
-    const connectionIndicator = container.querySelector("#connection-indicator");
-    connectionIndicator.className = "connection-indicator connection-connecting";
-    
-    let protocol = "wss://";
-    let hostname = window.location.hostname;
-    if (hostname === "localhost") {
-      protocol = "ws://";
-      hostname = "localhost:8000";
-    } else {
-      hostname = "llm.ben-hassen.com";
-    }
-    
-    const wsPath = protocol + hostname + "/ws/hbhai/";
-    ws = new WebSocket(wsPath);
-    
-    ws.onopen = () => {
-      console.log("Connected to HBH AI server");
-      connectionIndicator.className = "connection-indicator connection-online";
-      container.querySelector("#sendButton").disabled = false;
-    };
-    
-    ws.onclose = () => {
-      console.log("Connection closed");
-      connectionIndicator.className = "connection-indicator connection-offline";
-      container.querySelector("#sendButton").disabled = true;
-      
-      // Try to reconnect after a delay
-      setTimeout(() => {
-        if (ws.readyState === WebSocket.CLOSED) {
-          connectWebSocket();
-        }
-      }, 5000);
-    };
-    
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      connectionIndicator.className = "connection-indicator connection-error";
-    };
-    
-    ws.onmessage = handleWebSocketMessage;
-  };
+const syncNavigationWithCamera = () => {
+  const progress = getProgressFromCameraPosition();
+  updateNavigationProgress(progress);
+};
 
-  const handleWebSocketMessage = async (event) => {
-    const data = JSON.parse(event.data);
-    const consoleContent = container.querySelector("#consoleContent");
-    
-    switch(data.command) {
-      case "token":
-        if (consoleContent.querySelector(".typing-response")) {
-          // If we're still typing, append to the existing response
-          const currentText = consoleContent.querySelector(".typing-response").textContent;
-          consoleContent.querySelector(".typing-response").textContent = currentText + data.text;
-        } else {
-          // Create a new element for this response
-          const responseElement = document.createElement('span');
-          responseElement.className = 'typing-response';
-          responseElement.textContent = data.text;
-          consoleContent.appendChild(responseElement);
-        }
-        // Auto-scroll to bottom
-        consoleContent.scrollTop = consoleContent.scrollHeight;
-        break;
-        
-      case "result":
-      case "info":
-        // End of response
-        await StaticCLI.insertNewLine(consoleContent);
-        await StaticCLI.showPrompt(consoleContent, "", setupInlineInput);
-        finishProcessing();
-        break;
-        
-      case "error":
-        // Show error using StaticCLI
-        await StaticCLI.type(consoleContent, "Error: " + data.text, 1, false, "red");
-        await StaticCLI.insertNewLine(consoleContent);
-        await StaticCLI.showPrompt(consoleContent, "", setupInlineInput);
-        finishProcessing();
-        break;
-    }
-  };
+const handleSmoothNavScroll = (event) => {
+  event.preventDefault();
+  const mc = this._entity._entityManager._mc;
+  if (!mc || navigationState.isTransitioning) return;
+  
+  const delta = event.deltaY > 0 ? 0.1 : -0.1;
+  const newPosition = Math.max(0, Math.min(1, mc.UIManager.cubePosition + delta));
+  
+  mc.UIManager.cubePosition = newPosition;
+  mc.UIManager.updateScrollbarPosition();
+  mc.UIManager.moveCubeAlongPath(0);
+  
+  // Update our navigation progress to match
+  const navProgress = newPosition * 0.75; // Scale to match our navigation range
+  updateNavigationProgress(navProgress);
+};
 
-  const initChat = async () => {
-    // Clear container and type out the interface
-    container.innerHTML = "";
-    await StaticCLI.type(container, chatHTML, 1, false);
+const smoothTransitionTo = async (targetSection, duration = 2000) => {
+  if (navigationState.isTransitioning) return;
+  navigationState.isTransitioning = true;
+  
+  const mc = this._entity._entityManager._mc;
+  const startPos = mc.UIManager.splinePath.points[mc.UIManager.splinePath.points.length - 1] || new THREE.Vector3(0, 15, 0);
+  const targetPos = navigationState.sections[targetSection].position;
+  const targetProgress = navigationState.sections[targetSection].progress;
+  
+  // Create smooth path
+  const controlPoints = [
+    startPos,
+    startPos.clone().lerp(targetPos, 0.3).add(new THREE.Vector3(0, 5, 0)), // Add some curve
+    targetPos
+  ];
+  
+  mc.UIManager.splinePath.points = controlPoints;
+  mc.UIManager.updateSplineObject();
+  
+  // Animate the transition
+  await tween({
+    from: { 
+      progress: mc.UIManager.cubePosition,
+      navProgress: navigationState.sections[navigationState.currentSection].progress 
+    },
+    to: { 
+      progress: 1,
+      navProgress: targetProgress 
+    },
+    duration: duration,
+    easing: "easeInOutCubic",
+    render: (state) => {
+      mc.UIManager.cubePosition = state.progress;
+      mc.UIManager.updateScrollbarPosition();
+      updateNavigationProgress(state.navProgress);
+    },
+  });
+  
+  navigationState.currentSection = targetSection;
+  navigationState.isTransitioning = false;
+};
 
-    // Add styles
-    const styles = document.createElement('style');
-    styles.textContent = `
-      .cli-container {
-        height: 100%;
-        max-width: 80vw;
-        max-height: 80vh;
-        display: flex;
-        flex-direction: column;
-        background: #1e1e1e;
-        overflow: hidden;
-        color: #f0f0f0;
-        padding: 20px;
-        font-family: 'Courier New', monospace;
-        border-radius: 8px;
-      }
-
-      .cli-cursor {
-        animation: blink 1s step-end infinite;
-      }
-
-      @keyframes blink {
-        0%, 100% { opacity: 1 }
-        50% { opacity: 0 }
-      }
-
-      .connection-indicator {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        margin-left: 8px;
-      }
-
-      .connection-offline {
-        background-color: #d32f2f;
-      }
-
-      .connection-connecting {
-        background-color: #f39c12;
-        animation: pulse 1.5s infinite;
-      }
-
-      .connection-online {
-        background-color: #4CAF50;
-      }
-
-      .connection-error {
-        background-color: #9c27b0;
-      }
-
-      @keyframes pulse {
-        0% { opacity: 0.4; }
-        50% { opacity: 1; }
-        100% { opacity: 0.4; }
-      }
-
-      .cli-console {
-        flex-grow: 1;
-        overflow-y: auto;
-        padding: 10px;
-        background: #252525;
-        border-radius: 4px;
-        margin-bottom: 15px;
-        border: 1px solid #333;
-      }
-
-      .console-content {
-        white-space: pre-wrap;
-        min-height: 300px;
-      }
-
-      .cli-input-container {
-        display: flex;
-        gap: 10px;
-      }
-
-      .static-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-      }
-
-      .send-button {
-        background: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-
-      .send-button:disabled {
-        background: #7cb580;
-        cursor: not-allowed;
-      }
-
-      .cancel-button {
-        background: #f44336;
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-
-      .underlined-suggestion {
-        text-decoration: underline;
-        cursor: pointer;
-        margin: 0 10px;
-        color: #4CAF50;
-        background: none;
-        border: none;
-        font-family: inherit;
-        font-size: inherit;
-        padding: 0;
-      }
-
-      .inline-input-container {
-        position: relative;
-        display: inline-block;
-      }
-
-      .inline-input {
-        background: transparent;
-        border: none;
-        color: inherit;
-        font-family: inherit;
-        font-size: inherit;
-        padding: 0;
-        margin: 0;
-        outline: none;
-        caret-color:  white;
-        caret-shape: block;
-
-        width: 100%;
-        position: relative;
-      }
-
-      .inline-input::after {
-        content: '▋';
-        animation: blink 1s step-end infinite;
-        color: #f0f0f0;
-        position: absolute;
-        right: 0;
-      }
-
-      @keyframes blink {
-        0%, 100% { opacity: 1 }
-        50% { opacity: 0 }
-      }
-    `;
-    container.appendChild(styles);
-
-    // Reference elements
-    const consoleContent = container.querySelector("#consoleContent");
-    const inlineInputContainer = container.querySelector("#inlineInputContainer");
-    const sendButton = container.querySelector("#sendButton");
-    const cancelButton = container.querySelector("#cancelButton");
-    const loadingSpinner = container.querySelector("#loading-spinner");
-    const staticButtons = container.querySelector("#staticButtons");
-
-    // Connect to WebSocket
-    connectWebSocket();
-
-    // Initial welcome message with StaticCLI
-    await StaticCLI.insertNewLine(consoleContent);
-    await StaticCLI.type(
-      consoleContent,
-      "HBH AI : ",
-      1,
-      false,
-      "red"
-    );
-    await StaticCLI.type(
-      consoleContent,
-      "Welcome to my personal assistant! I'm Hamza Ben Hassen, an Electrical Engineer. How can I help you today?",
-      1,
-      false
-    );
-    await StaticCLI.insertNewLine(consoleContent);
-    await StaticCLI.showPrompt(consoleContent, "", setupInlineInput);
-    await StaticCLI.insertNewLine(consoleContent);
-
-    // Add suggested topics as underlined buttons
-    const suggestions = [
-      { cmd: "who_are_you", text: "Who are you?" },
-      { cmd: "education", text: "Education History" },
-      { cmd: "resume", text: "Show Résumé" },
-      { cmd: "projects", text: "Current Projects" },
-    ];
-
-    suggestions.forEach((suggestion) => {
-      const btn = document.createElement("button");
-      btn.className = "underlined-suggestion";
-      btn.textContent = suggestion.text;
-      btn.onclick = () => handleCommand(suggestion.cmd);
-      staticButtons.appendChild(btn);
-      staticButtons.appendChild(document.createTextNode(" "));
-    });
-
-    // Setup 3D scene positioning
-    setupScene();
-  };
-
-  const setupInlineInput = (promptElement) => {
-    currentPromptElement = promptElement;
-    const consoleContent = container.querySelector("#consoleContent");
-    const inlineInputContainer = container.querySelector("#inlineInputContainer");
-    
-    // Clear any existing input
-    inlineInputContainer.innerHTML = '';
-    
-    // Create the inline input
-    const input = document.createElement('input');
-    input.className = 'inline-input';
-    input.type = 'text';
-    input.placeholder = '';
-    
-    // Position the input directly in the console content after the prompt
-    if (promptElement) {
-      // Append the input directly after the prompt in the DOM
-      promptElement.parentNode.insertBefore(inlineInputContainer, promptElement.nextSibling);
-             inlineInputContainer.style.position = 'relative';
-      inlineInputContainer.style.display = 'inline-block';
-      inlineInputContainer.style.width = 'calc(100% - ' + promptElement.offsetWidth + 'px)';
-    }
-    
-    inlineInputContainer.appendChild(input);
-    inlineInputActive = true;
-   
-    // Focus the input
-    input.focus();
-    
-    // Add event listeners
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !isProcessing && input.value.trim()) {
-        submitInlineInput(input.value.trim());
-        input.value = '';
-      }
-    });
-    
-    const sendButton = container.querySelector("#sendButton");
-    sendButton.addEventListener('click', () => {
-      if (!isProcessing && input.value.trim()) {
-        submitInlineInput(input.value.trim());
-        input.value = '';
-      }
-    });
-  };
-
-  const submitInlineInput = (text) => {
-    if (!text || !inlineInputActive) return;
-    
-    // Hide the inline input
-    const inlineInputContainer = container.querySelector("#inlineInputContainer");
-    inlineInputContainer.innerHTML = '';
-    inlineInputContainer.style.display = 'none';
-    inlineInputActive = false;
-    
-    // Process the command
-    handleCommand(text);
-  };
-
-  const setupScene = () => {
-    if (!mc) return;
-    
-    let startpos = new THREE.Vector3(0, 10, 0);
-    let pos = new THREE.Vector3(-0.1, 10, 0);
-    let contactFlow = [
-      startpos,
-      pos,
-      new THREE.Vector3(-0.1, 10, 0),
-      new THREE.Vector3(-0.11, 10, 0),     
-    ];
-    let lookatFlow = [
-      new THREE.Vector3(0, 0, -1),
-      new THREE.Vector3(0.1, 0, -0.98),
-    ];
-    
-    mc.UIManager.lookatPath = lookatFlow;
-    mc.UIManager.splinePath.points = contactFlow;
-    this._entity.Position.set(
-      mc.UIManager.splinePath.points[0].x,
-      mc.UIManager.splinePath.points[0].y,
-      mc.UIManager.splinePath.points[0].z - 2
-    );
-    mc.UIManager.cubePosition = 0.01;
-    mc.UIManager.updateScrollbarPosition();
-    mc.UIManager.updateSplineObject();
-  };
-
-  const appendSystemMessage = async (message, type = "info") => {
-    const consoleContent = container.querySelector("#consoleContent");
-    const color = type === "error" ? "red" : "gray";
-    
-    await StaticCLI.type(consoleContent, message, 1, false, color);
-    await StaticCLI.insertNewLine(consoleContent);
-    consoleContent.scrollTop = consoleContent.scrollHeight;
-  };
-
-  const handleCommand = async (command) => {
-    // Add to history
-    commandHistory.unshift(command);
-    historyIndex = -1;
-    
-    const consoleContent = container.querySelector("#consoleContent");
-    
-    // Show user command using StaticCLI
-    await StaticCLI.type(consoleContent, "You : ", 1, false, "green");
-    await StaticCLI.type(consoleContent, command, 1, false);
-    await StaticCLI.insertNewLine(consoleContent);
-    
-    // For predefined commands, use local responses
-    if (command.includes("_")) {
-      const response = getAIResponse(command);
-      await StaticCLI.type(consoleContent, "HBH AI : ", 1, false, "red");
-      await StaticCLI.type(consoleContent, response, 1, false);
-      await StaticCLI.insertNewLine(consoleContent);
-      await StaticCLI.showPrompt(consoleContent, "", setupInlineInput);
-    } else {
-      // For other commands, use WebSocket
-      startProcessing();
-      
-      await StaticCLI.type(consoleContent, "HBH AI : ", 1, false, "red");
-      // Create a span for incoming tokens
-      const responseElement = document.createElement('span');
-      responseElement.className = 'typing-response';
-      consoleContent.appendChild(responseElement);
-      
-      // Send to server
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          cmd: "gen",
-          question: command
-        }));
-      } else {
-        await appendSystemMessage("Connection to AI server lost. Attempting to reconnect...", "error");
-        connectWebSocket();
-        finishProcessing();
-      }
-    }
-  };
-
-  const startProcessing = () => {
-    isProcessing = true;
-    const sendButton = container.querySelector("#sendButton");
-    const cancelButton = container.querySelector("#cancelButton");
-    const loadingSpinner = container.querySelector("#loading-spinner");
-    
-    sendButton.disabled = true;
-    cancelButton.hidden = false;
-    loadingSpinner.hidden = false;
-  };
-
-  const finishProcessing = () => {
-    isProcessing = false;
-    const sendButton = container.querySelector("#sendButton");
-    const cancelButton = container.querySelector("#cancelButton");
-    const loadingSpinner = container.querySelector("#loading-spinner");
-    
-    sendButton.disabled = false;
-    cancelButton.hidden = true;
-    loadingSpinner.hidden = true;
-  };
-
-  const getAIResponse = (command) => {
-    const responses = {
-      who_are_you:
-        "I'm Hamza Ben Hassen, an Electrical Engineer specializing in embedded systems and automation.",
-      education:
-        "Master's in Electrical Engineering from XYZ University (2022)\nBachelor's in Electrical Engineering from ABC University (2018)",
-      resume:
-        "You can download my resume from:\nhttps://example.com/resume.pdf",
-      projects:
-        "Current projects:\n1. Smart Home Automation System\n2. Industrial IoT Monitoring\n3. AI-assisted Embedded Development",
-      default:
-        "I can answer questions about:\n- My background\n- Education\n- Projects\n- Technical skills",
-    };
-
-    const normalizedCmd = command.toLowerCase().replace(/\s+/g, "_");
-    return responses[normalizedCmd] || responses["default"];
-  };
-
-  // Initialize the chat interface
-  if (mc) {
-    initChat();
+// Cleanup function to remove navigation
+const cleanupSmoothNavigation = () => {
+  const existingNav = document.getElementById('smoothNavigation');
+  if (existingNav) {
+    existingNav.remove();
   }
 };
 
-postMessage({ type: "freshhtml", html: "" });
-postMessage({ type: "size", width: 800, height: 700 });
-self.postMessage({ type: "jssetup", js: `(${cb.toString()})` });
+const interestshtml = /*html*/ `
+<div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+
+  <h3 class="uk-card-title">Interests</h3>
+  <ul class="uk-list uk-list-divider">
+
+    <li><a href="#">Embedded Systems</a></li>
+    <li><a href="#">Automation</a></li>
+    <li><a href="#">Human-Machine Interfaces</a></li>
+    <li><a href="#">LLM driven agents</a></li>
+
+  </ul>
+</div>
+`;
+const contacthtml =/*html*/ `
+<div class="uk-card uk-card-secondary uk-card-body" uk-scrollspy="cls: uk-animation-slide-left; repeat: true">
+  <h3 class="uk-card-title">Contact</h3>
+  <form>
+    <fieldset class="uk-fieldset">
+      <div class="uk-margin">
+        <input class="uk-input" type="text" placeholder="Name" required>
+      </div>
+      <div class="uk-margin">
+        <input class="uk-input" type="email" placeholder="Email" required>
+      </div>
+      <div class="uk-margin">
+        <textarea class="uk-textarea" rows="5" placeholder="Message" required></textarea>
+      </div>
+      <button class="uk-button uk-button-primary" type="submit">Send</button>
+    </fieldset>
+  </form>
+</div>
+`;
+
+   let mc = this._entity._entityManager._mc;
+   console.log(mc);
+   if (mc){
+   
+      // Create the fixed smooth navigation on the document
+      const smoothNavElement = createFixedSmoothNavigation();
+      
+      // Hide the old scrollbar since we're replacing it
+      const oldScrollbar = document.querySelector('.scrollbar-container');
+      if (oldScrollbar) {
+        oldScrollbar.style.display = 'none';
+      }
+      
+      // Initialize navigation
+      updateNavigationProgress(0);
+      
+      // Set up periodic sync with camera position
+      setInterval(() => {
+        if (!navigationState.isTransitioning) {
+          syncNavigationWithCamera();
+        }
+      }, 100); // Update every 100ms for smooth tracking
+      
+      // Setup navigation marker click handlers
+      const navMarkers = document.querySelectorAll('.nav-marker'); // Now reference document
+      const smoothNavContainer = document.getElementById('smoothNavigation'); // Now reference document
+      
+      // Add scroll wheel support to smooth navigation
+      if (smoothNavContainer) {
+        smoothNavContainer.addEventListener('wheel', handleSmoothNavScroll, { passive: false });
+      }
+      
+      navMarkers.forEach((marker, index) => {
+        marker.addEventListener('click', async () => {
+          await smoothTransitionTo(index);
+          
+          // Trigger section-specific actions
+          const sectionName = navigationState.sections[index].name;
+          switch(sectionName) {
+            case 'contact':
+              mc.UIManager.adduiElement("contactui", contacthtml, navigationState.sections[index].position);
+              break;
+            case 'projects':
+              mc.initSound();
+              const ui = await mc.UIManager.CreateDynamicUI("projectsUIé", "../pages/projects.js", 
+                navigationState.sections[index].position, 
+                new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
+              break;
+            case 'about':
+              mc.UIManager.adduiElement("aboutui", interestshtml, navigationState.sections[index].position);
+              break;
+          }
+        });
+      });
+   
+      let contactButton = this.HtmlElement.querySelector("#contactButton");  
+      let projectsButton = this.HtmlElement.querySelector("#projectsButton");  
+      let aboutButton = this.HtmlElement.querySelector("#aboutButton");  
+      
+      contactButton.onclick = async () => {
+        await smoothTransitionTo(1); // Contact section
+        mc.UIManager.adduiElement("contactui", contacthtml, navigationState.sections[1].position);
+      };
+
+      projectsButton.onclick = async () => {
+        mc.initSound();
+        await smoothTransitionTo(2); // Projects section
+        
+        const ui = await mc.UIManager.CreateDynamicUI("projectsUIé", "../pages/projects.js", 
+          navigationState.sections[2].position, 
+          new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
+        
+        const dynauicomponent = ui.getComponent("DynamicuiWorkerComponent");
+      };
+
+      aboutButton.onclick = async () => {
+        await smoothTransitionTo(3); // About section
+        mc.UIManager.adduiElement("aboutui", interestshtml, navigationState.sections[3].position); 
+      };
+      
+      mc.UIManager.updateScrollbarPosition();
+      mc.UIManager.updateSplineObject();
+   };
+};
+ 
+ 
+postMessage({ type: 'freshhtml' , html : fronthtml });
+postMessage({ type: 'size', width: 1500, height: 1000 });
+
+
+
+self.postMessage({ type: 'jssetup', js: `(${cb.toString()})` });
+ 

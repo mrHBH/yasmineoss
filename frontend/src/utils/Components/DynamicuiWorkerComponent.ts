@@ -5,6 +5,14 @@ import { CSS2DObject } from "../CSS2D";
 import { tween } from "shifty";
 import { watch } from "fs";
 import { StaticCLI } from "../../SimpleCLI";
+import {
+  animate,
+  
+} from 'animejs';
+
+// Prevent unused import from being cleared
+const _ = animate;
+
 class DynamicuiWorkerComponent extends Component {
   
   private _html: string;

@@ -2,7 +2,14 @@ import * as THREE from "three";
 import { CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 import { StaticCLI } from "../../../SimpleCLI";
 import { Entity } from "../../Entity";
-
+import {
+  animate,
+  createTimeline,
+  utils,
+  stagger,
+  eases,
+  onScroll,
+} from "animejs"
 export class CharacterUIManager {
   private _entity: Entity;
   private _titlebar: HTMLElement;
@@ -129,9 +136,9 @@ export class CharacterUIManager {
         if (this.onFace) {
           this.onFace();
         }
-        if (this.onLoadWorker && this.behaviourscriptname) {
-          this.onLoadWorker(this.behaviourscriptname);
-        }
+        // if (this.onLoadWorker && this.behaviourscriptname) {
+        //   this.onLoadWorker(this.behaviourscriptname);
+        // }
         this.toggleDropdown();
       });
 
@@ -248,15 +255,45 @@ export class CharacterUIManager {
 
   resetConsole() {
     let inithtml = /*html*/ `
+  
     <div class="uk-card uk-card-secondary uk-card-body">
       <h3 class="uk-card-title">Greetings !</h3>
       <p class="content">I am your personal coder.</p>
       <button id="loadEnvironment" class="uk-button-default uk-margin-small-right">
         Load Script
+        
     </div>
+      
     `;
+    let init2html = /*html*/ `
+    <div class="scroll-container scroll-y  scroll-section padded" style="height: 20vh; overflow-y: auto;">
+          <div class="scroll-content grid square-grid">
+            <div class="scroll-section padded">
+              <div class="large centered row">
+                <div class="label">scroll down</div>
+              </div>
+            </div>
+            <div class="">
+              <div class="large row">
+                <div class="square" style="background-color: #4a90e2; width: 5rem; height:5rem;"></div>
+              </div>
+            </div>
+          </div>
+        </div>`
+    
   
-    StaticCLI.typeSync(this.uiElement, inithtml, 5, true);
+    StaticCLI.typeSync(this.uiElement, init2html, 50, true);
+    animate('.square', {
+        x: '15rem',
+        rotate: '1turn',
+        duration: 2000,
+        alternate: true,
+        loop: true,
+        ease: 'inOutQuad',
+        autoplay: onScroll({
+          container: '.scroll-container'
+        })
+      });
   
     let button = this.uiElement.querySelector("#loadEnvironment");
     if (button) {

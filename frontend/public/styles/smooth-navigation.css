@@ -1,0 +1,196 @@
+/* Enhanced Smooth Navigation Styles - Replaces old scrollbar */
+.smooth-navigation {
+  position: fixed;
+  top: 50%;
+  right: 1vw; /* Match the old scrollbar position */
+  transform: translateY(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 25px;
+  padding: 1rem 0.5rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  width: 40px; /* Wider to replace scrollbar functionality */
+}
+
+.smooth-navigation:hover {
+  background: rgba(0, 0, 0, 0.2);
+  transform: translateY(-50%) scale(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: grab;
+}
+
+.smooth-navigation:active {
+  cursor: grabbing;
+}
+
+.nav-ruler {
+  width: 4px;
+  height: 250px; /* Taller to better match scrollbar height */
+  background: linear-gradient(to bottom, 
+    #ff6b6b 0%, 
+    #4ecdc4 33%, 
+    #45b7d1 66%, 
+    #96ceb4 100%);
+  border-radius: 2px;
+  position: relative;
+  margin: 1rem 0;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.nav-progress {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, #fff 0%, #f0f0f0 100%);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 15px rgba(255, 255, 255, 0.8),
+    0 0 25px rgba(255, 255, 255, 0.4),
+    inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: top 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid #333;
+  z-index: 10;
+}
+
+.nav-progress::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: #333;
+  border-radius: 50%;
+}
+
+.nav-markers {
+  position: absolute;
+  left: -15px;
+  top: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.nav-marker {
+  width: 10px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  transform-origin: left center;
+}
+
+.nav-marker:hover {
+  background: #fff;
+  transform: scaleX(1.8) scaleY(1.5);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.nav-marker.active {
+  background: #fff;
+  transform: scaleX(2.2) scaleY(1.8);
+  box-shadow: 
+    0 0 12px rgba(255, 255, 255, 0.8),
+    0 0 20px rgba(255, 255, 255, 0.4);
+}
+
+.nav-label {
+  position: absolute;
+  right: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.nav-marker:hover .nav-label {
+  opacity: 1;
+  transform: translateY(-50%) translateX(-5px);
+}
+
+.section-indicator {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0.5rem 0;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .smooth-navigation {
+    right: 1vw;
+    transform: translateY(-50%) scale(0.8);
+  }
+  
+  .smooth-navigation:hover {
+    transform: translateY(-50%) scale(0.9);
+  }
+  
+  .nav-ruler {
+    height: 150px;
+  }
+  
+  .nav-label {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
+/* Animation for initial load */
+@keyframes slideInFromRight {
+  from {
+    transform: translateY(-50%) translateX(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(-50%) translateX(0);
+    opacity: 1;
+  }
+}
+
+.smooth-navigation {
+  animation: slideInFromRight 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.5s both;
+}
+
+/* Enhanced scrollbar integration - Hide old scrollbar when smooth navigation is active */
+.scrollbar-container {
+  transition: opacity 0.3s ease;
+}
+
+/* Hide the old scrollbar completely when smooth navigation is present */
+body:has(.smooth-navigation) .scrollbar-container {
+  display: none !important;
+}
+
+.smooth-navigation:hover ~ .scrollbar-container {
+  opacity: 0.2 !important;
+}
