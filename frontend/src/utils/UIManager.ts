@@ -14,6 +14,7 @@ import { StaticCLI } from "../SimpleCLI.js";
   onScroll,
   animate,
 } from 'animejs';
+import { Minimap } from "./Minimap.js";
 
 // //const {MediaPresenter, AudioStreamer , VideoStreamer } = require('sfmediastream');
 
@@ -29,6 +30,7 @@ class UIManager {
   private birdEyeviewOffset = new THREE.Vector3(0, 0, 0);
   private fpsposoffset = new THREE.Vector3(0, 0, 0);
   currentUIelement:    twoDUIComponent;
+  minimap: Minimap | null = null;
  
   splineObject: THREE.Line<
     THREE.BufferGeometry<THREE.NormalBufferAttributes>,
@@ -55,7 +57,12 @@ class UIManager {
     this.createUIButtons();
     this.addScrollbar();
     this.moveCubeAlongPath(0);
-   this.createInitialUI();
+    
+    // Initialize minimap after a short delay to ensure everything is set up
+    setTimeout(() => {
+      this.initializeMinimap();
+    }, 1000);
+ //  this.createInitialUI();
   }
 
   private async createInitialUI(): Promise<void> {
@@ -879,6 +886,11 @@ class UIManager {
       
       //this.mc.zoomTo(this.attentionCursor.position, 5,   this.attentionCursor.quaternion);
     }
+    
+    // Update minimap
+    if (this.minimap) {
+      this.minimap.update();
+    }
   }
 
   async CreateDynamicUI(
@@ -966,5 +978,17 @@ class UIManager {
       }
     });
   }
+
+  private initializeMinimap(): void {
+    if (this.mc && this.mc.entitymanager) {
+      this.minimap = new Minimap(this.mc.entitymanager, this.mc);
+      console.log("Minimap initialized in UIManager");
+    }
+  }
+
+  public getMinimapInstance(): Minimap | null {
+    return this.minimap;
+  }
+
 }
 export { UIManager };

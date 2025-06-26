@@ -77,6 +77,7 @@ const createFixedSmoothNavigation = () => {
     document.head.appendChild(cssLink);
   }
   
+  
   // Create the navigation HTML
   const navHTML = `
     <div class="smooth-navigation" id="smoothNavigation">

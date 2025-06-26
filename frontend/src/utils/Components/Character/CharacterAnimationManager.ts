@@ -256,9 +256,8 @@ export class CharacterAnimationManager {
           Running: {
             entry: "StartRunning",
             on: {
-              WALK: {
-                cond: "canWalk",
-                target: "Walking",
+              SLOWDOWN: {
+                target: "StoppingRunning",
               },
               STOP: {
                 target: "StoppingRunning",
@@ -285,6 +284,9 @@ export class CharacterAnimationManager {
             on: {
               RUNNINGSTOPPED: {
                 target: "Ideling",
+              },
+              RUNNINGTOWALKING: {
+                target: "Walking",
               },
             },
           },
@@ -546,7 +548,7 @@ export class CharacterAnimationManager {
         curAction.play();
       },
 
-      StartStoppingRunning: (_context, _event) => {
+      StartStoppingRunning: (_context, event) => {
         const ac1 = this.animations_[this.AnimationFSMService_.state.value];
         const ac2 = this.animations_[this.AnimationFSMService_._state.history.value];
 
@@ -563,8 +565,15 @@ export class CharacterAnimationManager {
         curAction.crossFadeFrom(prevAction, 0.1, true);
         curAction.play();
 
+        // Store whether we should transition to walking or idling
+        const shouldWalk = event.type === "SLOWDOWN";
+        
         setTimeout(() => {
-          this.AnimationFSMService_.send("RUNNINGSTOPPED");
+          if (shouldWalk) {
+            this.AnimationFSMService_.send("RUNNINGTOWALKING");
+          } else {
+            this.AnimationFSMService_.send("RUNNINGSTOPPED");
+          }
         }, (curAction.getClip().duration * 1000) / 1);
       },
 

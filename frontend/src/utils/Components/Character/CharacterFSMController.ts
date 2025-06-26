@@ -76,7 +76,7 @@ export class CharacterFSMController {
     }
 
     if (input._keys.forward && currentState == "Running" && !input._keys.shift) {
-      this.animationManager.sendEvent("WALK");
+      this.animationManager.sendEvent("SLOWDOWN");
     }
 
     if (!input._keys.forward &&

@@ -15,6 +15,7 @@ import { KeyboardInput } from "./utils/Components/KeyboardInput";
 // Add this import statement
 import { LoadingManager } from "./utils/LoadingManager";
 import {  CarComponent } from "./utils/Components/CarComponent";
+// import { MinimapComponent } from "./utils/Components/MinimapComponent"; // Now using UIManager's Minimap class
 
 class Main {
   private entityManager: EntityManager;
@@ -77,6 +78,9 @@ class Main {
       this.maincController.initSound() 
     console.log("LoadingManager initialized successfully");
 
+    // Wait a bit for MainController to fully initialize
+    await new Promise(resolve => setTimeout(resolve, 100));
+
         // Initialize the scene without Bob initially
 
    // this.maincController.physicsmanager.debug = false;
@@ -92,9 +96,9 @@ class Main {
     });
     await hamza.AddComponent(hbhc);
     await hamza.AddComponent(new AIInput());
-    await hamza.AddComponent(new KeyboardInput());
+   // await hamza.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
-    this.maincController.MainEntity = hamza;
+   // this.maincController.MainEntity = hamza;
 
     hbhc.face();
     hamza.Broadcast({
@@ -138,14 +142,30 @@ class Main {
         musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
         await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
         await musicstreamerenity.AddComponent(new AIInput());
-        await musicstreamerenity.AddComponent(new KeyboardInput());
+      //  await musicstreamerenity.AddComponent(new KeyboardInput());
         await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
     
+    // Minimap is now handled by UIManager directly, no need for separate entity
+    console.log("Minimap system will be initialized by UIManager");
 
    // this.maincController.UIManager.toggleScrollmode();
 
     
     // Add event listener for 'b' key press to create Bob
+    // Key bindings:
+    // - 'b'/'B': Create a new Bob entity
+    // - 'm'/'M': Show memory stats 
+    // - 'c'/'C': Force cleanup
+    // - 'F1': Toggle physics debug mode
+    // - 'o': Toggle minimap visibility
+    // - '[': Decrease view cone size
+    // - ']': Increase view cone size
+    // - ';': Narrow view cone angle (45°)
+    // - "'": Widen view cone angle (90°)
+    // - 'v'/'V': Test audio visualizer
+    // - 'p'/'P': Play music and test visualizer  
+    // - 'd'/'D': Delete most recent Bob entity
+    // - 'i'/'I': Spawn car entity
     document.addEventListener('keydown', (event) => {
       if (event.key === 'b' || event.key === 'B') {
         this.createBob();
@@ -184,6 +204,51 @@ class Main {
           this.maincController.physicsmanager.debug = !this.maincController.physicsmanager.debug;
           console.log(`Physics debug mode: ${this.maincController.physicsmanager.debug}`);
         }
+        
+        // Add 'o' key to toggle minimap visibility via UIManager
+        if (event.key === 'o') {
+          const minimap = this.maincController.UIManager.getMinimapInstance();
+          if (minimap) {
+            minimap.toggleVisibility();
+            console.log('Minimap visibility toggled');
+          } else {
+            console.log('Minimap not available');
+          }
+        }
+        // View cone size and angle adjustment controls (now use UIManager minimap)
+        if (event.key === '[') {
+          const minimap = this.maincController.UIManager.getMinimapInstance();
+          if (minimap) {
+            minimap.setViewConeSize(30, 45); // Smaller cone
+            console.log('View cone size decreased');
+          }
+        }
+        
+        if (event.key === ']') {
+          const minimap = this.maincController.UIManager.getMinimapInstance();
+          if (minimap) {
+            minimap.setViewConeSize(50, 75); // Larger cone
+            console.log('View cone size increased');
+          }
+        }
+        
+        // Add ';' and ''' keys to adjust view cone angle
+        if (event.key === ';') {
+          const minimap = this.maincController.UIManager.getMinimapInstance();
+          if (minimap) {
+            minimap.setViewConeAngle(45); // Narrower cone
+            console.log('View cone angle decreased to 45°');
+          }
+        }
+        
+        if (event.key === "'") {
+          const minimap = this.maincController.UIManager.getMinimapInstance();
+          if (minimap) {
+            minimap.setViewConeAngle(90); // Wider cone
+            console.log('View cone angle increased to 90°');
+          }
+        }
+        
         
       // Add 'v' key to test visualizer
       if (event.key === 'v' || event.key === 'V') {
@@ -256,7 +321,7 @@ class Main {
       // const keyboardinput = new KeyboardInput();
       await car.AddComponent(new KeyboardInput());
       await this.entityManager.AddEntity(car, "Car");
-
+      this.maincController.MainEntity = car;
      
     };
     h();
@@ -284,7 +349,7 @@ class Main {
     await letterCounterBot.AddComponent(letterCounterBotcontroller2);
 
     await letterCounterBot.AddComponent(new AIInput());
-    await letterCounterBot.AddComponent(new KeyboardInput());
+ //   await letterCounterBot.AddComponent(new KeyboardInput());
 
     //  await environmentbot2.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(letterCounterBot, "lca");
@@ -306,7 +371,7 @@ class Main {
     await uitesterbot.AddComponent(new KeyboardInput());
 
     //  await environmentbot2.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(uitesterbot, "uitester66");
+    // await this.entityManager.AddEntity(uitesterbot, "uitester66"); // Commented out test entity
  
     
    // this.maincController.UIManager.toggleScrollmode();
