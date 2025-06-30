@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import * as CANNON from "cannon-es";
+import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import { MeshPhysicalNodeMaterial, mod, WebGPURenderer } from "three/webgpu";
 import { ThreePerf } from 'three-perf';
 
@@ -33,6 +33,7 @@ import { CharacterComponent } from "./Components/CharacterComponentRefactored.js
 // import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import { LoadingManager } from "./LoadingManager.js";
 import { AIInput } from "./Components/AIInput.js";
+import { StreamingWorld } from './StreamingWorld.js';
 // import { BoxLineGeometry } from "three/examples/jsm/Addons.js";
 // let customcursor = new CustomCursor();
 
@@ -71,6 +72,12 @@ class MainController {
   CameraControls: CameraControls;
   //mesh + body
   walls: any[] = [];
+  
+  // Add StreamingWorld property
+  streamingWorld: StreamingWorld;
+  
+  // Physics stats tracking
+  private physicsStatsElement: HTMLElement | null = null;
   
   // Mouse tracking for distinguishing clicks from drags
   private rightMouseDown: boolean = false;
@@ -144,7 +151,7 @@ class MainController {
     this.webgpu.setClearColor(new THREE.Color(0x202020));
 
     const fog = new THREE.Fog(0x202020, 0.1, 50);
-    this.webgpuscene.fog = fog;
+  //  this.webgpuscene.fog = fog;
     this.entitymanager = entityManager;
     this.entitymanager._mc = this;
     this.annotationRenderer = new CSS2DRenderer();
@@ -398,6 +405,133 @@ setInterval(() => {
     updateHeapGraph(randomMB);
   }
 }, 1000);
+
+// Create physics objects graph container with exact same structure as FPS/heap containers
+const physicsContainer = document.createElement("div");
+physicsContainer.style.display = "flex";
+physicsContainer.style.alignItems = "center";
+physicsContainer.style.marginBottom = "4px";
+physicsContainer.className = fpsContainer.className;
+
+// Create SVG for physics graph
+const physicsSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+physicsSvg.setAttribute("width", "100px");
+physicsSvg.setAttribute("height", "20px");
+physicsSvg.style.flexShrink = "0";
+physicsSvg.style.marginRight = getComputedStyle(fpsSvg).marginRight;
+
+// Create dark background for physics graph
+const physicsBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+physicsBg.setAttribute("width", "100%");
+physicsBg.setAttribute("height", "100%");
+physicsBg.setAttribute("fill", "#1a1a1a");
+physicsSvg.appendChild(physicsBg);
+
+// Create horizontal lines for physics graph
+for (let i = 0; i < 8; i++) {
+  const lineY = (i + 1) * (20 / 8);
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line.setAttribute("x1", "0");
+  line.setAttribute("y1", lineY.toString());
+  line.setAttribute("x2", "100%");
+  line.setAttribute("y2", lineY.toString());
+  line.setAttribute("stroke", "#333333");
+  line.setAttribute("stroke-width", "0.5");
+  physicsSvg.appendChild(line);
+}
+
+// Create gradient for physics line
+const physicsGradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+physicsGradient.setAttribute("id", "physicsGradient");
+physicsGradient.setAttribute("x1", "0%");
+physicsGradient.setAttribute("y1", "0%");
+physicsGradient.setAttribute("x2", "100%");
+physicsGradient.setAttribute("y2", "0%");
+physicsGradient.innerHTML = `
+  <stop offset="70%" stop-color="#7d7dff" stop-opacity="1"/>
+  <stop offset="100%" stop-color="#7d7dff" stop-opacity="0"/>
+`;
+const physicsDefs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+physicsDefs.appendChild(physicsGradient);
+physicsSvg.appendChild(physicsDefs);
+
+// Create physics line
+const physicsLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+physicsLine.setAttribute("fill", "none");
+physicsLine.setAttribute("stroke", "url(#physicsGradient)");
+physicsLine.setAttribute("stroke-width", "1");
+physicsSvg.appendChild(physicsLine);
+
+// Create physics label container with exact same structure as FPS label
+const physicsLabelContainer = document.createElement("div");
+physicsLabelContainer.className = fpsLabelContainer.className;
+physicsLabelContainer.style.display = getComputedStyle(fpsLabelContainer).display;
+physicsLabelContainer.style.flexDirection = getComputedStyle(fpsLabelContainer).flexDirection;
+physicsLabelContainer.style.alignItems = getComputedStyle(fpsLabelContainer).alignItems;
+physicsLabelContainer.style.justifyContent = getComputedStyle(fpsLabelContainer).justifyContent;
+physicsLabelContainer.style.marginLeft = getComputedStyle(fpsLabelContainer).marginLeft;
+physicsLabelContainer.style.padding = getComputedStyle(fpsLabelContainer).padding;
+
+// Create physics value with exact same styling as FPS value
+const physicsValue = document.createElement("span");
+physicsValue.className = fpsValueElement.className;
+physicsValue.style.color = "#7d7dff";
+physicsValue.style.fontSize = getComputedStyle(fpsValueElement).fontSize;
+physicsValue.style.fontWeight = getComputedStyle(fpsValueElement).fontWeight;
+physicsValue.style.lineHeight = getComputedStyle(fpsValueElement).lineHeight;
+physicsValue.style.margin = getComputedStyle(fpsValueElement).margin;
+physicsValue.style.padding = getComputedStyle(fpsValueElement).padding;
+physicsValue.textContent = "0";
+
+// Create physics unit with exact same styling as FPS unit
+const physicsUnit = document.createElement("span");
+physicsUnit.className = fpsUnitElement.className;
+physicsUnit.style.color = "#7d7dff";
+physicsUnit.style.fontSize = getComputedStyle(fpsUnitElement).fontSize;
+physicsUnit.style.fontWeight = getComputedStyle(fpsUnitElement).fontWeight;
+physicsUnit.style.lineHeight = getComputedStyle(fpsUnitElement).lineHeight;
+physicsUnit.style.margin = getComputedStyle(fpsUnitElement).margin;
+physicsUnit.style.padding = getComputedStyle(fpsUnitElement).padding;
+physicsUnit.style.opacity = getComputedStyle(fpsUnitElement).opacity;
+physicsUnit.textContent = "OBJ";
+
+// Assemble the components
+physicsLabelContainer.appendChild(physicsValue);
+physicsLabelContainer.appendChild(physicsUnit);
+physicsContainer.appendChild(physicsSvg);
+physicsContainer.appendChild(physicsLabelContainer);
+
+// Add physics container to pane right after heap container
+heapContainer.parentNode.insertBefore(physicsContainer, heapContainer.nextSibling);
+
+// Physics tracking variables
+let physicsPoints = [];
+const maxPhysicsObjects = 500; // Maximum expected physics objects
+
+function updatePhysicsGraph(objectCount) {
+  // Calculate scaled Y position (inverted)
+  const scaledY = 20 - (
+    ((Math.max(0, Math.min(maxPhysicsObjects, objectCount)) / maxPhysicsObjects) * 20)
+  );
+
+  // Update points array
+  physicsPoints.push(scaledY);
+  if (physicsPoints.length > maxPoints) physicsPoints.shift();
+
+  // Create points string with exact same spacing as FPS graph
+  const points = physicsPoints.map((y, i) => `${i * (100 / maxPoints)},${y}`).join(" ");
+  physicsLine.setAttribute("points", points);
+  
+  // Update label
+  physicsValue.textContent = objectCount.toString();
+}
+
+// Update physics graph every second - bind this context
+const updatePhysicsGraphBound = () => {
+  const physicsObjectCount = this.physicsmanager?.World?.bodies?.length || 0;
+  updatePhysicsGraph(physicsObjectCount);
+};
+setInterval(updatePhysicsGraphBound, 1000);
  
     this.CameraControls = new CameraControls(
       this.camera,
@@ -500,6 +634,22 @@ setInterval(() => {
       }
     });
 
+    // Add 'p' key to display physics stats
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "p" || event.key === "P") {
+        const stats = this.getPhysicsStats();
+        console.log('=== PHYSICS WORLD STATS ===');
+        console.log(`Total Bodies: ${stats.totalBodies}`);
+        console.log(`Dynamic Bodies: ${stats.dynamicBodies}`);
+        console.log(`Static Bodies: ${stats.staticBodies}`);
+        console.log(`Constraints: ${stats.constraints}`);
+        console.log(`Contacts: ${stats.contacts}`);
+        console.log(`Streaming Tiles: ${stats.streamingTiles}`);
+        console.log(`Streaming Objects: ${stats.streamingObjects}`);
+        console.log('===========================');
+      }
+    });
+
     const light = new THREE.PointLight(0xffffff, 3);
     light.position.set(0, 1, 5);
     light.castShadow = true;
@@ -540,7 +690,7 @@ setInterval(() => {
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = 0;
 
-    this.webgpuscene.add(ground);
+    //this.webgpuscene.add(ground);
 
     this.sunLight = new THREE.DirectionalLight(0xeeeeff, 5);
 
@@ -577,6 +727,11 @@ setInterval(() => {
     this.clock = new THREE.Clock();
 
     this.UIManager = new UIManager(this);
+    
+    // Initialize StreamingWorld with physics world reference
+    this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
+    this.webgpuscene.add(this.streamingWorld);
+    console.log("StreamingWorld initialized and added to scene");
   }
 
   calculateScreenDimensions = (camera, targetDistance) => {
@@ -813,6 +968,16 @@ setInterval(() => {
     this.physicsmanager?.Update(delta);
     this.UIManager?.Update();
     this.CameraControls?.update(delta / 2);
+    
+    // Update StreamingWorld based on main entity position or camera position
+    if (this.streamingWorld) {
+      const centerPosition = this.mainEntity ? this.mainEntity.Position : this.camera.position;
+      this.streamingWorld.update(centerPosition);
+      
+      // Synchronize physics bodies with Three.js meshes for streaming objects
+      this.updateStreamingPhysics();
+    }
+    
     this.fpsGraph?.end();
  this.#stats_.end();
    // this.stats.end();
@@ -1022,6 +1187,90 @@ setInterval(() => {
     this.isFollowing = true;
   }
 
+  // Get physics world statistics for memory leak detection
+  getPhysicsStats(): {
+    totalBodies: number,
+    dynamicBodies: number,
+    staticBodies: number,
+    constraints: number,
+    contacts: number,
+    streamingTiles: number,
+    streamingObjects: number
+  } {
+    const world = this.physicsmanager?.World;
+    if (!world) {
+      return {
+        totalBodies: 0,
+        dynamicBodies: 0,
+        staticBodies: 0,
+        constraints: 0,
+        contacts: 0,
+        streamingTiles: 0,
+        streamingObjects: 0
+      };
+    }
+
+    let dynamicBodies = 0;
+    let staticBodies = 0;
+    world.bodies.forEach(body => {
+      if (body.type === CANNON.Body.DYNAMIC) {
+        dynamicBodies++;
+      } else {
+        staticBodies++;
+      }
+    });
+
+    // Count streaming world objects
+    const streamingTiles = Object.keys(this.streamingWorld?.['#tiles_'] || {}).length;
+    let streamingObjects = 0;
+    if (this.streamingWorld?.['#tiles_']) {
+      Object.values(this.streamingWorld['#tiles_']).forEach((tile: any) => {
+        streamingObjects += tile.physicsBodies?.length || 0;
+      });
+    }
+
+    return {
+      totalBodies: world.bodies.length,
+      dynamicBodies,
+      staticBodies,
+      constraints: world.constraints.length,
+      contacts: world.contacts.length,
+      streamingTiles,
+      streamingObjects
+    };
+  }
+
+  // Update physics bodies positions to match Three.js meshes for streaming objects
+  private updateStreamingPhysics(): void {
+    if (!this.streamingWorld?.['#tiles_']) return;
+
+    Object.values(this.streamingWorld['#tiles_']).forEach((tile: any) => {
+      if (tile.physicsBodies && tile.children.length > 0) {
+        tile.children.forEach((group: any) => {
+          if (group.children) {
+            group.children.forEach((mesh: THREE.Mesh) => {
+              const physicsBody = mesh.userData?.physicsBody;
+              if (physicsBody && physicsBody instanceof CANNON.Body) {
+                // Update mesh position from physics body (for falling cubes, etc.)
+                const worldPos = tile.position.clone();
+                mesh.position.set(
+                  physicsBody.position.x - worldPos.x,
+                  physicsBody.position.y - worldPos.y,
+                  physicsBody.position.z - worldPos.z
+                );
+                mesh.quaternion.set(
+                  physicsBody.quaternion.x,
+                  physicsBody.quaternion.y,
+                  physicsBody.quaternion.z,
+                  physicsBody.quaternion.w
+                );
+              }
+            });
+          }
+        });
+      }
+    });
+  }
   initSound() {
     if (!this.listener) {
       this.listener = new SoundGeneratorAudioListener();

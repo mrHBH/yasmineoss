@@ -1,4 +1,3 @@
-
 import { Entity } from './Entity';
 class Component {
     _entity: Entity;
@@ -38,7 +37,15 @@ class Component {
         this._entity.Broadcast(m);
     }
 
+    // Optional state methods for tile streaming
+    getState(): any {
+        // Override in subclasses to provide state data
+        return {};
+    }
 
+    async setState(state: any): Promise<void> {
+        // Override in subclasses to restore state data
+    }
 }
 export { Component };
 

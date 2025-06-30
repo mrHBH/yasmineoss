@@ -17,6 +17,13 @@ class Entity {
     private _state: 'BUSY' | 'IDLE' = 'IDLE';
     private _updatePromise: Promise<void> | null = null; // Store the current update promise
 
+    // Tile-based streaming properties
+    _originTileKey: string | null = null; // The tile where this entity was originally created
+    _isStreamedEntity: boolean = false; // Whether this entity should be managed by tile streaming
+    _maxDistanceFromMainEntity: number = 200; // Distance threshold for disposal
+    _entityState: any = null; // Stored state for restoration
+    _componentCreationInfo: any[] = []; // Store component creation information for restoration
+
 
     constructor() {
         this._position = new THREE.Vector3();
@@ -169,8 +176,92 @@ class Entity {
         }
     }
 
+    // Tile streaming methods
+    setOriginTile(tileKey: string, isStreamedEntity: boolean = true) {
+        this._originTileKey = tileKey;
+        this._isStreamedEntity = isStreamedEntity;
+    }
 
+    getOriginTileKey(): string | null {
+        return this._originTileKey;
+    }
 
+    shouldBeDisposed(mainEntityPosition: THREE.Vector3): boolean {
+        if (!this._isStreamedEntity) return false;
+        const distance = this._position.distanceTo(mainEntityPosition);
+        return distance > this._maxDistanceFromMainEntity;
+    }
+
+    saveEntityState(): any {
+        const componentStates: any = {};
+        const componentTypes: string[] = [];
+        
+        // Save component states and types
+        for (const component of this._components) {
+            componentTypes.push(component.constructor.name);
+            if (typeof (component as any).getState === 'function') {
+                componentStates[component._componentname] = (component as any).getState();
+            }
+        }
+
+        return {
+            name: this._name,
+            position: {
+                x: this._position.x,
+                y: this._position.y,
+                z: this._position.z
+            },
+            quaternion: {
+                x: this._quaternion.x,
+                y: this._quaternion.y,
+                z: this._quaternion.z,
+                w: this._quaternion.w
+            },
+            alive: this._alive,
+            originTileKey: this._originTileKey,
+            isStreamedEntity: this._isStreamedEntity,
+            maxDistanceFromMainEntity: this._maxDistanceFromMainEntity,
+            componentStates: componentStates,
+            componentTypes: componentTypes,
+            componentCreationInfo: this._componentCreationInfo
+        };
+    }
+
+    async restoreEntityState(state: any): Promise<void> {
+        this._name = state.name;
+        this._position.set(state.position.x, state.position.y, state.position.z);
+        this._quaternion.set(state.quaternion.x, state.quaternion.y, state.quaternion.z, state.quaternion.w);
+        this._alive = state.alive;
+        this._originTileKey = state.originTileKey;
+        this._isStreamedEntity = state.isStreamedEntity;
+        this._maxDistanceFromMainEntity = state.maxDistanceFromMainEntity;
+        this._componentCreationInfo = state.componentCreationInfo || [];
+
+        // Note: Components need to be recreated by the EntityManager
+        // This method just restores the entity's basic state
+        
+        // Store component states for later restoration after components are recreated
+        this._entityState = state.componentStates;
+
+        // Broadcast position and quaternion updates
+        this.Broadcast({ topic: "position", data: this._position });
+        this.Broadcast({ topic: "quaternion", data: this._quaternion });
+    }
+
+    async restoreComponentStates(): Promise<void> {
+        if (!this._entityState) return;
+
+        // Restore component states after components have been recreated
+        for (const component of this._components) {
+            const componentState = this._entityState[component._componentname];
+            if (componentState && typeof (component as any).setState === 'function') {
+                await (component as any).setState(componentState);
+            }
+        }
+
+        // Clear the stored state
+        this._entityState = null;
+    }
 }
 
 

@@ -15,7 +15,7 @@ import { KeyboardInput } from "./utils/Components/KeyboardInput";
 // Add this import statement
 import { LoadingManager } from "./utils/LoadingManager";
 import {  CarComponent } from "./utils/Components/CarComponent";
-// import { MinimapComponent } from "./utils/Components/MinimapComponent"; // Now using UIManager's Minimap class
+import { MinimapComponent } from "./utils/Components/MinimapComponent";
 
 class Main {
   private entityManager: EntityManager;
@@ -50,6 +50,19 @@ class Main {
         behaviourscriptname: "botbasicbehavior.js",
     });
 
+    // Store component creation info for restoration
+    bob._componentCreationInfo = [
+      { 
+        type: 'CharacterComponent', 
+        config: {
+          modelpath: "models/gltf/ybot2.glb",
+          animationspathslist: this.maincController.animations,
+          behaviourscriptname: "botbasicbehavior.js",
+        }
+      },
+      { type: 'AIInput', config: {} }
+    ];
+
     await bob.AddComponent(bobcontroller);
     await bob.AddComponent(new AIInput());
     // await bob.AddComponent(new KeyboardInput());
@@ -57,9 +70,52 @@ class Main {
     // Give Bob a unique name
     this.bobCounter++;
     const bobName = `Bob-${this.bobCounter}`;
-    await this.entityManager.AddEntity(bob, bobName);
+    await this.entityManager.AddEntity(bob, bobName); // Now automatically streamable
     
     console.log(`${bobName} has been added to the scene!`);
+  }
+  
+  // Helper method to create test entities at various distances
+  private async createTestEntities(): Promise<void> {
+    console.log('Creating test entities at various distances...');
+    const mainPos = this.maincController.MainEntity?.Position || new THREE.Vector3(0, 0, 0);
+    
+    // Create entities at different distances
+    const distances = [50, 100, 150, 250, 300];
+    for (const distance of distances) {
+      const angle = Math.random() * Math.PI * 2;
+      const x = mainPos.x + Math.cos(angle) * distance;
+      const z = mainPos.z + Math.sin(angle) * distance;
+      
+      const testEntity = new Entity();
+      testEntity.Position = new THREE.Vector3(x, 1, z);
+      
+      const testController = new CharacterComponent({
+        modelpath: "models/gltf/ybot2.glb",
+        animationspathslist: this.maincController.animations,
+        behaviourscriptname: "botbasicbehavior.js",
+      });
+      
+      testEntity._componentCreationInfo = [
+        { 
+          type: 'CharacterComponent', 
+          config: {
+            modelpath: "models/gltf/ybot2.glb",
+            animationspathslist: this.maincController.animations,
+            behaviourscriptname: "botbasicbehavior.js",
+          }
+        },
+        { type: 'AIInput', config: {} }
+      ];
+      
+      await testEntity.AddComponent(testController);
+      await testEntity.AddComponent(new AIInput());
+      
+      const testName = `TestEntity-${distance}m`;
+      await this.entityManager.AddEntity(testEntity, testName); // Now automatically streamable
+      
+      console.log(`Created ${testName} at distance ${distance}m`);
+    }
   }
   
   private async init(): Promise<void> {
@@ -94,6 +150,20 @@ class Main {
       animationspathslist: this.maincController.animations,
       behaviourscriptname: "Hamza02.js",
     });
+    
+    // Store component creation info for streaming
+    hamza._componentCreationInfo = [
+      { 
+        type: 'CharacterComponent', 
+        config: {
+          modelpath: "models/gltf/ybot2.glb",
+          animationspathslist: this.maincController.animations,
+          behaviourscriptname: "Hamza02.js",
+        }
+      },
+      { type: 'AIInput', config: {} }
+    ];
+    
     await hamza.AddComponent(hbhc);
     await hamza.AddComponent(new AIInput());
    // await hamza.AddComponent(new KeyboardInput());
@@ -113,6 +183,21 @@ class Main {
       animationspathslist: this.maincController.animations,
       behaviourscriptname: "uitester2.js",
     });
+    
+    // Store component creation info for streaming
+    uitester2._componentCreationInfo = [
+      { 
+        type: 'CharacterComponent', 
+        config: {
+          modelpath: "models/gltf/ybot2.glb",
+          animationspathslist: this.maincController.animations,
+          behaviourscriptname: "uitester2.js",
+        }
+      },
+      { type: 'AIInput', config: {} },
+      { type: 'KeyboardInput', config: {} }
+    ];
+    
     await uitester2.AddComponent(uitestercontroller3);
 
     await uitester2.AddComponent(new AIInput());
@@ -140,13 +225,35 @@ class Main {
           behaviourscriptname: "musicStreamer.js",
         });
         musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
+        
+        // Store component creation info for streaming
+        musicstreamerenity._componentCreationInfo = [
+          { 
+            type: 'CharacterComponent', 
+            config: {
+              modelpath: "models/gltf/Xbot.glb",
+              animationspathslist: this.maincController.animations,
+              behaviourscriptname: "musicStreamer.js",
+            }
+          },
+          { type: 'AIInput', config: {} }
+        ];
+        
         await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
         await musicstreamerenity.AddComponent(new AIInput());
       //  await musicstreamerenity.AddComponent(new KeyboardInput());
         await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
     
-    // Minimap is now handled by UIManager directly, no need for separate entity
-    console.log("Minimap system will be initialized by UIManager");
+    // Initialize minimap system after all entities are created
+    // Note: MinimapComponent can work standalone, no need for separate entity
+    const minimapEntity = new Entity();
+    const minimapComponent = new MinimapComponent();
+    await minimapEntity.AddComponent(minimapComponent);
+    await this.entityManager.AddEntity(minimapEntity, "MinimapSystem", false); // Not streamable - it's a system
+    console.log("Minimap system initialized");
+
+    console.log("🌐 Entity Streaming System: All entities are now automatically streamable!");
+    console.log("📊 Use 's' key to view streaming stats, 't' key to create test entities");
 
    // this.maincController.UIManager.toggleScrollmode();
 
@@ -156,12 +263,14 @@ class Main {
     // - 'b'/'B': Create a new Bob entity
     // - 'm'/'M': Show memory stats 
     // - 'c'/'C': Force cleanup
+    // - 's'/'S': Show entity streaming stats
+    // - 't'/'T': Create test entities at various distances
     // - 'F1': Toggle physics debug mode
-    // - 'o': Toggle minimap visibility
-    // - '[': Decrease view cone size
-    // - ']': Increase view cone size
-    // - ';': Narrow view cone angle (45°)
-    // - "'": Widen view cone angle (90°)
+    // - 'M': Toggle minimap visibility (currently disabled)
+    // - '[': Zoom in minimap
+    // - ']': Zoom out minimap
+    // - ';': Narrow view cone angle (45°) (currently disabled)
+    // - "'": Reset minimap zoom and position
     // - 'v'/'V': Test audio visualizer
     // - 'p'/'P': Play music and test visualizer  
     // - 'd'/'D': Delete most recent Bob entity
@@ -183,6 +292,18 @@ class Main {
         console.log('Asset Reference Counts:', stats.assetRefCounts);
         console.log('Animation Reference Counts:', stats.animationRefCounts);
         console.log('===================');
+        
+        // Also log physics stats
+        const physicsStats = this.maincController.getPhysicsStats();
+        console.log('=== PHYSICS STATS ===');
+        console.log(`Total Bodies: ${physicsStats.totalBodies}`);
+        console.log(`Dynamic Bodies: ${physicsStats.dynamicBodies}`);
+        console.log(`Static Bodies: ${physicsStats.staticBodies}`);
+        console.log(`Constraints: ${physicsStats.constraints}`);
+        console.log(`Contacts: ${physicsStats.contacts}`);
+        console.log(`Streaming Tiles: ${physicsStats.streamingTiles}`);
+        console.log(`Streaming Objects: ${physicsStats.streamingObjects}`);
+        console.log('====================');
       }
       
       // Add 'c' key to force cleanup
@@ -195,6 +316,45 @@ class Main {
         console.log('Memory Stats after cleanup:', stats);
       }
       
+      // Add 's' key to show streaming stats
+      if (event.key === 's' || event.key === 'S') {
+        const allEntities = this.entityManager.Entities;
+        const streamedEntities = allEntities.filter(e => e._isStreamedEntity);
+        const nonStreamedEntities = allEntities.filter(e => !e._isStreamedEntity);
+        const totalStreamedStates = (this.entityManager as any)._streamedEntityStates.size;
+        
+        console.log('=== ENTITY STREAMING STATS ===');
+        console.log(`Total entities: ${allEntities.length}`);
+        console.log(`Streamable entities: ${streamedEntities.length}`);
+        console.log(`Non-streamable entities: ${nonStreamedEntities.length}`);
+        console.log(`Cached tile states: ${totalStreamedStates}`);
+        console.log(`Main entity position: ${this.maincController.MainEntity?.Position.x.toFixed(1)}, ${this.maincController.MainEntity?.Position.z.toFixed(1)}`);
+        
+        // Show non-streamable entities (usually system entities)
+        if (nonStreamedEntities.length > 0) {
+          console.log('\nNon-streamable entities:');
+          nonStreamedEntities.forEach(entity => {
+            console.log(`  ${entity.name} (System entity)`);
+          });
+        }
+        
+        // Show streamable entity positions
+        if (streamedEntities.length > 0) {
+          console.log('\nStreamable entities:');
+          streamedEntities.forEach(entity => {
+            const distance = this.maincController.MainEntity ? 
+              entity.Position.distanceTo(this.maincController.MainEntity.Position) : 0;
+            console.log(`  ${entity.name}: (${entity.Position.x.toFixed(1)}, ${entity.Position.z.toFixed(1)}) - Distance: ${distance.toFixed(1)} - Tile: ${entity._originTileKey}`);
+          });
+        }
+        console.log('===============================');
+      }
+      
+      // Add 't' key to create test entities at various distances
+      if (event.key === 't' || event.key === 'T') {
+        this.createTestEntities();
+      }
+      
       //if f1 key is pressed,     if (this.maincController.physicsmanager.debug) {
         //   this.maincController.physicsmanager.debug = false;
         //   this.maincController.physicsmanager.debug = true;
@@ -205,47 +365,65 @@ class Main {
           console.log(`Physics debug mode: ${this.maincController.physicsmanager.debug}`);
         }
         
-        // Add 'o' key to toggle minimap visibility via UIManager
+        // Add 'M' key to toggle minimap - disabled since minimap system is commented out
+       
         if (event.key === 'o') {
-          const minimap = this.maincController.UIManager.getMinimapInstance();
-          if (minimap) {
-            minimap.toggleVisibility();
-            console.log('Minimap visibility toggled');
-          } else {
-            console.log('Minimap not available');
+          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
+          if (minimapEntity) {
+            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
+            if (minimapComponent && typeof minimapComponent.toggleVisibility === 'function') {
+              minimapComponent.toggleVisibility();
+              console.log('Minimap visibility toggled');
+            }
           }
         }
-        // View cone size and angle adjustment controls (now use UIManager minimap)
+        
+        
+    //    Add '[' and ']' keys to adjust view cone size
+      //  View cone size and angle adjustment controls (disabled with MinimapSystem)
+         
         if (event.key === '[') {
-          const minimap = this.maincController.UIManager.getMinimapInstance();
-          if (minimap) {
-            minimap.setViewConeSize(30, 45); // Smaller cone
-            console.log('View cone size decreased');
+          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
+          if (minimapEntity) {
+            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
+            if (minimapComponent && typeof minimapComponent.zoomIn === 'function') {
+              minimapComponent.zoomIn();
+              console.log('Minimap zoom increased');
+            }
           }
         }
         
         if (event.key === ']') {
-          const minimap = this.maincController.UIManager.getMinimapInstance();
-          if (minimap) {
-            minimap.setViewConeSize(50, 75); // Larger cone
-            console.log('View cone size increased');
+          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
+          if (minimapEntity) {
+            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
+            if (minimapComponent && typeof minimapComponent.zoomOut === 'function') {
+              minimapComponent.zoomOut();
+              console.log('Minimap zoom decreased');
+            }
           }
         }
         
-        // Add ';' and ''' keys to adjust view cone angle
+       // Add ';' and ''' keys to adjust view cone angle
         if (event.key === ';') {
-          const minimap = this.maincController.UIManager.getMinimapInstance();
-          if (minimap) {
-            minimap.setViewConeAngle(45); // Narrower cone
-            console.log('View cone angle decreased to 45°');
+          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
+          if (minimapEntity) {
+            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
+            if (minimapComponent && typeof minimapComponent.setViewConeAngle === 'function') {
+              minimapComponent.setViewConeAngle(45); // Narrower cone
+              console.log('View cone angle decreased to 45°');
+            }
           }
         }
         
         if (event.key === "'") {
-          const minimap = this.maincController.UIManager.getMinimapInstance();
-          if (minimap) {
-            minimap.setViewConeAngle(90); // Wider cone
-            console.log('View cone angle increased to 90°');
+          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
+          if (minimapEntity) {
+            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
+            if (minimapComponent && typeof minimapComponent.resetZoom === 'function') {
+              minimapComponent.resetZoom();
+              console.log('Minimap zoom and position reset');
+            }
           }
         }
         
@@ -315,6 +493,13 @@ class Main {
 
     });
     car.Position = new THREE.Vector3(0, 1, 0);
+    
+    // Store component creation info for streaming
+    car._componentCreationInfo = [
+      { type: 'CarComponent', config: {} },
+      { type: 'KeyboardInput', config: {} }
+    ];
+    
     const h = async () => {
       await car.AddComponent(carcontroller);
        
@@ -331,7 +516,7 @@ class Main {
     
  
     //  await environmentbot2.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(uitester2, "uitester6");
+    await this.entityManager.AddEntity(uitester2, "uitester6", false); // Main entity should not be streamable
     uitestercontroller3.face();
     this.maincController.MainEntity = uitester2;
 
@@ -345,6 +530,19 @@ class Main {
       animationspathslist: this.maincController.animations,
       behaviourscriptname: "letterCounterBot.js",
     });
+
+    // Store component creation info for streaming
+    letterCounterBot._componentCreationInfo = [
+      { 
+        type: 'CharacterComponent', 
+        config: {
+          modelpath: "models/gltf/ybot2.glb",
+          animationspathslist: this.maincController.animations,
+          behaviourscriptname: "letterCounterBot.js",
+        }
+      },
+      { type: 'AIInput', config: {} }
+    ];
 
     await letterCounterBot.AddComponent(letterCounterBotcontroller2);
 
