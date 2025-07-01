@@ -150,7 +150,7 @@ class MainController {
 
     this.webgpu.setClearColor(new THREE.Color(0x202020));
 
-    const fog = new THREE.Fog(0x202020, 0.1, 350);
+    const fog = new THREE.Fog(0x202020, 0.1, 150);
     this.webgpuscene.fog = fog;
     this.entitymanager = entityManager;
     this.entitymanager._mc = this;
@@ -395,16 +395,16 @@ function updateHeapGraph(usedHeapMB) {
 }
 
 // // Update heap graph every second
-// setInterval(() => {
-//   if (performance.memory) {
-//     const usedHeapMB = performance.memory.usedJSHeapSize / (1024 * 1024);
-//     updateHeapGraph(usedHeapMB);
-//   } else {
-//     // For browsers that don't support performance.memory
-//     const randomMB = 50 + Math.random() * 50;
-//     updateHeapGraph(randomMB);
-//   }
-// }, 1000);
+setInterval(() => {
+  if (performance.memory) {
+    const usedHeapMB = performance.memory.usedJSHeapSize / (1024 * 1024);
+    updateHeapGraph(usedHeapMB);
+  } else {
+    // For browsers that don't support performance.memory
+    const randomMB = 50 + Math.random() * 50;
+    updateHeapGraph(randomMB);
+  }
+}, 1000);
 
 // Create physics objects graph container with exact same structure as FPS/heap containers
 const physicsContainer = document.createElement("div");
