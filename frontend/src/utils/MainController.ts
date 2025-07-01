@@ -502,36 +502,36 @@ physicsContainer.appendChild(physicsSvg);
 physicsContainer.appendChild(physicsLabelContainer);
 
 // Add physics container to pane right after heap container
-heapContainer.parentNode.insertBefore(physicsContainer, heapContainer.nextSibling);
+//heapContainer.parentNode.insertBefore(physicsContainer, heapContainer.nextSibling);
 
 // Physics tracking variables
 let physicsPoints = [];
 const maxPhysicsObjects = 500; // Maximum expected physics objects
 
-function updatePhysicsGraph(objectCount) {
-  // Calculate scaled Y position (inverted)
-  const scaledY = 20 - (
-    ((Math.max(0, Math.min(maxPhysicsObjects, objectCount)) / maxPhysicsObjects) * 20)
-  );
+// function updatePhysicsGraph(objectCount) {
+//   // Calculate scaled Y position (inverted)
+//   const scaledY = 20 - (
+//     ((Math.max(0, Math.min(maxPhysicsObjects, objectCount)) / maxPhysicsObjects) * 20)
+//   );
 
-  // Update points array
-  physicsPoints.push(scaledY);
-  if (physicsPoints.length > maxPoints) physicsPoints.shift();
+//   // Update points array
+//   physicsPoints.push(scaledY);
+//   if (physicsPoints.length > maxPoints) physicsPoints.shift();
 
-  // Create points string with exact same spacing as FPS graph
-  const points = physicsPoints.map((y, i) => `${i * (100 / maxPoints)},${y}`).join(" ");
-  physicsLine.setAttribute("points", points);
+//   // Create points string with exact same spacing as FPS graph
+//   const points = physicsPoints.map((y, i) => `${i * (100 / maxPoints)},${y}`).join(" ");
+//   physicsLine.setAttribute("points", points);
   
-  // Update label
-  physicsValue.textContent = objectCount.toString();
-}
+//   // Update label
+//   physicsValue.textContent = objectCount.toString();
+// }
 
 // Update physics graph every second - bind this context
-const updatePhysicsGraphBound = () => {
-  const physicsObjectCount = this.physicsmanager?.World?.bodies?.length || 0;
-  updatePhysicsGraph(physicsObjectCount);
-};
-setInterval(updatePhysicsGraphBound, 1000);
+// const updatePhysicsGraphBound = () => {
+//   const physicsObjectCount = this.physicsmanager?.World?.bodies?.length || 0;
+//   updatePhysicsGraph(physicsObjectCount);
+// };
+//etInterval(updatePhysicsGraphBound, 1000);
  
     this.CameraControls = new CameraControls(
       this.camera,

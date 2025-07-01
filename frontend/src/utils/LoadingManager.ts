@@ -138,7 +138,7 @@ class LoadingManager {
     // Increment reference count for this animation
     const currentCount = this.animationRefCounts.get(url) || 0;
     this.animationRefCounts.set(url, currentCount + 1);
-    console.log(`🎬 LoadingManager: Incremented animation ref count for ${url} to ${currentCount + 1}`);
+   // console.log(`🎬 LoadingManager: Incremented animation ref count for ${url} to ${currentCount + 1}`);
 
     if (this.animationClips.has(url)) {
       return this.animationClips.get(url)!;
@@ -293,23 +293,23 @@ class LoadingManager {
         }
       }
       
-      console.log(`LoadingManager: Disposed ${geometryCount} geometries, ${materialCount} materials, ${textureCount} textures, and ${animationsRemoved} animations for ${url}`);
+      //console.log(`LoadingManager: Disposed ${geometryCount} geometries, ${materialCount} materials, ${textureCount} textures, and ${animationsRemoved} animations for ${url}`);
       
       // Get renderer info after disposal
       const afterInfo = this.#options.renderer?.info;
-      console.log(`🖼️ After disposal - WebGL Textures: ${afterInfo?.memory?.textures}, Geometries: ${afterInfo?.memory?.geometries}`);
+     // console.log(`🖼️ After disposal - WebGL Textures: ${afterInfo?.memory?.textures}, Geometries: ${afterInfo?.memory?.geometries}`);
       if (this.#options.renderer) {
         try {
           // Access the renderer info to see stats about memory usage
           const info = this.#options.renderer.info;
-          console.log(`LoadingManager: Renderer info before asset removal - Textures: ${info.memory?.textures}, Geometries: ${info.memory?.geometries}`);
+        //  console.log(`LoadingManager: Renderer info before asset removal - Textures: ${info.memory?.textures}, Geometries: ${info.memory?.geometries}`);
           
           // DO NOT DISPOSE THE ENTIRE RENDERER HERE.
           // this.#options.renderer.dispose(); // This was problematic.
 
           // Logging after asset disposal, info should reflect changes if synchronous.
           // Note: WebGL garbage collection can be asynchronous.
-          console.log(`LoadingManager: Renderer info after asset removal (check logs for actual disposal timing) - Textures: ${this.#options.renderer.info.memory?.textures}, Geometries: ${this.#options.renderer.info.memory?.geometries}`);
+       //   console.log(`LoadingManager: Renderer info after asset removal (check logs for actual disposal timing) - Textures: ${this.#options.renderer.info.memory?.textures}, Geometries: ${this.#options.renderer.info.memory?.geometries}`);
         } catch (error) {
           console.warn("Error while trying to log renderer memory after asset disposal:", error);
         }

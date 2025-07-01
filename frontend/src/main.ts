@@ -12,6 +12,7 @@ import { EntityManager } from "./utils/EntityManager";
 import { MainController } from "./utils/MainController";
 import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
+import { AudioComponent } from "./utils/Components/AudioComponent";
 // Add this import statement
 import { LoadingManager } from "./utils/LoadingManager";
 import {  CarComponent } from "./utils/Components/CarComponent";
@@ -60,11 +61,19 @@ class Main {
           behaviourscriptname: "botbasicbehavior.js",
         }
       },
-      { type: 'AIInput', config: {} }
+      { type: 'AIInput', config: {} },
+      { 
+        type: 'AudioComponent', 
+        config: {
+          audioConfig: {},
+          visualizerConfig: { enabled: true }
+        }
+      }
     ];
 
     await bob.AddComponent(bobcontroller);
     await bob.AddComponent(new AIInput());
+    await bob.AddComponent(new AudioComponent());
     // await bob.AddComponent(new KeyboardInput());
     
     // Give Bob a unique name
@@ -105,11 +114,19 @@ class Main {
             behaviourscriptname: "botbasicbehavior.js",
           }
         },
-        { type: 'AIInput', config: {} }
+        { type: 'AIInput', config: {} },
+        { 
+          type: 'AudioComponent', 
+          config: {
+            audioConfig: {},
+            visualizerConfig: { enabled: true }
+          }
+        }
       ];
       
       await testEntity.AddComponent(testController);
       await testEntity.AddComponent(new AIInput());
+      await testEntity.AddComponent(new AudioComponent());
       
       const testName = `TestEntity-${distance}m`;
       await this.entityManager.AddEntity(testEntity, testName); // Now automatically streamable
@@ -161,11 +178,19 @@ class Main {
           behaviourscriptname: "Hamza02.js",
         }
       },
-      { type: 'AIInput', config: {} }
+      { type: 'AIInput', config: {} },
+      { 
+        type: 'AudioComponent', 
+        config: {
+          audioConfig: {},
+          visualizerConfig: { enabled: true }
+        }
+      }
     ];
     
     await hamza.AddComponent(hbhc);
     await hamza.AddComponent(new AIInput());
+    await hamza.AddComponent(new AudioComponent());
    // await hamza.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
    // this.maincController.MainEntity = hamza;
@@ -195,13 +220,20 @@ class Main {
         }
       },
       { type: 'AIInput', config: {} },
-      { type: 'KeyboardInput', config: {} }
+      { type: 'KeyboardInput', config: {} },
+      { 
+        type: 'AudioComponent', 
+        config: {
+          audioConfig: {},
+          visualizerConfig: { enabled: true }
+        }
+      }
     ];
     
     await uitester2.AddComponent(uitestercontroller3);
-
     await uitester2.AddComponent(new AIInput());
     await uitester2.AddComponent(new KeyboardInput());
+    await uitester2.AddComponent(new AudioComponent());
 
     //     const car = new Entity();
     // const carcontroller = new CarComponent({
@@ -236,11 +268,19 @@ class Main {
               behaviourscriptname: "musicStreamer.js",
             }
           },
-          { type: 'AIInput', config: {} }
+          { type: 'AIInput', config: {} },
+          { 
+            type: 'AudioComponent', 
+            config: {
+              audioConfig: {},
+              visualizerConfig: { enabled: true }
+            }
+          }
         ];
         
         await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
         await musicstreamerenity.AddComponent(new AIInput());
+        await musicstreamerenity.AddComponent(new AudioComponent());
       //  await musicstreamerenity.AddComponent(new KeyboardInput());
         await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
     
@@ -266,13 +306,12 @@ class Main {
     // - 's'/'S': Show entity streaming stats
     // - 't'/'T': Create test entities at various distances
     // - 'F1': Toggle physics debug mode
-    // - 'M': Toggle minimap visibility (currently disabled)
+    // - 'o': Toggle minimap visibility
     // - '[': Zoom in minimap
     // - ']': Zoom out minimap
-    // - ';': Narrow view cone angle (45°) (currently disabled)
+    // - ';': Narrow view cone angle (45°)
     // - "'": Reset minimap zoom and position
-    // - 'v'/'V': Test audio visualizer
-    // - 'p'/'P': Play music and test visualizer  
+    // - 'p'/'P': Play music and start visualizer
     // - 'd'/'D': Delete most recent Bob entity
     // - 'i'/'I': Spawn car entity
     document.addEventListener('keydown', (event) => {
@@ -428,29 +467,7 @@ class Main {
         }
         
         
-      // Add 'v' key to test visualizer
-      if (event.key === 'v' || event.key === 'V') {
-        console.log('Testing audio visualizer...');
-        const mainEntity = this.maincController.MainEntity;
-        if (mainEntity) {
-          const characterComponent = mainEntity.getComponent('CharacterComponent') as any;
-          if (characterComponent && characterComponent.getAudioManager) {
-            const audioManager = characterComponent.getAudioManager();
-            if (audioManager && typeof audioManager.testVisualizer === 'function') {
-              audioManager.testVisualizer();
-              console.log('Visualizer test triggered!');
-            } else {
-              console.log('AudioManager or testVisualizer method not available');
-            }
-          } else {
-            console.log('Character component not found');
-          }
-        } else {
-          console.log('No main entity found');
-        }
-      }
-      
-      // Add 'p' key to play music and test visualizer
+      // Add 'p' key to play music
       if (event.key === 'p' || event.key === 'P') {
         console.log('Playing music to test visualizer...');
         const mainEntity = this.maincController.MainEntity;
@@ -541,12 +558,19 @@ class Main {
           behaviourscriptname: "letterCounterBot.js",
         }
       },
-      { type: 'AIInput', config: {} }
+      { type: 'AIInput', config: {} },
+      { 
+        type: 'AudioComponent', 
+        config: {
+          audioConfig: {},
+          visualizerConfig: { enabled: true }
+        }
+      }
     ];
 
     await letterCounterBot.AddComponent(letterCounterBotcontroller2);
-
     await letterCounterBot.AddComponent(new AIInput());
+    await letterCounterBot.AddComponent(new AudioComponent());
  //   await letterCounterBot.AddComponent(new KeyboardInput());
 
     //  await environmentbot2.AddComponent(new KeyboardInput());

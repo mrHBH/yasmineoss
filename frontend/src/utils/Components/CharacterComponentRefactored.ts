@@ -6,12 +6,12 @@ import * as CANNON from "cannon-es";
 
 import { CharacterAnimationManager } from "./Character/CharacterAnimationManager";
 import { CharacterPhysicsController } from "./Character/CharacterPhysicsController";
-import { CharacterAudioManager } from "./Character/CharacterAudioManager";
 import { CharacterUIManager } from "./Character/CharacterUIManager";
 import { CharacterBehaviorController } from "./Character/CharacterBehaviorController";
 import { CharacterMovementController } from "./Character/CharacterMovementController";
 import { CharacterVehicleController } from "./Character/CharacterVehicleController";
 import { CharacterFSMController } from "./Character/CharacterFSMController";
+import { AudioComponent } from "./AudioComponent";
 
 
 class CharacterComponent extends Component {
@@ -26,7 +26,6 @@ class CharacterComponent extends Component {
   // Manager instances
   private animationManager: CharacterAnimationManager;
   private physicsController: CharacterPhysicsController;
-  private audioManager: CharacterAudioManager | any; // Can be CharacterAudioManager or a dummy object
   private uiManager: CharacterUIManager;
   private behaviorController: CharacterBehaviorController;
   private movementController: CharacterMovementController;
@@ -93,10 +92,7 @@ class CharacterComponent extends Component {
         child.castShadow = true;
          child.receiveShadow = false;
       }
-
-
     });
-
 
     // Initialize managers
     this.animationManager = new CharacterAnimationManager(this._model, animations);
@@ -108,81 +104,22 @@ class CharacterComponent extends Component {
 
     // Setup callbacks between managers
     this.setupManagerCallbacks();
-
-
   }
 
-  public getAudioManager(): CharacterAudioManager | { 
-    isDummyAudioManager: boolean; 
-    initTTS: () => void; 
-    update: () => void; 
-    destroy: () => void; 
-    positionalAudio: undefined | any; 
-    SoundGenerator: any;
-    onAudioStart: (buffer?: AudioBuffer) => void;
-    onAudioStop: () => void;
-    hasVisualizer: () => boolean;
-    isVisualizationActive: () => boolean;
-  } {
-    if (this.audioManager && (this.audioManager instanceof CharacterAudioManager || this.audioManager.isDummyAudioManager)) {
-      return this.audioManager;
-    }
-
+  // Public methods for external use  
+  async playPositionalMusic(audioUrl: string = (Math.random() < 0.5 ? "sounds/viridian.mp3" : "sounds/viri.wav"), startTime: number = 0): Promise<boolean> {
     try {
-      // Check if entity and webgpugroup are available
-      if (!this._entity) {
-        console.error("getAudioManager: Entity not initialized yet");
-        return this.createDummyAudioManager();
+      const audioComponent = this._entity.getComponent('AudioComponent') as AudioComponent;
+      if (audioComponent && typeof audioComponent.playPositionalMusic === 'function') {
+        return await audioComponent.playPositionalMusic(audioUrl, startTime);
+      } else {
+        console.warn("AudioComponent not found or method not available");
+        return false;
       }
-
-      if (!this._webgpugroup) {
-        console.error("getAudioManager: WebGPU group not initialized yet");
-        return this.createDummyAudioManager();
-      }
-
-      const entityManager = this._entity._entityManager;
-      if (!entityManager) {
-        console.error("getAudioManager: Entity manager not available. Entity may not be added to scene yet.");
-        return this.createDummyAudioManager();
-      }
-
-      const mainController = entityManager._mc;
-      if (!mainController) {
-        console.error("getAudioManager: Main controller not available. Scene may not be initialized yet.");
-        return this.createDummyAudioManager();
-      }
-
-      const listener = mainController.listener;
-      if (!listener) {
-        console.error("getAudioManager: Audio listener not available. Audio system may not be initialized yet.");
-        return this.createDummyAudioManager();
-      }
-
-      // All prerequisites are available, create the real audio manager
-      this.audioManager = new CharacterAudioManager(this._webgpugroup, listener);
-      console.log("CharacterAudioManager initialized successfully.");
-      return this.audioManager;
-
     } catch (error) {
-      console.error("Exception during CharacterAudioManager instantiation in getAudioManager:", error);
-      return this.createDummyAudioManager();
+      console.error("Error in playPositionalMusic:", error);
+      return false;
     }
-  }
-
-  private createDummyAudioManager() {
-    this.audioManager = {
-      isDummyAudioManager: true,
-      initTTS: () => console.warn("Dummy AudioManager: initTTS called - real audio manager not available."),
-      update: () => { },
-      destroy: () => { },
-      positionalAudio: undefined,
-      SoundGenerator: undefined,
-      onAudioStart: () => console.warn("Dummy AudioManager: onAudioStart called - real audio manager not available."),
-      onAudioStop: () => console.warn("Dummy AudioManager: onAudioStop called - real audio manager not available."),
-      hasVisualizer: () => false,
-      isVisualizationActive: () => false,
-    };
-    return this.audioManager;
   }
 
   private setupManagerCallbacks() {
@@ -195,16 +132,12 @@ class CharacterComponent extends Component {
       this.physicsController.body.position.set(newPosition.x, newPosition.y, newPosition.z);
     };
     this.animationManager.onMounting = () => {
-      // Mounting animation state change - handled by vehicle controller
       console.log("Character mounting vehicle");
     };
     this.animationManager.onUnmounting = () => {
-      // Unmounting animation state change - handled by vehicle controller  
       console.log("Character unmounting vehicle");
     };
     this.animationManager.onResetPhysicsBody = () => {
-
-
       const spine2Bone = this._model.getObjectByName("mixamorigSpine2");
       const rightToeBaseBone = this._model.getObjectByName("mixamorigRightToeBase");
       const rightHandMiddle4Bone = this._model.getObjectByName("mixamorigSpine2");
@@ -215,151 +148,58 @@ class CharacterComponent extends Component {
         rightHandMiddle4Bone?.getWorldPosition(new THREE.Vector3()).z ?? this._entity.Position.z
       );
       this.physicsController.resetPhysicsBody(pos.add(new THREE.Vector3(-0.0017684019097760815, -0.03283674009230393, 0.048088878150204226)), 0.5);
-
     }
 
-      // UI callbacks
-      this.uiManager.onFace = () => this.face();
-      this.uiManager.onReset = () => this.Reset();
-      this.uiManager.onLoadWorker = (scriptname) => this.behaviorController.LoadWorker(scriptname);
-      this.uiManager.onKillEntity = () => this._entity.kill();
-      this.uiManager.onPlayMusic = () => this.playPositionalMusic();
+    // UI callbacks
+    this.uiManager.onFace = () => this.face();
+    this.uiManager.onReset = () => this.Reset();
+    this.uiManager.onLoadWorker = (scriptname) => this.behaviorController.LoadWorker(scriptname);
+    this.uiManager.onKillEntity = () => this._entity.kill();
+    this.uiManager.onPlayMusic = () => this.playPositionalMusic();
 
-      // Movement callbacks
-      this.movementController.onInputUpdate = (input) => {
-        if (this.Input && this.Input._keys) {
-          Object.assign(this.Input._keys, input);
-        }
-      };
-      this.movementController.onAddArrow = (arrow) => {
-        this._entity._entityManager._mc.webgpuscene.add(arrow);
-      };
-      this.movementController.onRemoveArrow = (arrow) => {
-        this._entity._entityManager._mc.webgpuscene.remove(arrow);
-      };
-      this.movementController.getCurrentState = () => {
-        return this.animationManager ? this.animationManager.getCurrentState() : "Ideling";
-      };
+    // Movement callbacks
+    this.movementController.onInputUpdate = (input) => {
+      if (this.Input && this.Input._keys) {
+        Object.assign(this.Input._keys, input);
+      }
+    };
+    this.movementController.onAddArrow = (arrow) => {
+      this._entity._entityManager._mc.webgpuscene.add(arrow);
+    };
+    this.movementController.onRemoveArrow = (arrow) => {
+      this._entity._entityManager._mc.webgpuscene.remove(arrow);
+    };
+    this.movementController.getCurrentState = () => {
+      return this.animationManager ? this.animationManager.getCurrentState() : "Ideling";
+    };
 
-      // Vehicle controller callbacks
-      this.vehicleController.onMounting = () => {
-        this.animationManager.sendEvent("MOUNT");
-      };
-      this.vehicleController.onUnmounting = () => {
-        this.animationManager.sendEvent("UNMOUNT");
-      };
-      this.vehicleController.onRemovePhysicsBody = () => {
-        this._entity._entityManager._mc.physicsmanager.world.removeBody(this.physicsController.body);
-      };
-      this.vehicleController.onAddPhysicsBody = () => {
-        this._entity._entityManager._mc.physicsmanager.world.addBody(this.physicsController.body);
-      };
-      this.vehicleController.onSetPosition = (position: THREE.Vector3) => {
-        this._entity.Position = position;
-        this._webgpugroup.position.copy(position);
-      };
-      this.vehicleController.onSetPhysicsPosition = (position: THREE.Vector3) => {
-        this.physicsController.body.position.copy(new CANNON.Vec3(position.x, position.y, position.z));
-      };
-      this.vehicleController.onGetAnimationDuration = () => {
-        return this.animationManager.getCurrentClipDuration();
-      };
-    }
+    // Vehicle controller callbacks
+    this.vehicleController.onMounting = () => {
+      this.animationManager.sendEvent("MOUNT");
+    };
+    this.vehicleController.onUnmounting = () => {
+      this.animationManager.sendEvent("UNMOUNT");
+    };
+    this.vehicleController.onRemovePhysicsBody = () => {
+      this._entity._entityManager._mc.physicsmanager.world.removeBody(this.physicsController.body);
+    };
+    this.vehicleController.onAddPhysicsBody = () => {
+      this._entity._entityManager._mc.physicsmanager.world.addBody(this.physicsController.body);
+    };
+    this.vehicleController.onSetPosition = (position: THREE.Vector3) => {
+      this._entity.Position = position;
+      this._webgpugroup.position.copy(position);
+    };
+    this.vehicleController.onSetPhysicsPosition = (position: THREE.Vector3) => {
+      this.physicsController.body.position.copy(new CANNON.Vec3(position.x, position.y, position.z));
+    };
+    this.vehicleController.onGetAnimationDuration = () => {
+      return this.animationManager.getCurrentClipDuration();
+    };
+  }
 
   updateFSM(input: any) {
     this.state = this.fsmController.updateFSM(input);
-  }
-
-  // Public methods for external use  
-  async playPositionalMusic(audioUrl: string = (Math.random() < 0.5 ? "sounds/viridian.mp3" : "sounds/viri.wav")): Promise<boolean> {
-    try {
-      console.log("Attempting to play positional music:", audioUrl);
-
-      // Try to initialize audio manager
-      let audioManager = this.getAudioManager();
-
-      // If we got a dummy manager, wait a bit and try again (entity might still be initializing)
-      if (!audioManager || (audioManager as any).isDummyAudioManager) {
-        console.log("Audio manager not ready, waiting for entity initialization...");
-
-        // Wait for up to 3 seconds for the entity to be fully initialized
-        for (let i = 0; i < 30; i++) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          audioManager = this.getAudioManager();
-
-          if (audioManager && !(audioManager as any).isDummyAudioManager) {
-            console.log("Audio manager became available after waiting");
-            break;
-          }
-        }
-
-        // Final check
-        if (!audioManager || (audioManager as any).isDummyAudioManager) {
-          console.error("Cannot play positional music: Audio manager initialization failed after waiting");
-          return false;
-        }
-      }
-
-      // Ensure TTS is initialized (which sets up positional audio)
-      if (typeof audioManager.initTTS === 'function') {
-        audioManager.initTTS();
-      }
-
-      // Wait a bit for initialization to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      if (!audioManager.positionalAudio) {
-        console.error("Cannot play positional music: Positional audio not available");
-        return false;
-      }
-
-      // Load and play the audio file
-      const audioLoader = new THREE.AudioLoader();
-
-      return new Promise((resolve) => {
-        audioLoader.load(
-          audioUrl,
-          (buffer) => {
-            try {
-              audioManager.positionalAudio.setBuffer(buffer);
-              audioManager.positionalAudio.setRefDistance(20);
-              
-              // Start the visualizer before playing audio
-              if (audioManager.onAudioStart) {
-                audioManager.onAudioStart(buffer);
-              }
-              
-              audioManager.positionalAudio.play();
-              
-              // Set up event listener for when audio ends to stop visualizer
-              if (audioManager.positionalAudio.source) {
-                audioManager.positionalAudio.source.onended = () => {
-                  if (audioManager.onAudioStop) {
-                    audioManager.onAudioStop();
-                  }
-                };
-              }
-              
-              console.log(`Successfully playing positional music with visualizer: ${audioUrl}`);
-              resolve(true);
-            } catch (error) {
-              console.error("Error playing positional music:", error);
-              resolve(false);
-            }
-          },
-          (progress) => {
-            console.log("Loading audio:", (progress.loaded / progress.total * 100) + '% loaded');
-          },
-          (error) => {
-            console.error("Error loading audio file:", error);
-            resolve(false);
-          }
-        );
-      });
-    } catch (error) {
-      console.error("Error in playPositionalMusic:", error);
-      return false;
-    }
   }
 
   async walkToPos(locationPosition: THREE.Vector3, timeout = 20000) {
@@ -380,9 +220,8 @@ class CharacterComponent extends Component {
 
   activate() {
     // Check if audio visualizer is active - if so, don't show regular activation circle
-    const audioManager = this.getAudioManager();
-    if (audioManager && 'hasVisualizer' in audioManager && 
-        audioManager.hasVisualizer() && audioManager.isVisualizationActive()) {
+    const audioComponent = this._entity.getComponent('AudioComponent') as AudioComponent;
+    if (audioComponent && audioComponent.hasVisualizer() && audioComponent.isVisualizationActive()) {
       // Audio visualizer is active, no need for activation circle
       return;
     }
@@ -405,9 +244,8 @@ class CharacterComponent extends Component {
 
   deactivate() {
     // Only remove activation circle if no audio visualizer is active
-    const audioManager = this.getAudioManager();
-    const hasActiveVisualizer = audioManager && 'hasVisualizer' in audioManager && 
-                               audioManager.hasVisualizer() && audioManager.isVisualizationActive();
+    const audioComponent = this._entity.getComponent('AudioComponent') as AudioComponent;
+    const hasActiveVisualizer = audioComponent && audioComponent.hasVisualizer() && audioComponent.isVisualizationActive();
 
     if (!hasActiveVisualizer && this.activationCircle) {
       this._webgpugroup.remove(this.activationCircle);
@@ -535,11 +373,6 @@ class CharacterComponent extends Component {
   }
 
   async Update(deltaTime: number): Promise<void> {
-    // Update audio manager only if it's the real one (not dummy)
-    if (this.audioManager && !this.audioManager.isDummyAudioManager) {
-      this.audioManager.update(deltaTime);
-    }
-
     // Handle driving state
     if (this.isDriving) {
       this.updateDrivingState(deltaTime);
@@ -629,11 +462,6 @@ class CharacterComponent extends Component {
     this.uiManager?.destroy();
     this.vehicleController?.destroy();
     this.fsmController?.destroy();
-    
-    // audioManager might be the real one or the dummy. Both should have a destroy method or be safely optional-chained.
-    if (this.audioManager && typeof this.audioManager.destroy === 'function') {
-      this.audioManager.destroy();
-    }
     this.animationManager?.destroy();
 
     // Clean up physics (including left leg physics box)
@@ -727,11 +555,12 @@ class CharacterComponent extends Component {
 
   public isAudioSystemReady(): boolean {
     try {
+      const audioComponent = this._entity?.getComponent('AudioComponent') as AudioComponent;
       const entityManager = this._entity?._entityManager;
       const mainController = entityManager?._mc;
       const listener = mainController?.listener;
 
-      return !!(this._entity && this._webgpugroup && entityManager && mainController && listener);
+      return !!(audioComponent && this._entity && this._webgpugroup && entityManager && mainController && listener);
     } catch {
       return false;
     }

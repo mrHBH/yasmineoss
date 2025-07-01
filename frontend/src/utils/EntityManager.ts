@@ -154,7 +154,7 @@ class EntityManager {
     }
 
     private finishEntityDisposal(entitiesToDispose: Entity[]): void {
-        // Debug: Log streaming stats
+        // Only log if entities were actually disposed
         if (entitiesToDispose.length > 0) {
             console.log(`Entity Streaming: Disposed ${entitiesToDispose.length} entities. Total cached tiles: ${this._streamedEntityStates.size}`);
         }
@@ -196,8 +196,6 @@ class EntityManager {
             // Check if entity with this name already exists
             const existingEntity = this._entities.find(e => e._name === state.name);
             if (existingEntity) continue;
-
-            console.log(`Restoring streamed entity ${state.name} for tile ${tileKey}`);
             
             // Create new entity and restore its state
             const entity = new Entity();
@@ -247,6 +245,11 @@ class EntityManager {
                         const { CarComponent } = await import("./Components/CarComponent");
                         component = new CarComponent(compInfo.config);
                         break;
+                    case 'AudioComponent':
+                        const { AudioComponent } = await import("./Components/AudioComponent");
+                        component = new AudioComponent(compInfo.config?.audioConfig, compInfo.config?.visualizerConfig);
+                        break;
+                
                     default:
                         console.warn(`Unknown component type: ${compInfo.type}`);
                         continue;

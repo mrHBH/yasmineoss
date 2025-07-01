@@ -104,7 +104,7 @@ export class CharacterAudioManager {
       }
       
       // Set initial volume to prevent being too loud (0.3 = 30% volume)
-      this.positionalAudio.setVolume(0.09);
+      this.positionalAudio.setVolume(0.9);
       
       this.SoundGenerator.add(this.positionalAudio);
 
