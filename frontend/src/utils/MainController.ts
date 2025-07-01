@@ -28,7 +28,7 @@ import { DynamicuiComponent } from "./Components/DynamicuiComponent.js";
 // // import { MeshPhongNodeMaterial,MeshBasicNodeMaterial, MeshPhysicalNodeMaterial, MeshStandardNodeMaterial } from 'three/tsl';
 import Stats from "three/addons/libs/stats.module.js";
 // // import { t } from "xstate";
-import { CharacterComponent } from "./Components/CharacterComponentRefactored.js";
+import { CharacterComponent } from "./Components/CharacterComponent.js";
 // // import {  VolumeNodeMaterial, vec3, materialReference, smoothstep, If, Break, tslFn } from 'three/tsl';
 // import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import { LoadingManager } from "./LoadingManager.js";
@@ -150,8 +150,8 @@ class MainController {
 
     this.webgpu.setClearColor(new THREE.Color(0x202020));
 
-    const fog = new THREE.Fog(0x202020, 0.1, 50);
-  //  this.webgpuscene.fog = fog;
+    const fog = new THREE.Fog(0x202020, 0.1, 350);
+    this.webgpuscene.fog = fog;
     this.entitymanager = entityManager;
     this.entitymanager._mc = this;
     this.annotationRenderer = new CSS2DRenderer();
@@ -394,17 +394,17 @@ function updateHeapGraph(usedHeapMB) {
   heapValue.textContent = usedHeapMB.toFixed(1);
 }
 
-// Update heap graph every second
-setInterval(() => {
-  if (performance.memory) {
-    const usedHeapMB = performance.memory.usedJSHeapSize / (1024 * 1024);
-    updateHeapGraph(usedHeapMB);
-  } else {
-    // For browsers that don't support performance.memory
-    const randomMB = 50 + Math.random() * 50;
-    updateHeapGraph(randomMB);
-  }
-}, 1000);
+// // Update heap graph every second
+// setInterval(() => {
+//   if (performance.memory) {
+//     const usedHeapMB = performance.memory.usedJSHeapSize / (1024 * 1024);
+//     updateHeapGraph(usedHeapMB);
+//   } else {
+//     // For browsers that don't support performance.memory
+//     const randomMB = 50 + Math.random() * 50;
+//     updateHeapGraph(randomMB);
+//   }
+// }, 1000);
 
 // Create physics objects graph container with exact same structure as FPS/heap containers
 const physicsContainer = document.createElement("div");

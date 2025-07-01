@@ -6,7 +6,7 @@ UIkit.use(Icons);
 
 import * as THREE from "three";
 import { Entity } from "./utils/Entity";
-import { CharacterComponent } from "./utils/Components/CharacterComponentRefactored";
+import { CharacterComponent } from "./utils/Components/CharacterComponent";
 
 import { EntityManager } from "./utils/EntityManager";
 import { MainController } from "./utils/MainController";
@@ -286,14 +286,14 @@ class Main {
     
     // Initialize minimap system after all entities are created
     // Note: MinimapComponent can work standalone, no need for separate entity
-    const minimapEntity = new Entity();
-    const minimapComponent = new MinimapComponent();
-    await minimapEntity.AddComponent(minimapComponent);
-    await this.entityManager.AddEntity(minimapEntity, "MinimapSystem", false); // Not streamable - it's a system
-    console.log("Minimap system initialized");
+    // const minimapEntity = new Entity();
+    // const minimapComponent = new MinimapComponent();
+    // await minimapEntity.AddComponent(minimapComponent);
+    // await this.entityManager.AddEntity(minimapEntity, "MinimapSystem", false); // Not streamable - it's a system
+    // console.log("Minimap system initialized");
 
-    console.log("🌐 Entity Streaming System: All entities are now automatically streamable!");
-    console.log("📊 Use 's' key to view streaming stats, 't' key to create test entities");
+    // console.log("🌐 Entity Streaming System: All entities are now automatically streamable!");
+    // console.log("📊 Use 's' key to view streaming stats, 't' key to create test entities");
 
    // this.maincController.UIManager.toggleScrollmode();
 

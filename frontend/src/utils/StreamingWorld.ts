@@ -3,10 +3,7 @@ import * as CANNON from 'cannon-es';
 import { ManagedGroup } from './ManagedGroup';
 import { LoadingManager } from './LoadingManager';
 import { noise2D } from './noise';
-
-const TILE_SIZE = 50;
-const TILE_RESOLUTION = 10;
-const TILE_RANDOM_OBJECTS = 2;
+import { STREAMING_CONSTANTS } from './StreamingConstants';
 
 // Simple seeded random number generator
 class SeededRandom {
@@ -117,7 +114,7 @@ class StreamingTile extends THREE.Group {
 
   async load(tilePos: THREE.Vector3, state: any) {
     const groundGeometry = new THREE.PlaneGeometry(
-        TILE_SIZE, TILE_SIZE, TILE_RESOLUTION, TILE_RESOLUTION);
+        STREAMING_CONSTANTS.TILE_SIZE, STREAMING_CONSTANTS.TILE_SIZE, STREAMING_CONSTANTS.TILE_RESOLUTION, STREAMING_CONSTANTS.TILE_RESOLUTION);
     groundGeometry.rotateX(-Math.PI / 2);
 
     const groundMaterial = new THREE.MeshStandardMaterial({
@@ -137,9 +134,9 @@ class StreamingTile extends THREE.Group {
     const seed = Math.floor(tilePos.x * 1000 + tilePos.z * 1000) + 12345;
     const seededRandom = new SeededRandom(seed);
 
-    for (let i = 0; i < TILE_RANDOM_OBJECTS; i++) {
+    for (let i = 0; i < STREAMING_CONSTANTS.TILE_RANDOM_OBJECTS; i++) {
         const randomAngle = seededRandom.next() * Math.PI * 2;
-        const randomRadius = seededRandom.next() * TILE_SIZE * 0.5;
+        const randomRadius = seededRandom.next() * STREAMING_CONSTANTS.TILE_SIZE * 0.5;
         const x = Math.cos(randomAngle) * randomRadius;
         const z = Math.sin(randomAngle) * randomRadius;
 
@@ -188,16 +185,16 @@ class StreamingTile extends THREE.Group {
   }
 };
 
-const LOAD_DISTANCE = 200;
-const NUM_TILES = 5;
+const LOAD_DISTANCE = STREAMING_CONSTANTS.LOAD_DISTANCE;
+const NUM_TILES = STREAMING_CONSTANTS.NUM_TILES;
 
 class StreamingWorld extends THREE.Group {
   #tiles_: {[key: string]: StreamingTile} = {};
   #tileDataCache_: {[key: string]: any} = {};
   #cacheAccessTime_: {[key: string]: number} = {}; // Track when cache entries were last accessed
-  #cacheCleanupInterval_: number = 30000; // 30 seconds
+  #cacheCleanupInterval_: number = STREAMING_CONSTANTS.CACHE_CLEANUP_INTERVAL;
   #lastCacheCleanup_: number = 0;
-  #maxCacheEntries_: number = 50; // Maximum cache entries before forced cleanup
+  #maxCacheEntries_: number = STREAMING_CONSTANTS.MAX_CACHE_ENTRIES;
   physicsWorld: CANNON.World;
   entityManager: any; // Reference to EntityManager for entity streaming
 
@@ -215,9 +212,9 @@ class StreamingWorld extends THREE.Group {
 
     // Round to the nearest tile
     const baseTilePos = posXZ.clone();
-    baseTilePos.divideScalar(TILE_SIZE);
+    baseTilePos.divideScalar(STREAMING_CONSTANTS.TILE_SIZE);
     baseTilePos.round();
-    baseTilePos.multiplyScalar(TILE_SIZE);
+    baseTilePos.multiplyScalar(STREAMING_CONSTANTS.TILE_SIZE);
 
     const newTiles: {[key: string]: StreamingTile} = {};
     const oldTiles = this.#tiles_;
@@ -225,7 +222,7 @@ class StreamingWorld extends THREE.Group {
     for (let x = -NUM_TILES; x <= NUM_TILES; x++) {
         for (let z = -NUM_TILES; z <= NUM_TILES; z++) {
             const offset = new THREE.Vector3(x, 0, z);
-            offset.multiplyScalar(TILE_SIZE);
+            offset.multiplyScalar(STREAMING_CONSTANTS.TILE_SIZE);
 
             const tilePos = baseTilePos.clone().add(offset);
             const key = tilePos.x + '/' + tilePos.z;
@@ -278,12 +275,12 @@ class StreamingWorld extends THREE.Group {
     
     // Check for memory leaks
     const memStats = this.getMemoryStats();
-    if (memStats.totalPhysicsBodies > 1000) { // Adjust threshold as needed
+    if (memStats.totalPhysicsBodies > STREAMING_CONSTANTS.MAX_PHYSICS_BODIES_WARNING) { // Adjust threshold as needed
       console.warn('StreamingWorld: High physics body count detected:', memStats);
     }
     
     const updateTime = performance.now() - startTime;
-    if (updateTime > 16) { // More than one frame at 60fps
+    if (updateTime > STREAMING_CONSTANTS.SLOW_UPDATE_WARNING_MS) { // More than one frame at 60fps
       console.warn('StreamingWorld: Slow update detected:', updateTime + 'ms');
     }
   }
@@ -304,7 +301,7 @@ class StreamingWorld extends THREE.Group {
             
             // Only update if the body is still active and position has changed significantly
             if (body.sleepState === CANNON.Body.AWAKE || !mesh.userData.lastPosition || 
-                body.position.distanceTo(mesh.userData.lastPosition) > 0.01) {
+                body.position.distanceTo(mesh.userData.lastPosition) > STREAMING_CONSTANTS.MESH_UPDATE_DISTANCE_THRESHOLD) {
               
               mesh.position.copy(body.position as any).sub(groupPos);
               mesh.quaternion.copy(body.quaternion as any);
@@ -372,7 +369,7 @@ class StreamingWorld extends THREE.Group {
   }
 
   private purgeOldCacheEntries(now: number, aggressive: boolean = false): void {
-    const maxAge = aggressive ? 60000 : 120000; // 1 or 2 minutes
+    const maxAge = aggressive ? STREAMING_CONSTANTS.CACHE_MAX_AGE_AGGRESSIVE : STREAMING_CONSTANTS.CACHE_MAX_AGE_NORMAL; // 1 or 2 minutes
     const keysToRemove: string[] = [];
     
     // Find old cache entries
@@ -408,7 +405,7 @@ class StreamingWorld extends THREE.Group {
 
   // Enhanced cache management - purge cache when returning to areas
   private shouldPurgeCache(currentPos: THREE.Vector3): boolean {
-    const PURGE_DISTANCE = 300; // If player moves far from cached areas, purge old cache
+    const PURGE_DISTANCE = STREAMING_CONSTANTS.PURGE_DISTANCE; // If player moves far from cached areas, purge old cache
     const cachedTileCount = Object.keys(this.#tileDataCache_).length;
     
     // If cache is getting large, check if we're far from cached areas
@@ -435,7 +432,7 @@ class StreamingWorld extends THREE.Group {
 
   // Method to detect when player returns to a previously visited area
   private detectReturnToArea(currentPos: THREE.Vector3): void {
-    const RETURN_THRESHOLD = 100; // Distance threshold to consider "returning"
+    const RETURN_THRESHOLD = STREAMING_CONSTANTS.RETURN_THRESHOLD; // Distance threshold to consider "returning"
     
     // Check if we're returning to a cached area
     for (const tileKey in this.#tileDataCache_) {
@@ -455,7 +452,7 @@ class StreamingWorld extends THREE.Group {
 
   private purgeStaleCache(): void {
     const now = Date.now();
-    const STALE_THRESHOLD = 300000; // 5 minutes
+    const STALE_THRESHOLD = STREAMING_CONSTANTS.CACHE_STALE_THRESHOLD; // 5 minutes
     const keysToRemove: string[] = [];
     
     for (const [key, accessTime] of Object.entries(this.#cacheAccessTime_)) {

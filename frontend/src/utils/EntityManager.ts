@@ -1,17 +1,23 @@
 import * as THREE from "three";
 import { Entity } from "./Entity.ts";
 import { MainController } from "./MainController.ts";
+import { STREAMING_CONSTANTS } from "./StreamingConstants";
 
 class EntityManager {
     _ids: number;
     _entities: Entity[];
-    _entitiesMap:   Map<number, Entity>;
+    _entitiesMap: Map<number, Entity>;
     _mc: MainController;
 
     // Entity streaming state
     private _streamedEntityStates: Map<string, any[]> = new Map(); // tileKey -> array of entity states
-    private _streamingCheckInterval: number = 1000; // ms
+    private _streamingCheckInterval: number = STREAMING_CONSTANTS.ENTITY_STREAMING_CHECK_INTERVAL; // ms
     private _lastStreamingCheck: number = 0;
+    
+    // Streaming configuration - update this to match your streaming world tile size
+    private static readonly STREAMING_TILE_SIZE = STREAMING_CONSTANTS.ENTITY_STREAMING_TILE_SIZE;
+    private static readonly DISPOSAL_DISTANCE_MULTIPLIER = STREAMING_CONSTANTS.ENTITY_DISPOSAL_DISTANCE_MULTIPLIER; // Entities disposed at 1x tile size
+    private static readonly RESTORE_DISTANCE_MULTIPLIER = STREAMING_CONSTANTS.ENTITY_RESTORE_DISTANCE_MULTIPLIER; // Entities restored at 1x tile size
 
     
     constructor() {
@@ -161,7 +167,7 @@ class EntityManager {
     }
 
     private restoreEntitiesForNearbyTiles(mainEntityPos: THREE.Vector3): void {
-        const TILE_SIZE = 50; // Match the tile size from StreamingWorld
+        const TILE_SIZE = EntityManager.STREAMING_TILE_SIZE;
         
         // Calculate which tiles are nearby
         const baseTilePos = mainEntityPos.clone();
@@ -169,7 +175,7 @@ class EntityManager {
         baseTilePos.round();
         baseTilePos.multiplyScalar(TILE_SIZE);
 
-        const NUM_TILES = 3; // Smaller range than visual tiles
+        const NUM_TILES = STREAMING_CONSTANTS.ENTITY_NUM_TILES; // Smaller range than visual tiles
         for (let x = -NUM_TILES; x <= NUM_TILES; x++) {
             for (let z = -NUM_TILES; z <= NUM_TILES; z++) {
                 const offset = new THREE.Vector3(x, 0, z);
@@ -180,7 +186,7 @@ class EntityManager {
                 // Check if this tile has saved entities and we're close enough
                 if (this._streamedEntityStates.has(tileKey)) {
                     const distance = mainEntityPos.distanceTo(tilePos);
-                    if (distance <= 150) { // Restore entities when within 150 units
+                    if (distance <= TILE_SIZE * EntityManager.RESTORE_DISTANCE_MULTIPLIER) {
                         this.restoreEntitiesForTile(tileKey);
                     }
                 }
@@ -230,7 +236,7 @@ class EntityManager {
             try {
                 switch (compInfo.type) {
                     case 'CharacterComponent':
-                        const { CharacterComponent } = await import("./Components/CharacterComponentRefactored");
+                        const { CharacterComponent } = await import("./Components/CharacterComponent.ts");
                         component = new CharacterComponent(compInfo.config);
                         break;
                     case 'AIInput':
@@ -266,7 +272,7 @@ class EntityManager {
 
     // Utility method to register an entity for tile streaming
     registerStreamedEntity(entity: Entity, position: THREE.Vector3): void {
-        const TILE_SIZE = 50;
+        const TILE_SIZE = EntityManager.STREAMING_TILE_SIZE;
         const tilePos = position.clone();
         tilePos.divideScalar(TILE_SIZE);
         tilePos.round();
@@ -274,6 +280,7 @@ class EntityManager {
         const tileKey = tilePos.x + '/' + tilePos.z;
         
         entity.setOriginTile(tileKey, true);
+        entity._maxDistanceFromMainEntity = TILE_SIZE * EntityManager.DISPOSAL_DISTANCE_MULTIPLIER;
     }
 
     // Helper method to store component creation info for streaming entities

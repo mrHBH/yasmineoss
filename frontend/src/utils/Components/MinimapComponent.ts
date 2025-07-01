@@ -1196,36 +1196,36 @@ export class MinimapComponent extends Component {
       this.cameraViewport.style.cursor = 'grabbing';
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingViewport) return;
+    // const handleMouseMove = (e: MouseEvent) => {
+    //   if (!isDraggingViewport) return;
       
-      const entityManager = this._entity._entityManager;
-      if (!entityManager || !entityManager._mc || !entityManager._mc.camera) return;
+    //   const entityManager = this._entity._entityManager;
+    //   if (!entityManager || !entityManager._mc || !entityManager._mc.camera) return;
       
-      e.preventDefault();
+    //   e.preventDefault();
       
-      const deltaX = e.clientX - dragStartPos.x;
-      const deltaY = e.clientY - dragStartPos.y;
+    //   const deltaX = e.clientX - dragStartPos.x;
+    //   const deltaY = e.clientY - dragStartPos.y;
       
-      // Convert screen delta to world coordinates
-      const scale = this.worldSize / (this.minimapSize - 10);
-      const worldDeltaX = -deltaX * scale; // Invert X to match coordinate system
-      const worldDeltaZ = deltaY * scale; // Y screen maps to Z world
+    //   // Convert screen delta to world coordinates
+    //   const scale = this.worldSize / (this.minimapSize - 10);
+    //   const worldDeltaX = -deltaX * scale; // Invert X to match coordinate system
+    //   const worldDeltaZ = deltaY * scale; // Y screen maps to Z world
       
-      // Rotate the delta by the current minimap rotation to align with the world
-      const minimapRotationRad = -this.lastMinimapRotation * (Math.PI / 180);
-      const rotatedDeltaX = worldDeltaX * Math.cos(minimapRotationRad) - worldDeltaZ * Math.sin(minimapRotationRad);
-      const rotatedDeltaZ = worldDeltaX * Math.sin(minimapRotationRad) + worldDeltaZ * Math.cos(minimapRotationRad);
+    //   // Rotate the delta by the current minimap rotation to align with the world
+    //   const minimapRotationRad = -this.lastMinimapRotation * (Math.PI / 180);
+    //   const rotatedDeltaX = worldDeltaX * Math.cos(minimapRotationRad) - worldDeltaZ * Math.sin(minimapRotationRad);
+    //   const rotatedDeltaZ = worldDeltaX * Math.sin(minimapRotationRad) + worldDeltaZ * Math.cos(minimapRotationRad);
 
-      // Move camera position
-      const newCameraPos = new THREE.Vector3(
-        dragStartCameraPos.x + rotatedDeltaX,
-        dragStartCameraPos.y,
-        dragStartCameraPos.z + rotatedDeltaZ
-      );
+    //   // Move camera position
+    //   const newCameraPos = new THREE.Vector3(
+    //     dragStartCameraPos.x + rotatedDeltaX,
+    //     dragStartCameraPos.y,
+    //     dragStartCameraPos.z + rotatedDeltaZ
+    //   );
       
-      entityManager._mc.camera.position.copy(newCameraPos);
-    };
+    //   entityManager._mc.camera.position.copy(newCameraPos);
+    // };
 
     const handleMouseUp = () => {
       if (isDraggingViewport) {
