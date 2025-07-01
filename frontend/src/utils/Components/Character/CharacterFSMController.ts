@@ -36,7 +36,7 @@ export class CharacterFSMController {
       this.physicsController.jump(25, 150);
     }
 
-    // Movement logic
+    // Movement logic with analog support
     if (input._keys.forward && this.physicsController.isColliding_) {
       this.animationManager.sendEvent("PUSH");
     }
@@ -51,20 +51,43 @@ export class CharacterFSMController {
       this.animationManager.sendEvent("STOP");
     }
 
-    // Running and walking logic
-    if (input._keys.forward && input._keys.shift && currentState == "Walking") {
-      this.animationManager.sendEvent("RUN");
-    }
-    if (input._keys.forward && input._keys.shift && currentState == "Ideling") {
-      this.animationManager.sendEvent("SLOWWALK");
-    }
-    if (input._keys.forward &&
-      (currentState == "Ideling" || currentState == "SlowWalking" ||
-        currentState == "Pushing" || currentState == "Executing") &&
-      !input._keys.shift && !this.physicsController.isColliding_) {
-      this.animationManager.sendEvent("WALK");
-    } else if (input._keys.forward && currentState !== "Pushing" && this.physicsController.isColliding_) {
-      this.animationManager.sendEvent("STOP");
+    // Analog-based movement - use force to determine movement type
+    const analogActive = input._analog && input._analog.isActive;
+    const force = analogActive ? input._analog.force : 0;
+
+    if (input._keys.forward) {
+      if (analogActive && force > 0.3) {
+        // Use analog force for movement determination
+        if (force >= 0.8) {
+          // High force = running
+          if (currentState !== "Running") {
+            this.animationManager.sendEvent("RUN");
+          }
+        } else if (force >= 0.6) {
+          // Medium force = walking
+          if (currentState !== "Walking") {
+            this.animationManager.sendEvent("WALK");
+          }
+        } else {
+          // Low force = slow walking
+          if (currentState !== "SlowWalking") {
+            this.animationManager.sendEvent("SLOWWALK");
+          }
+        }
+      } else {
+        // Fallback to keyboard-based movement
+        if (input._keys.shift && currentState == "Walking") {
+          this.animationManager.sendEvent("RUN");
+        } else if (input._keys.shift && currentState == "Ideling") {
+          this.animationManager.sendEvent("SLOWWALK");
+        } else if ((currentState == "Ideling" || currentState == "SlowWalking" ||
+            currentState == "Pushing" || currentState == "Executing") &&
+          !input._keys.shift && !this.physicsController.isColliding_) {
+          this.animationManager.sendEvent("WALK");
+        } else if (currentState !== "Pushing" && this.physicsController.isColliding_) {
+          this.animationManager.sendEvent("STOP");
+        }
+      }
     }
 
     if (input._keys.forward && currentState == "Pushing" && input._keys.shift) {
@@ -75,7 +98,7 @@ export class CharacterFSMController {
       this.animationManager.sendEvent("STAND");
     }
 
-    if (input._keys.forward && currentState == "Running" && !input._keys.shift) {
+    if (input._keys.forward && currentState == "Running" && !input._keys.shift && !analogActive) {
       this.animationManager.sendEvent("SLOWDOWN");
     }
 

@@ -30,6 +30,7 @@
     "langchain": "^0.1.37",
     "latex.js": "^0.12.6",
     "mersennetwister": "^0.2.3",
+    "nipplejs": "^0.10.2",
     "pdfjs-dist": "^4.10.38",
     "run": "^1.5.0",
     "shifty": "^3.0.6",

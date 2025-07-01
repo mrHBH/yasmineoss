@@ -142,9 +142,9 @@ class MainController {
 
     this.webgpu.shadowMap.enabled = true;
       this.webgpu.shadowMap.type = THREE.PCFSoftShadowMap  
-    // this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
-    // this.webgpu.outputEncoding = THREE.sRGBEncoding;
-    // this.webgpu.physicallyCorrectLights = true;
+    this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
+    this.webgpu.outputEncoding = THREE.sRGBEncoding;
+    this.webgpu.physicallyCorrectLights = true;
 
     this.webgpu.setPixelRatio(window.devicePixelRatio);
 
