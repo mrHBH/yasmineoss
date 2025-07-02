@@ -20,13 +20,17 @@ class LoadingManager {
   // Static asset caches
   static assets = new Map<string, GLTF>();
   static animationClips = new Map<string, AnimationClip>();
+  static animationSets = new Map<string, {[key: string]: AnimationClip}>(); // Cache animation sets by signature
   
   // Reference counting for assets
   static assetRefCounts = new Map<string, number>();
   static animationRefCounts = new Map<string, number>();
+  static animationSetRefCounts = new Map<string, number>(); // Track animation set usage
   
   // Loading trackers (similar to cached-asset-streamer.js)
   static #loading = new Map<string, Promise<GLTF>>();
+  static #loadingAnimations = new Map<string, Promise<AnimationClip>>();
+  static #loadingAnimationSets = new Map<string, Promise<{[key: string]: AnimationClip}>>();
   static #gltfLoader: GLTFLoader;
   static #options: LoadingManagerOptions = {};
 
@@ -138,13 +142,32 @@ class LoadingManager {
     // Increment reference count for this animation
     const currentCount = this.animationRefCounts.get(url) || 0;
     this.animationRefCounts.set(url, currentCount + 1);
-   // console.log(`🎬 LoadingManager: Incremented animation ref count for ${url} to ${currentCount + 1}`);
+    console.log(`🎬 LoadingManager: Incremented animation ref count for ${url} to ${currentCount + 1}`);
 
+    // 1. Animation is already loaded, return it immediately
     if (this.animationClips.has(url)) {
+      console.log(`🎬 LoadingManager: Using cached animation: ${url}`);
       return this.animationClips.get(url)!;
     }
     
-    // Reuse the same loading promise if already loading
+    // 2. Animation isn't loaded and isn't being loaded currently
+    if (!this.#loadingAnimations.has(url)) {
+      console.log("Starting to load animation:", url);
+      this.#loadingAnimations.set(url, this.#loadSingleAnimation(url));
+      
+      const animation = await this.#loadingAnimations.get(url)!;
+      this.#loadingAnimations.delete(url);
+      return animation;
+    }
+    
+    // 3. Animation is currently being loaded, wait for it to finish
+    console.log("Waiting for animation to load:", url);
+    return await this.#loadingAnimations.get(url)!;
+  }
+
+  // Internal method to load a single animation
+  static async #loadSingleAnimation(url: string): Promise<AnimationClip> {
+    // Reuse GLTF loading promise if already loading
     if (!this.#loading.has(url)) {
       this.#loading.set(url, this.#gltfLoader.loadAsync(url));
     }
@@ -165,10 +188,60 @@ class LoadingManager {
   static async loadGLTFFirstAnimations(
     animationspathslist: AnimationItem[]
   ): Promise<{[key: string]: AnimationClip}> {
+    // Create a signature for this animation set
+    const signature = animationspathslist.map(item => 
+      `${item.url}${item.skipTracks ? `|skip:${item.skipTracks.join(',')}` : ''}`
+    ).join('|');
+    
+    console.log(`🎬 LoadingManager: Request for animation set. Signature: ${signature.substring(0, 100)}...`);
+    
+    // Check if we already have this animation set cached
+    if (this.animationSets.has(signature)) {
+      // Increment reference count for the entire set
+      const currentCount = this.animationSetRefCounts.get(signature) || 0;
+      this.animationSetRefCounts.set(signature, currentCount + 1);
+      console.log(`🎬 LoadingManager: Using cached animation set (ref count: ${currentCount + 1})`);
+      return this.animationSets.get(signature)!;
+    }
+    
+    // Check if this animation set is currently being loaded
+    if (!this.#loadingAnimationSets.has(signature)) {
+      console.log(`🎬 LoadingManager: Loading new animation set with ${animationspathslist.length} animations`);
+      this.#loadingAnimationSets.set(signature, this.#loadAnimationSet(animationspathslist, signature));
+      
+      const animationSet = await this.#loadingAnimationSets.get(signature)!;
+      this.#loadingAnimationSets.delete(signature);
+      return animationSet;
+    }
+    
+    // Animation set is currently being loaded, wait for it to finish
+    console.log(`🎬 LoadingManager: Waiting for animation set to finish loading`);
+    return await this.#loadingAnimationSets.get(signature)!;
+  }
+
+  // Internal method to load an animation set
+  static async #loadAnimationSet(animationspathslist: AnimationItem[], signature: string): Promise<{[key: string]: AnimationClip}> {
     const animationClips = {} as {[key: string]: AnimationClip};
     const promises = animationspathslist.map(async (item) => {
       try {
-        let animation = await this.loadGLTFAnimation(item.url);
+        // Don't increment ref count here - the set ref count handles this
+        let animation: AnimationClip;
+        
+        // Check if animation is already cached
+        if (this.animationClips.has(item.url)) {
+          animation = this.animationClips.get(item.url)!;
+        } else {
+          // Load animation without incrementing ref count (since set handles it)
+          const currentCount = this.animationRefCounts.get(item.url) || 0;
+          this.animationRefCounts.set(item.url, currentCount); // Don't increment here
+          
+          if (!this.#loadingAnimations.has(item.url)) {
+            this.#loadingAnimations.set(item.url, this.#loadSingleAnimationForSet(item.url));
+          }
+          animation = await this.#loadingAnimations.get(item.url)!;
+          this.#loadingAnimations.delete(item.url);
+        }
+        
         if (item.skipTracks) {
           animation = this.cloneAnimationClip(animation);
           for (let i = 0; i < animation.tracks[0].values.length; i++) {
@@ -193,7 +266,33 @@ class LoadingManager {
     });
     
     await Promise.all(promises);
+    
+    // Cache the animation set
+    this.animationSets.set(signature, animationClips);
+    this.animationSetRefCounts.set(signature, 1);
+    console.log(`🎬 LoadingManager: Cached new animation set`);
+    
     return animationClips;
+  }
+
+  // Internal method to load a single animation for a set (without ref counting)
+  static async #loadSingleAnimationForSet(url: string): Promise<AnimationClip> {
+    // Reuse GLTF loading promise if already loading
+    if (!this.#loading.has(url)) {
+      this.#loading.set(url, this.#gltfLoader.loadAsync(url));
+    }
+    
+    const gltf = await this.#loading.get(url)!;
+    this.#loading.delete(url);
+    
+    if (gltf.animations.length > 0) {
+      this.animationClips.set(url, gltf.animations[0]);
+      console.log("Loaded GLTF Animation for set:", url);
+      return gltf.animations[0];
+    } else {
+      console.error("No animation found in GLTF file:", url);
+      throw new Error("No animation found in GLTF file");
+    }
   }
 
   // Release animation references
@@ -203,7 +302,7 @@ class LoadingManager {
       if (currentCount <= 0) {
         console.warn(`LoadingManager: Attempted to release animation ${url} with no references`);
         return;
-      }        const newCount = currentCount - 1;
+      }      const newCount = currentCount - 1;
         this.animationRefCounts.set(url, newCount);
         console.log(`🎭 LoadingManager: Decremented animation ref count for ${url} to ${newCount}`);
         
@@ -213,6 +312,32 @@ class LoadingManager {
           this.animationClips.delete(url);
         }
     });
+  }
+
+  // Release animation set references
+  static releaseAnimationSet(animationspathslist: AnimationItem[]): void {
+    const signature = animationspathslist.map(item => 
+      `${item.url}${item.skipTracks ? `|skip:${item.skipTracks.join(',')}` : ''}`
+    ).join('|');
+    
+    const currentCount = this.animationSetRefCounts.get(signature) || 0;
+    if (currentCount <= 0) {
+      console.warn(`LoadingManager: Attempted to release animation set with no references`);
+      return;
+    }
+    
+    const newCount = currentCount - 1;
+    this.animationSetRefCounts.set(signature, newCount);
+    console.log(`🎭 LoadingManager: Decremented animation set ref count to ${newCount}`);
+    
+    if (newCount === 0) {
+      console.log(`🔥 LoadingManager: No more references to animation set, removing from cache`);
+      this.animationSetRefCounts.delete(signature);
+      this.animationSets.delete(signature);
+      
+      // Don't release individual animation references since they were never incremented for sets
+      // Individual animations are only reference counted when loaded directly via loadGLTFAnimation
+    }
   }
 
   // Decrement reference count for an asset
@@ -242,7 +367,6 @@ class LoadingManager {
       const gltf = this.assets.get(url)!;
       
       console.log(`🗑️ LoadingManager: Actually disposing GLTF asset: ${url}`);
-      let textureCount = 0;
       let materialCount = 0;
       let geometryCount = 0;
       
@@ -296,13 +420,11 @@ class LoadingManager {
       //console.log(`LoadingManager: Disposed ${geometryCount} geometries, ${materialCount} materials, ${textureCount} textures, and ${animationsRemoved} animations for ${url}`);
       
       // Get renderer info after disposal
-      const afterInfo = this.#options.renderer?.info;
-     // console.log(`🖼️ After disposal - WebGL Textures: ${afterInfo?.memory?.textures}, Geometries: ${afterInfo?.memory?.geometries}`);
+      console.log(`🖼️ After disposal - WebGL Textures: ${this.#options.renderer?.info?.memory?.textures}, Geometries: ${this.#options.renderer?.info?.memory?.geometries}`);
       if (this.#options.renderer) {
         try {
           // Access the renderer info to see stats about memory usage
-          const info = this.#options.renderer.info;
-        //  console.log(`LoadingManager: Renderer info before asset removal - Textures: ${info.memory?.textures}, Geometries: ${info.memory?.geometries}`);
+          console.log(`LoadingManager: Renderer info after asset removal - Textures: ${this.#options.renderer.info.memory?.textures}, Geometries: ${this.#options.renderer.info.memory?.geometries}`);
           
           // DO NOT DISPOSE THE ENTIRE RENDERER HERE.
           // this.#options.renderer.dispose(); // This was problematic.
@@ -404,8 +526,10 @@ class LoadingManager {
     geometries: number, 
     assets: number, 
     animations: number,
+    animationSets: number,
     assetRefCounts: Map<string, number>,
-    animationRefCounts: Map<string, number>
+    animationRefCounts: Map<string, number>,
+    animationSetRefCounts: Map<string, number>
   } {
     const info = this.#options.renderer?.info;
     return {
@@ -413,8 +537,10 @@ class LoadingManager {
       geometries: info?.memory?.geometries || 0,
       assets: this.assets.size,
       animations: this.animationClips.size,
+      animationSets: this.animationSets.size,
       assetRefCounts: new Map(this.assetRefCounts),
-      animationRefCounts: new Map(this.animationRefCounts)
+      animationRefCounts: new Map(this.animationRefCounts),
+      animationSetRefCounts: new Map(this.animationSetRefCounts)
     };
   }
 

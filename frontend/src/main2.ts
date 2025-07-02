@@ -143,7 +143,7 @@ class Main {
 
 
      const syndey2 = new Entity();
-    syndey2.Position = new THREE.Vector3(-80, 1, 0);
+    syndey2.Position = new THREE.Vector3(-0, 1, 0);
      const sydneycontroller2 = new CharacterComponent({
       modelpath: "models/gltf/Xbot.glb",
       animationspathslist: this.maincController.animations,

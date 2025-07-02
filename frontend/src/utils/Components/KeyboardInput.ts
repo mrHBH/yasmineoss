@@ -136,7 +136,7 @@ class KeyboardInput extends Component {
       this.joystickZone.id = 'joystick-zone';
       this.joystickZone.style.position = 'fixed';
       this.joystickZone.style.bottom = '20px';
-      this.joystickZone.style.left = '20px';
+      this.joystickZone.style.right = '20px';
       this.joystickZone.style.width = '150px';
       this.joystickZone.style.height = '150px';
       this.joystickZone.style.zIndex = '1000';
@@ -154,8 +154,8 @@ class KeyboardInput extends Component {
       multitouch: false,
       maxNumberOfNipples: 1,
       dataOnly: false,
-      mode: 'static' as const,
-      position: { bottom: '75px', left: '75px' },
+      mode:  "static",
+      position: { bottom: '75px', right: '75px' },
       restJoystick: true,
       restOpacity: 0.5,
       lockX: false,

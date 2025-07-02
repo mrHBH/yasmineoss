@@ -18,7 +18,7 @@ class CharacterComponent extends Component {
   _model: THREE.Object3D;
   private _modelpath: string;
   private _animationspathslist: { url: string; shiftTracks: boolean }[];
-  private _loadedAnimationUrls: string[] = []; // Track which animations we loaded
+
   private _webgpugroup: THREE.Group;
   private _css2dgroup: THREE.Group;
   private _css3dgroup: THREE.Group;
@@ -41,6 +41,9 @@ class CharacterComponent extends Component {
 
   // Activation circle for visual feedback
   public activationCircle: THREE.Line;
+  
+  // Track if name tag has been created to prevent duplicates
+  private nameTagCreated: boolean = false;
 
   constructor({ modelpath, animationspathslist, behaviourscriptname = "" }) {
     super();
@@ -77,33 +80,69 @@ class CharacterComponent extends Component {
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
 
-    // Load the character model
-    this._model = await LoadingManager.loadGLTF(this._modelpath);
-    this._model.userData.entity = this._entity;
-    this._webgpugroup.add(this._model);
+    // Load the character model asynchronously to prevent blocking
+    queueMicrotask(async () => {
+      try {
+        this._model = await LoadingManager.loadGLTF(this._modelpath);
+        this._model.userData.entity = this._entity;
+        this._webgpugroup.add(this._model);
 
-    // Load animations and track their URLs for later cleanup
-    this._loadedAnimationUrls = this._animationspathslist.map(item => item.url);
-    const animations = await LoadingManager.loadGLTFFirstAnimations(this._animationspathslist);
+        // Small delay to yield control
+        await new Promise(resolve => setTimeout(resolve, 2));
 
-    // Process model for shadows
-    this._model.traverse((child: any) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-         child.receiveShadow = false;
+        // Load animations and track their URLs for later cleanup
+        const animations = await LoadingManager.loadGLTFFirstAnimations(this._animationspathslist);
+
+        // Another small delay
+        await new Promise(resolve => setTimeout(resolve, 2));
+
+        // Process model for shadows
+        this._model.traverse((child: any) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+             child.receiveShadow = false;
+          }
+        });
+
+        // Initialize managers with delays between each to spread load
+        this.animationManager = new CharacterAnimationManager(this._model, animations);
+        await new Promise(resolve => setTimeout(resolve, 1));
+        
+        this.physicsController = new CharacterPhysicsController(this._entity, this._model);
+        await new Promise(resolve => setTimeout(resolve, 1));
+        
+        this.uiManager = new CharacterUIManager(this._entity, this._css2dgroup, this.behaviorController.behaviourscriptname);
+        await new Promise(resolve => setTimeout(resolve, 1));
+        
+        this.movementController = new CharacterMovementController(this._entity);
+        await new Promise(resolve => setTimeout(resolve, 1));
+        
+        this.vehicleController = new CharacterVehicleController(this._entity);
+        await new Promise(resolve => setTimeout(resolve, 1));
+        
+        this.fsmController = new CharacterFSMController(this.animationManager, this.physicsController);
+
+        // Setup callbacks between managers
+        this.setupManagerCallbacks();
+        
+        // Now that managers are initialized, setup physics and UI
+        if (this._entity._entityManager && this._entity._entityManager._mc) {
+          // Add physics controller to world
+          this.physicsController.addToWorld(this._entity._entityManager._mc.physicsmanager.world);
+          this.physicsController.setupLeftLegPhysicsBox();
+          
+          // Create name tag only if it hasn't been created yet
+          if (!this.nameTagCreated) {
+            this.uiManager.createNameTag();
+            this.nameTagCreated = true;
+          }
+        }
+        
+        console.log(`CharacterComponent: Async loading completed for ${this._entity.name}`);
+      } catch (error) {
+        console.error(`Error during async CharacterComponent initialization for ${this._entity.name}:`, error);
       }
     });
-
-    // Initialize managers
-    this.animationManager = new CharacterAnimationManager(this._model, animations);
-    this.physicsController = new CharacterPhysicsController(this._entity, this._model);
-    this.uiManager = new CharacterUIManager(this._entity, this._css2dgroup, this.behaviorController.behaviourscriptname);
-    this.movementController = new CharacterMovementController(this._entity);
-    this.vehicleController = new CharacterVehicleController(this._entity);
-    this.fsmController = new CharacterFSMController(this.animationManager, this.physicsController);
-
-    // Setup callbacks between managers
-    this.setupManagerCallbacks();
   }
 
   // Public methods for external use  
@@ -199,7 +238,9 @@ class CharacterComponent extends Component {
   }
 
   updateFSM(input: any) {
-    this.state = this.fsmController.updateFSM(input);
+    if (this.fsmController) {
+      this.state = this.fsmController.updateFSM(input);
+    }
   }
 
   async walkToPos(locationPosition: THREE.Vector3, timeout = 20000) {
@@ -211,11 +252,17 @@ class CharacterComponent extends Component {
   }
 
   StepToPosition(locationPosition: THREE.Vector3): boolean {
+    if (!this.movementController) {
+      console.warn("Movement controller not initialized");
+      return false;
+    }
     return this.movementController.StepToPosition(locationPosition);
   }
 
   respond(message: string) {
-    this.uiManager.respond(message);
+    if (this.uiManager) {
+      this.uiManager.respond(message);
+    }
   }
 
   activate() {
@@ -223,6 +270,12 @@ class CharacterComponent extends Component {
     const audioComponent = this._entity.getComponent('AudioComponent') as AudioComponent;
     if (audioComponent && audioComponent.hasVisualizer() && audioComponent.isVisualizationActive()) {
       // Audio visualizer is active, no need for activation circle
+      return;
+    }
+
+    // Only create activation circle if model is loaded and webgpu group exists
+    if (!this._webgpugroup) {
+      console.warn("Cannot activate: webgpu group not available");
       return;
     }
 
@@ -277,17 +330,31 @@ class CharacterComponent extends Component {
   }
 
   async mountvehicle(vehicle: any) {
+    if (!this.vehicleController) {
+      console.warn("Vehicle controller not initialized");
+      return false;
+    }
     return this.vehicleController.mountVehicle(vehicle);
   }
 
   async unmountvehicle() {
+    if (!this.vehicleController) {
+      console.warn("Vehicle controller not initialized");
+      return false;
+    }
     return this.vehicleController.unmountVehicle();
   }
 
   Reset() {
-    this.uiManager.resetConsole();
-    this.behaviorController.Reset();
-    this.movementController.clearAllIntervals();
+    if (this.uiManager) {
+      this.uiManager.resetConsole();
+    }
+    if (this.behaviorController) {
+      this.behaviorController.Reset();
+    }
+    if (this.movementController) {
+      this.movementController.clearAllIntervals();
+    }
 
     // Reset inputs
     if (this.Input && this.Input._keys) {
@@ -306,29 +373,42 @@ class CharacterComponent extends Component {
 
   // Getter methods for backward compatibility
   public get isDriving(): boolean {
-    return this.vehicleController.isCurrentlyDriving();
+    return this.vehicleController ? this.vehicleController.isCurrentlyDriving() : false;
   }
 
   public get vehicle(): any {
-    return this.vehicleController.getCurrentVehicle();
+    return this.vehicleController ? this.vehicleController.getCurrentVehicle() : null;
   }
 
   public get carcomponent(): any {
-    return this.vehicleController.getCurrentVehicle();
+    return this.vehicleController ? this.vehicleController.getCurrentVehicle() : null;
   }
 
   public getLeftLegPhysicsBox(): CANNON.Body | null {
-    return this.physicsController.getLeftLegPhysicsBox();
+    return this.physicsController ? this.physicsController.getLeftLegPhysicsBox() : null;
   }
 
   async InitEntity(): Promise<void> {
 
     this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
     this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
-    this.physicsController.addToWorld(this._entity._entityManager._mc.physicsmanager.world);
-    // camm     this.createNameTag(); from ui 
-    this.uiManager.createNameTag();
-    this.physicsController.setupLeftLegPhysicsBox();
+    
+    // Only add physics controller to world if it's initialized
+    if (this.physicsController) {
+      this.physicsController.addToWorld(this._entity._entityManager._mc.physicsmanager.world);
+      this.physicsController.setupLeftLegPhysicsBox();
+    } else {
+      console.log(`Physics controller not yet initialized for ${this._entity.name}, will be added when loaded`);
+    }
+    
+    // Only create name tag if UI manager is initialized and not already created
+    if (this.uiManager && !this.nameTagCreated) {
+      this.uiManager.createNameTag();
+      this.nameTagCreated = true;
+    } else {
+      console.log(`UI manager not yet initialized for ${this._entity.name}, name tag will be created when loaded`);
+    }
+    
     // Register entity handlers
     this._entity._RegisterHandler("walk", async (data: any) => {
       await this.walkToPos(data.position);
@@ -343,12 +423,16 @@ class CharacterComponent extends Component {
     });
 
     this._entity._RegisterHandler("loadscript", (data: any) => {
-      this.behaviorController.LoadWorker(data.scriptname);
+      if (this.behaviorController) {
+        this.behaviorController.LoadWorker(data.scriptname);
+      }
     });
 
     this._entity._RegisterHandler("position", (data: any) => {
       let p = data as THREE.Vector3;
-      this.physicsController.setPosition(p);
+      if (this.physicsController) {
+        this.physicsController.setPosition(p);
+      }
       this._webgpugroup?.position.set(p.x, p.y, p.z);
       this._css2dgroup?.position.set(p.x, p.y, p.z);
       this._css3dgroup?.position.set(p.x, p.y, p.z);
@@ -373,6 +457,11 @@ class CharacterComponent extends Component {
   }
 
   async Update(deltaTime: number): Promise<void> {
+    // Early return if components are not yet loaded
+    if (!this.animationManager || !this.physicsController || !this.fsmController) {
+      return;
+    }
+
     // Handle driving state
     if (this.isDriving) {
       this.updateDrivingState(deltaTime);
@@ -385,17 +474,21 @@ class CharacterComponent extends Component {
 
   private updateDrivingState(deltaTime: number): void {
     // Check for unmounting input
-    if (this.vehicleController.checkForUnmountingInput(this.Input)) {
+    if (this.vehicleController && this.vehicleController.checkForUnmountingInput(this.Input)) {
       this.unmountvehicle();
     }
 
     // Update vehicle positioning
-    const currentState = this.animationManager.getCurrentState();
-    this.vehicleController.updateVehiclePositioning(currentState, this._entity, this._webgpugroup);
+    if (this.animationManager && this.vehicleController) {
+      const currentState = this.animationManager.getCurrentState();
+      this.vehicleController.updateVehiclePositioning(currentState, this._entity, this._webgpugroup);
+    }
 
     // Update animation and behavior
-    this.animationManager.update(deltaTime);
-    if (this.behaviorController.workerloop) {
+    if (this.animationManager) {
+      this.animationManager.update(deltaTime);
+    }
+    if (this.behaviorController && this.behaviorController.workerloop) {
       this.behaviorController.workerloop();
     }
     if (this.Input) {
@@ -405,33 +498,39 @@ class CharacterComponent extends Component {
 
   private updateNormalState(deltaTime: number): void {
     // Update behavior worker
-    if (this.behaviorController.workerloop) {
+    if (this.behaviorController && this.behaviorController.workerloop) {
       this.behaviorController.workerloop();
     }
 
     // Update animation
-    this.animationManager.update(deltaTime);
+    if (this.animationManager) {
+      this.animationManager.update(deltaTime);
+    }
 
     // Update physics and handle state transitions
-    if (this.Input) {
+    if (this.Input && this.fsmController) {
       this.fsmController.handlePhysicsStateTransitions(this.Input, deltaTime, this._webgpugroup);
       this.updateFSM(this.Input);
 
       // Check for vehicle mounting
-      const currentState = this.animationManager.getCurrentState();
-      if (this.vehicleController.checkForMountingInput(this.Input, currentState)) {
-        this.mountvehicle(this.carcomponent);
+      if (this.animationManager && this.vehicleController) {
+        const currentState = this.animationManager.getCurrentState();
+        if (this.vehicleController.checkForMountingInput(this.Input, currentState)) {
+          this.mountvehicle(this.carcomponent);
+        }
       }
     }
 
     // Update UI visibility based on camera distance
-    const distance = this._entity.Position.distanceTo(
-      this._entity._entityManager._mc.camera.position
-    );
-    this.uiManager.updateVisibility(distance);
+    if (this.uiManager) {
+      const distance = this._entity.Position.distanceTo(
+        this._entity._entityManager._mc.camera.position
+      );
+      this.uiManager.updateVisibility(distance);
+    }
 
     // Send updates to behavior worker
-    if (this.behaviorController.worker) {
+    if (this.behaviorController && this.behaviorController.worker) {
       this.behaviorController.sendUpdate({
         position: this._entity.Position,
         quaternion: [
@@ -449,108 +548,117 @@ class CharacterComponent extends Component {
 
   async Destroy() {
     console.log(`CharacterComponent: Destroying ${this._entity.name}. Model path: ${this._modelpath}`);
-    // Correctly access the WebGLRenderer instance
-    const webGLRenderer = this._entity._entityManager?._mc?.webgpu;
+    
+    // Schedule cleanup asynchronously to prevent blocking
+    return new Promise<void>((resolve) => {
+      queueMicrotask(async () => {
+        try {
+          // Correctly access the WebGLRenderer instance
+          const webGLRenderer = this._entity._entityManager?._mc?.webgpu;
 
-    if (webGLRenderer && webGLRenderer.info && webGLRenderer.info.memory) {
-      console.log(`[Before Destroy Actions - ${this._entity.name}] WebGL Textures: ${webGLRenderer.info.memory.textures}`);
-    }
-
-    // Destroy all managers
-    this.movementController?.destroy();
-    this.behaviorController?.destroy();
-    this.uiManager?.destroy();
-    this.vehicleController?.destroy();
-    this.fsmController?.destroy();
-    this.animationManager?.destroy();
-
-    // Clean up physics (including left leg physics box)
-    if (this.physicsController && this._entity._entityManager._mc.physicsmanager?.world) {
-      this.physicsController.removeFromWorld(this._entity._entityManager._mc.physicsmanager.world);
-      this.physicsController.destroy();
-    }
-
-    // Dispose of the per-entity cloned skeleton's bone textures FIRST
-    if (this._model) {
-      console.log(`CharacterComponent: Model for ${this._entity.name} exists. Traversing for SkinnedMesh.`);
-      let skinnedMeshCount = 0;
-      const disposedSkeletonUUIDs = new Set<string>();
-
-      this._model.traverse((child: any) => {
-        if (child.isSkinnedMesh) {
-          skinnedMeshCount++;
-          if (child.skeleton) {
-            const boneTextureUUID = child.skeleton.boneTexture?.uuid || 'N/A';
-            const boneTextureExists = !!child.skeleton.boneTexture;
-            console.log(`🦴 CharacterComponent: Found SkinnedMesh "${child.name || 'unnamed'}" (Mesh UUID: ${child.uuid}) in cloned model of ${this._entity.name}. Skeleton UUID: ${child.skeleton.uuid}. BoneTexture Exists: ${boneTextureExists}, BoneTexture UUID: ${boneTextureUUID}`);
-            if (child.skeleton.boneTexture) {
-              console.log(`   BoneTexture for ${child.skeleton.uuid} - Image null: ${child.skeleton.boneTexture.image === null}, Source data null: ${child.skeleton.boneTexture.source?.data === null}, Disposed: ${child.skeleton.boneTexture.__disposed || false}`);
-            }
-            child.skeleton.dispose(); // Dispose the clone's skeleton
-            disposedSkeletonUUIDs.add(child.skeleton.uuid);
-            console.log(`   Called skeleton.dispose() for ${child.skeleton.uuid}. BoneTexture Disposed (after call): ${child.skeleton.boneTexture?.__disposed || 'texture was null'}`);
-          } else {
-            console.warn(`🦴 CharacterComponent: SkinnedMesh "${child.name || 'unnamed'}" (Mesh UUID: ${child.uuid}) in cloned model of ${this._entity.name} has NO skeleton.`);
+          if (webGLRenderer && webGLRenderer.info && webGLRenderer.info.memory) {
+            console.log(`[Before Destroy Actions - ${this._entity.name}] WebGL Textures: ${webGLRenderer.info.memory.textures}`);
           }
+
+          // Destroy all managers first
+          this.movementController?.destroy();
+          this.behaviorController?.destroy();
+          this.uiManager?.destroy();
+          this.vehicleController?.destroy();
+          this.fsmController?.destroy();
+          this.animationManager?.destroy();
+
+          // Reset name tag tracking
+          this.nameTagCreated = false;
+
+          // Clean up physics (including left leg physics box)
+          if (this.physicsController && this._entity._entityManager._mc.physicsmanager?.world) {
+            this.physicsController.removeFromWorld(this._entity._entityManager._mc.physicsmanager.world);
+            this.physicsController.destroy();
+          }
+
+          // Dispose of the per-entity cloned skeleton's bone textures FIRST
+          if (this._model) {
+            console.log(`CharacterComponent: Model for ${this._entity.name} exists. Traversing for SkinnedMesh.`);
+            let skinnedMeshCount = 0;
+            const disposedSkeletonUUIDs = new Set<string>();
+
+            this._model.traverse((child: any) => {
+              if (child.isSkinnedMesh) {
+                skinnedMeshCount++;
+                if (child.skeleton) {
+                  const boneTextureUUID = child.skeleton.boneTexture?.uuid || 'N/A';
+                  const boneTextureExists = !!child.skeleton.boneTexture;
+                  console.log(`🦴 CharacterComponent: Found SkinnedMesh "${child.name || 'unnamed'}" (Mesh UUID: ${child.uuid}) in cloned model of ${this._entity.name}. Skeleton UUID: ${child.skeleton.uuid}. BoneTexture Exists: ${boneTextureExists}, BoneTexture UUID: ${boneTextureUUID}`);
+                  if (child.skeleton.boneTexture) {
+                    console.log(`   BoneTexture for ${child.skeleton.uuid} - Image null: ${child.skeleton.boneTexture.image === null}, Source data null: ${child.skeleton.boneTexture.source?.data === null}, Disposed: ${child.skeleton.boneTexture.__disposed || false}`);
+                  }
+                  child.skeleton.dispose(); // Dispose the clone's skeleton
+                  disposedSkeletonUUIDs.add(child.skeleton.uuid);
+                  console.log(`   Called skeleton.dispose() for ${child.skeleton.uuid}. BoneTexture Disposed (after call): ${child.skeleton.boneTexture?.__disposed || 'texture was null'}`);
+                } else {
+                  console.warn(`🦴 CharacterComponent: SkinnedMesh "${child.name || 'unnamed'}" (Mesh UUID: ${child.uuid}) in cloned model of ${this._entity.name} has NO skeleton.`);
+                }
+              }
+            });
+            console.log(`🦴 CharacterComponent: Traversed model for ${this._entity.name}. Found ${skinnedMeshCount} SkinnedMesh instances. Disposed skeleton UUIDs: ${Array.from(disposedSkeletonUUIDs).join(', ') || 'None'}`);
+          } else {
+            console.log(`CharacterComponent: Model for ${this._entity.name} is null or undefined. No SkinnedMesh traversal.`);
+          }
+
+          // Then, release the reference to the shared GLTF asset.
+          if (this._modelpath) {
+            console.log(`CharacterComponent: Releasing asset ${this._modelpath} for ${this._entity.name}`);
+            LoadingManager.releaseAsset(this._modelpath);
+          } else {
+            console.log(`CharacterComponent: No model path for ${this._entity.name}. Cannot release asset.`);
+          }
+          this._model = null; // Now set the reference to the model to null
+
+          // Release animation set if we have it
+          if (this._animationspathslist && this._animationspathslist.length > 0) {
+            LoadingManager.releaseAnimationSet(this._animationspathslist);
+          }
+
+          // Remove groups from scenes
+          if (this._entity._entityManager._mc.webgpuscene) {
+            this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+          }
+          if (this._entity._entityManager._mc.annoationsScene) {
+            this._entity._entityManager._mc.annoationsScene.remove(this._css2dgroup);
+          }
+
+          // Dispose of activation circle if it exists
+          if (this.activationCircle) {
+            if (this.activationCircle.geometry) {
+              this.activationCircle.geometry.dispose();
+            }
+            if (this.activationCircle.material) {
+              const material = this.activationCircle.material;
+              if (material instanceof THREE.Material) {
+                material.dispose();
+              } else if (Array.isArray(material)) {
+                material.forEach(mat => mat.dispose());
+              }
+            }
+            if (this.activationCircle.parent) {
+              this.activationCircle.parent.remove(this.activationCircle);
+            }
+            this.activationCircle = null;
+          }
+
+          if (webGLRenderer && webGLRenderer.info && webGLRenderer.info.memory) {
+            console.log(`[After Destroy Actions - ${this._entity.name}] WebGL Textures: ${webGLRenderer.info.memory.textures}`);
+          }
+          console.log(`CharacterComponent: Finished Destroy for ${this._entity.name}`);
+          
+          resolve();
+        } catch (error) {
+          console.error(`Error during CharacterComponent destruction for ${this._entity.name}:`, error);
+          resolve(); // Still resolve to prevent hanging
         }
       });
-      console.log(`🦴 CharacterComponent: Traversed model for ${this._entity.name}. Found ${skinnedMeshCount} SkinnedMesh instances. Disposed skeleton UUIDs: ${Array.from(disposedSkeletonUUIDs).join(', ') || 'None'}`);
-    } else {
-      console.log(`CharacterComponent: Model for ${this._entity.name} is null or undefined. No SkinnedMesh traversal.`);
-    }
-
-    // Then, release the reference to the shared GLTF asset.
-    if (this._modelpath) {
-      console.log(`CharacterComponent: Releasing asset ${this._modelpath} for ${this._entity.name}`);
-      LoadingManager.releaseAsset(this._modelpath);
-    } else {
-      console.log(`CharacterComponent: No model path for ${this._entity.name}. Cannot release asset.`);
-    }
-    this._model = null; // Now set the reference to the model to null
-
-    // Release animation references
-    if (this._loadedAnimationUrls.length > 0) {
-      LoadingManager.releaseAnimations(this._loadedAnimationUrls);
-      this._loadedAnimationUrls = [];
-    }
-
-    // Note: Materials, geometries, and textures of the *shared* asset
-    // are managed and disposed by LoadingManager based on reference counts.
-    // We have already handled the *cloned* skeleton above.
-
-    // Remove groups from scenes
-    if (this._entity._entityManager._mc.webgpuscene) {
-      this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
-    }
-    if (this._entity._entityManager._mc.annoationsScene) {
-      this._entity._entityManager._mc.annoationsScene.remove(this._css2dgroup);
-    }
-
-    // Dispose of activation circle if it exists
-    if (this.activationCircle) {
-      if (this.activationCircle.geometry) {
-        this.activationCircle.geometry.dispose();
-      }
-      if (this.activationCircle.material) {
-        const material = this.activationCircle.material;
-        if (material instanceof THREE.Material) {
-          material.dispose();
-        } else if (Array.isArray(material)) {
-          material.forEach(mat => mat.dispose());
-        }
-      }
-      if (this.activationCircle.parent) {
-        this.activationCircle.parent.remove(this.activationCircle);
-      }
-      this.activationCircle = null;
-    }
-
-    if (webGLRenderer && webGLRenderer.info && webGLRenderer.info.memory) {
-      // Note: Texture count might not update immediately due to WebGL's asynchronous nature.
-      // Consider checking after a short timeout or a forced render cycle if immediate feedback is needed for debugging.
-      console.log(`[After Destroy Actions - ${this._entity.name}] WebGL Textures: ${webGLRenderer.info.memory.textures}`);
-    }
-    console.log(`CharacterComponent: Finished Destroy for ${this._entity.name}`);
+    });
   }
 
   public isAudioSystemReady(): boolean {
@@ -564,6 +672,33 @@ class CharacterComponent extends Component {
     } catch {
       return false;
     }
+  }
+
+  // Check if all managers are loaded and ready
+  public isFullyLoaded(): boolean {
+    return !!(this._model && 
+              this.animationManager && 
+              this.physicsController && 
+              this.uiManager && 
+              this.movementController && 
+              this.vehicleController && 
+              this.fsmController);
+  }
+
+  // Get loading progress (0-1)
+  public getLoadingProgress(): number {
+    let loaded = 0;
+    const total = 7; // Total number of components to load
+    
+    if (this._model) loaded++;
+    if (this.animationManager) loaded++;
+    if (this.physicsController) loaded++;
+    if (this.uiManager) loaded++;
+    if (this.movementController) loaded++;
+    if (this.vehicleController) loaded++;
+    if (this.fsmController) loaded++;
+    
+    return loaded / total;
   }
 }
 

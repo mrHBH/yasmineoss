@@ -1,16 +1,16 @@
 // Streaming World Constants
 export const STREAMING_CONSTANTS = {
   // Tile configuration
-  TILE_SIZE: 155,
-  TILE_RESOLUTION: 100,
-  TILE_RANDOM_OBJECTS: 10,
+  TILE_SIZE: 100,
+  TILE_RESOLUTION: 10,
+  TILE_RANDOM_OBJECTS: 1,
   
   // Loading and visibility
-  LOAD_DISTANCE: 200,
+  LOAD_DISTANCE: 150,
   NUM_TILES: 10,
   
   // Entity streaming configuration
-  ENTITY_STREAMING_TILE_SIZE: 150, // Smaller than visual tiles for performance
+  ENTITY_STREAMING_TILE_SIZE: 70, // Smaller than visual tiles for performance
   ENTITY_DISPOSAL_DISTANCE_MULTIPLIER: 1, // Entities disposed at 1x tile size
   ENTITY_RESTORE_DISTANCE_MULTIPLIER: 1, // Entities restored at 1x tile size
   ENTITY_STREAMING_CHECK_INTERVAL: 1000, // ms
@@ -31,6 +31,22 @@ export const STREAMING_CONSTANTS = {
   
   // Memory management
   MESH_UPDATE_DISTANCE_THRESHOLD: 0.01, // Only update mesh if position changed significantly
+  
+  // Entity streaming performance
+  MAX_ENTITIES_RESTORED_PER_FRAME: 1, // Max entities to restore per frame to prevent stutters (reduced from 2)
+  ENTITY_RESTORATION_FRAME_DELAY: 4, // ms delay between restoration batches (reduced for faster loading)
+  ASYNC_COMPONENT_LOADING: true, // Load components asynchronously to prevent blocking
+  
+  // Entity streaming optimization
+  ENTITY_PRELOAD_DISTANCE_MULTIPLIER: 1.5, // Start loading entities at 1.5x tile size
+  ENTITY_STATE_CACHE_MAX_AGE: 300000, // 5 minutes - how long to keep entity states cached
+  COMPONENT_LOADING_BATCH_SIZE: 1, // Load one component at a time to prevent blocking
+  ENTITY_INIT_DELAY: 8, // ms delay between entity initializations
+  
+  // Model loading optimization
+  MODEL_LOADING_FRAME_YIELD_INTERVAL: 1, // Yield every N model loads
+  ANIMATION_LOADING_FRAME_DELAY: 4, // ms delay between animation loads
+  COMPONENT_INIT_FRAME_DELAY: 2, // ms delay between component initializations
 } as const;
 
 export type StreamingConstants = typeof STREAMING_CONSTANTS;

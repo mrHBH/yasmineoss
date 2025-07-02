@@ -2,13 +2,11 @@ import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import { MeshPhysicalNodeMaterial, mod, WebGPURenderer } from "three/webgpu";
-import { ThreePerf } from 'three-perf';
 
 // import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
 import { InfiniteGridHelper } from "./InfiniteGridHelper";
 import { tween, Tweenable } from "shifty";
-import { Pane } from "tweakpane";
-import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
+import { PerformanceMonitor } from "./PerformanceMonitor";
 
 import { EntityManager } from "./EntityManager";
 import { CSS3DRenderer } from "./CSS3D";
@@ -58,9 +56,8 @@ class MainController {
   webgpuscene: THREE.Scene = new THREE.Scene();
   clock: THREE.Clock;
   grid: any;
-  fpsGraph: any;
-  memGraph: any;
   html3dRenderer: CSS3DRenderer;
+  performanceMonitor: PerformanceMonitor;
   UIManager: UIManager;
   mainEntity: Entity;
   listener: any;
@@ -77,13 +74,10 @@ class MainController {
   streamingWorld: StreamingWorld;
   
   // Physics stats tracking
-  private physicsStatsElement: HTMLElement | null = null;
-  
-  // Mouse tracking for distinguishing clicks from drags
-  private rightMouseDown: boolean = false;
-  private mouseDownPosition: { x: number; y: number } = { x: 0, y: 0 };
   private isDragging: boolean = false;
   private dragThreshold: number = 5; // pixels
+  private rightMouseDown: boolean = false;
+  private mouseDownPosition: { x: number; y: number } = { x: 0, y: 0 };
   
   animations: { url: string; skipTracks?: number[] }[] = [
     { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
@@ -118,11 +112,15 @@ class MainController {
     { url: "animations/gltf/ybot2@TurningRight.glb" },
   ];
   stats: any;
-  #stats_: ThreePerf;
 
   constructor(entityManager: EntityManager) {
     this.webgpuscene.background = new THREE.Color(0x202020);
     this.walls = [];
+
+    // Detect if we're on mobile or desktop
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     window.innerWidth <= 768 || 
+                     'ontouchstart' in window;
 
     // this.webgpu = new THREE.WebGPURenderer({
     //   antialias: true,
@@ -131,27 +129,27 @@ class MainController {
     // }) as THREE.WebGPURenderer;
     //webgl
     this.webgpu =  new  THREE.WebGLRenderer({
-      antialias: false,
-       logarithmicDepthBuffer: false,
+      antialias: !isMobile,  // Enable antialiasing on desktop only
+       logarithmicDepthBuffer: !isMobile,
        alpha: false,
        depth: true,
-
-
-     // powerPreference: "high-performance",
+       powerPreference: "high-performance",
     })  
 
-    this.webgpu.shadowMap.enabled = false;
-      this.webgpu.shadowMap.type = THREE.PCFSoftShadowMap  
-    // this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
-    // this.webgpu.outputEncoding = THREE.sRGBEncoding;
-    // this.webgpu.physicallyCorrectLights = true;
+    // Enable shadows on desktop only
+    this.webgpu.shadowMap.enabled = !isMobile;
+    this.webgpu.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
+    // Note: outputEncoding and physicallyCorrectLights are deprecated in newer Three.js versions
 
-    this.webgpu.setPixelRatio(window.devicePixelRatio*0.5);
+    // Set pixel ratio based on device type
+    const pixelRatio = isMobile ? window.devicePixelRatio * 0.5 : Math.min(window.devicePixelRatio * 1.25, 2);
+    this.webgpu.setPixelRatio(pixelRatio);
 
     this.webgpu.setClearColor(new THREE.Color(0x202020));
 
     const fog = new THREE.Fog(0x202020, 0.1, 150);
-    this.webgpuscene.fog = fog;
+  //  this.webgpuscene.fog = fog;
     this.entitymanager = entityManager;
     this.entitymanager._mc = this;
     this.annotationRenderer = new CSS2DRenderer();
@@ -201,14 +199,6 @@ class MainController {
       0.005,
       1000
     );
-       
-   this.#stats_ = new ThreePerf({
-      anchorX: 'left',
-      anchorY: 'top',
-      domElement: this.annotationRenderer.domElement,
-      renderer: this.webgpu,
-     showGraph: true,
-    });
     
     // this.camera.position.set(2.5, 20, 5);
     // this.camera.position.multiplyScalar(0.8);
@@ -216,322 +206,20 @@ class MainController {
 
     this.webgpuscene.add(this.camera);
     
-    const pane = new Pane({});
-pane.element.style.position = "fixed";
-pane.element.style.zIndex = "3";
-pane.element.style.bottom = "0px";
-pane.element.style.left = "0px";
-pane.element.style.width = "100px";
-pane.element.style.pointerEvents = "none";
-pane.element.style.userSelect = "none";
-pane.element.style.opacity = "0.5";
-pane.registerPlugin(EssentialsPlugin);
+    // Initialize physics manager first
+    const floorShape = new CANNON.Plane();
+    const floorBody = new CANNON.Body({ mass: 0 });
+    floorBody.addShape(floorShape);
+    floorBody.quaternion.setFromAxisAngle(
+      new CANNON.Vec3(1, 0, 0),
+      -Math.PI / 2
+    );
 
-// Create FPS graph
-this.fpsGraph = pane.addBlade({
-  view: "fpsgraph",
-  lineCount: 8,
-  min: 0,
-  max: 244,
-});
-
-// Modify FPS graph container
-const fpsContainer = this.fpsGraph.element;
-fpsContainer.style.display = "flex";
-fpsContainer.style.alignItems = "center";
-fpsContainer.style.marginBottom = "4px";
-
-// Add fade gradient to FPS graph
-const fpsSvg = fpsContainer.querySelector("svg");
-fpsSvg.style.width = "100px";
-fpsSvg.style.height = "20px";
-fpsSvg.style.flexShrink = "0";
-
-// Get the FPS label container for layout reference
-const fpsLabelContainer = fpsContainer.querySelector(".tp-fpsv_l");
-const fpsValueElement = fpsContainer.querySelector(".tp-fpsv_v");
-const fpsUnitElement = fpsContainer.querySelector(".tp-fpsv_u");
-
-// Create gradient for FPS line
-const fpsGradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
-fpsGradient.setAttribute("id", "fpsGradient");
-fpsGradient.setAttribute("x1", "0%");
-fpsGradient.setAttribute("y1", "0%");
-fpsGradient.setAttribute("x2", "100%");
-fpsGradient.setAttribute("y2", "0%");
-fpsGradient.innerHTML = `
-  <stop offset="70%" stop-color="#808080" stop-opacity="1"/>
-  <stop offset="100%" stop-color="#808080" stop-opacity="0"/>
-`;
-const fpsDefs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-fpsDefs.appendChild(fpsGradient);
-fpsSvg.insertBefore(fpsDefs, fpsSvg.firstChild);
-
-// Apply gradient to FPS line
-const fpsLine = fpsSvg.querySelector("polyline");
-fpsLine.setAttribute("stroke", "url(#fpsGradient)");
-
-// Create heap graph container with exact same structure as FPS container
-const heapContainer = document.createElement("div");
-heapContainer.style.display = "flex";
-heapContainer.style.alignItems = "center";
-heapContainer.style.marginBottom = "4px";
-heapContainer.className = fpsContainer.className; // Copy the same class if any
-
-// Create SVG for heap graph
-const heapSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-heapSvg.setAttribute("width", "100px");
-heapSvg.setAttribute("height", "20px");
-heapSvg.style.flexShrink = "0";
-heapSvg.style.marginRight = getComputedStyle(fpsSvg).marginRight;
-
-// Create dark background for heap graph
-const heapBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-heapBg.setAttribute("width", "100%");
-heapBg.setAttribute("height", "100%");
-heapBg.setAttribute("fill", "#1a1a1a");
-heapSvg.appendChild(heapBg);
-
-// Create horizontal lines for heap graph
-for (let i = 0; i < 8; i++) {
-  const lineY = (i + 1) * (20 / 8);
-  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-  line.setAttribute("x1", "0");
-  line.setAttribute("y1", lineY);
-  line.setAttribute("x2", "100%");
-  line.setAttribute("y2", lineY);
-  line.setAttribute("stroke", "#333333");
-  line.setAttribute("stroke-width", "0.5");
-  heapSvg.appendChild(line);
-}
-
-// Create gradient for heap line
-const heapGradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
-heapGradient.setAttribute("id", "heapGradient");
-heapGradient.setAttribute("x1", "0%");
-heapGradient.setAttribute("y1", "0%");
-heapGradient.setAttribute("x2", "100%");
-heapGradient.setAttribute("y2", "0%");
-heapGradient.innerHTML = `
-  <stop offset="70%" stop-color="#ff7d7d" stop-opacity="1"/>
-  <stop offset="100%" stop-color="#ff7d7d" stop-opacity="0"/>
-`;
-const heapDefs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-heapDefs.appendChild(heapGradient);
-heapSvg.appendChild(heapDefs);
-
-// Create heap line
-const heapLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-heapLine.setAttribute("fill", "none");
-heapLine.setAttribute("stroke", "url(#heapGradient)");
-heapLine.setAttribute("stroke-width", "1");
-heapSvg.appendChild(heapLine);
-
-// Create heap label container with exact same structure as FPS label
-const heapLabelContainer = document.createElement("div");
-heapLabelContainer.className = fpsLabelContainer.className;
-heapLabelContainer.style.display = getComputedStyle(fpsLabelContainer).display;
-heapLabelContainer.style.flexDirection = getComputedStyle(fpsLabelContainer).flexDirection;
-heapLabelContainer.style.alignItems = getComputedStyle(fpsLabelContainer).alignItems;
-heapLabelContainer.style.justifyContent = getComputedStyle(fpsLabelContainer).justifyContent;
-heapLabelContainer.style.marginLeft = getComputedStyle(fpsLabelContainer).marginLeft;
-heapLabelContainer.style.padding = getComputedStyle(fpsLabelContainer).padding;
-
-// Create heap value with exact same styling as FPS value
-const heapValue = document.createElement("span");
-heapValue.className = fpsValueElement.className;
-heapValue.style.color = "#ff7d7d";
-heapValue.style.fontSize = getComputedStyle(fpsValueElement).fontSize;
-heapValue.style.fontWeight = getComputedStyle(fpsValueElement).fontWeight;
-heapValue.style.lineHeight = getComputedStyle(fpsValueElement).lineHeight;
-heapValue.style.margin = getComputedStyle(fpsValueElement).margin;
-heapValue.style.padding = getComputedStyle(fpsValueElement).padding;
-heapValue.textContent = "80.0";
-
-// Create heap unit with exact same styling as FPS unit
-const heapUnit = document.createElement("span");
-heapUnit.className = fpsUnitElement.className;
-heapUnit.style.color = "#ff7d7d";
-heapUnit.style.fontSize = getComputedStyle(fpsUnitElement).fontSize;
-heapUnit.style.fontWeight = getComputedStyle(fpsUnitElement).fontWeight;
-heapUnit.style.lineHeight = getComputedStyle(fpsUnitElement).lineHeight;
-heapUnit.style.margin = getComputedStyle(fpsUnitElement).margin;
-heapUnit.style.padding = getComputedStyle(fpsUnitElement).padding;
-heapUnit.style.opacity = getComputedStyle(fpsUnitElement).opacity;
-heapUnit.textContent = "MB";
-
-// Assemble the components
-heapLabelContainer.appendChild(heapValue);
-heapLabelContainer.appendChild(heapUnit);
-heapContainer.appendChild(heapSvg);
-heapContainer.appendChild(heapLabelContainer);
-
-// Add heap container to pane right after FPS container
-fpsContainer.parentNode.insertBefore(heapContainer, fpsContainer.nextSibling);
-
-// Heap tracking variables
-let heapPoints = [];
-const maxPoints = 70; // Number of points to match FPS graph
-const minHeapMB = 10;
-const maxHeapMB = 250;
-
-function updateHeapGraph(usedHeapMB) {
-  // Calculate scaled Y position (inverted)
-  const scaledY = 20 - (
-    ((Math.max(minHeapMB, Math.min(maxHeapMB, usedHeapMB)) - minHeapMB) / 
-    (maxHeapMB - minHeapMB)) * 20
-  );
-
-  // Update points array
-  heapPoints.push(scaledY);
-  if (heapPoints.length > maxPoints) heapPoints.shift();
-
-  // Create points string with exact same spacing as FPS graph
-  const points = heapPoints.map((y, i) => `${i * (100 / maxPoints)},${y}`).join(" ");
-  heapLine.setAttribute("points", points);
-  
-  // Update label
-  heapValue.textContent = usedHeapMB.toFixed(1);
-}
-
-// // Update heap graph every second
-setInterval(() => {
-  if (performance.memory) {
-    const usedHeapMB = performance.memory.usedJSHeapSize / (1024 * 1024);
-    updateHeapGraph(usedHeapMB);
-  } else {
-    // For browsers that don't support performance.memory
-    const randomMB = 50 + Math.random() * 50;
-    updateHeapGraph(randomMB);
-  }
-}, 1000);
-
-// Create physics objects graph container with exact same structure as FPS/heap containers
-const physicsContainer = document.createElement("div");
-physicsContainer.style.display = "flex";
-physicsContainer.style.alignItems = "center";
-physicsContainer.style.marginBottom = "4px";
-physicsContainer.className = fpsContainer.className;
-
-// Create SVG for physics graph
-const physicsSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-physicsSvg.setAttribute("width", "100px");
-physicsSvg.setAttribute("height", "20px");
-physicsSvg.style.flexShrink = "0";
-physicsSvg.style.marginRight = getComputedStyle(fpsSvg).marginRight;
-
-// Create dark background for physics graph
-const physicsBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-physicsBg.setAttribute("width", "100%");
-physicsBg.setAttribute("height", "100%");
-physicsBg.setAttribute("fill", "#1a1a1a");
-physicsSvg.appendChild(physicsBg);
-
-// Create horizontal lines for physics graph
-for (let i = 0; i < 8; i++) {
-  const lineY = (i + 1) * (20 / 8);
-  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-  line.setAttribute("x1", "0");
-  line.setAttribute("y1", lineY.toString());
-  line.setAttribute("x2", "100%");
-  line.setAttribute("y2", lineY.toString());
-  line.setAttribute("stroke", "#333333");
-  line.setAttribute("stroke-width", "0.5");
-  physicsSvg.appendChild(line);
-}
-
-// Create gradient for physics line
-const physicsGradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
-physicsGradient.setAttribute("id", "physicsGradient");
-physicsGradient.setAttribute("x1", "0%");
-physicsGradient.setAttribute("y1", "0%");
-physicsGradient.setAttribute("x2", "100%");
-physicsGradient.setAttribute("y2", "0%");
-physicsGradient.innerHTML = `
-  <stop offset="70%" stop-color="#7d7dff" stop-opacity="1"/>
-  <stop offset="100%" stop-color="#7d7dff" stop-opacity="0"/>
-`;
-const physicsDefs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-physicsDefs.appendChild(physicsGradient);
-physicsSvg.appendChild(physicsDefs);
-
-// Create physics line
-const physicsLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-physicsLine.setAttribute("fill", "none");
-physicsLine.setAttribute("stroke", "url(#physicsGradient)");
-physicsLine.setAttribute("stroke-width", "1");
-physicsSvg.appendChild(physicsLine);
-
-// Create physics label container with exact same structure as FPS label
-const physicsLabelContainer = document.createElement("div");
-physicsLabelContainer.className = fpsLabelContainer.className;
-physicsLabelContainer.style.display = getComputedStyle(fpsLabelContainer).display;
-physicsLabelContainer.style.flexDirection = getComputedStyle(fpsLabelContainer).flexDirection;
-physicsLabelContainer.style.alignItems = getComputedStyle(fpsLabelContainer).alignItems;
-physicsLabelContainer.style.justifyContent = getComputedStyle(fpsLabelContainer).justifyContent;
-physicsLabelContainer.style.marginLeft = getComputedStyle(fpsLabelContainer).marginLeft;
-physicsLabelContainer.style.padding = getComputedStyle(fpsLabelContainer).padding;
-
-// Create physics value with exact same styling as FPS value
-const physicsValue = document.createElement("span");
-physicsValue.className = fpsValueElement.className;
-physicsValue.style.color = "#7d7dff";
-physicsValue.style.fontSize = getComputedStyle(fpsValueElement).fontSize;
-physicsValue.style.fontWeight = getComputedStyle(fpsValueElement).fontWeight;
-physicsValue.style.lineHeight = getComputedStyle(fpsValueElement).lineHeight;
-physicsValue.style.margin = getComputedStyle(fpsValueElement).margin;
-physicsValue.style.padding = getComputedStyle(fpsValueElement).padding;
-physicsValue.textContent = "0";
-
-// Create physics unit with exact same styling as FPS unit
-const physicsUnit = document.createElement("span");
-physicsUnit.className = fpsUnitElement.className;
-physicsUnit.style.color = "#7d7dff";
-physicsUnit.style.fontSize = getComputedStyle(fpsUnitElement).fontSize;
-physicsUnit.style.fontWeight = getComputedStyle(fpsUnitElement).fontWeight;
-physicsUnit.style.lineHeight = getComputedStyle(fpsUnitElement).lineHeight;
-physicsUnit.style.margin = getComputedStyle(fpsUnitElement).margin;
-physicsUnit.style.padding = getComputedStyle(fpsUnitElement).padding;
-physicsUnit.style.opacity = getComputedStyle(fpsUnitElement).opacity;
-physicsUnit.textContent = "OBJ";
-
-// Assemble the components
-physicsLabelContainer.appendChild(physicsValue);
-physicsLabelContainer.appendChild(physicsUnit);
-physicsContainer.appendChild(physicsSvg);
-physicsContainer.appendChild(physicsLabelContainer);
-
-// Add physics container to pane right after heap container
-//heapContainer.parentNode.insertBefore(physicsContainer, heapContainer.nextSibling);
-
-// Physics tracking variables
-let physicsPoints = [];
-const maxPhysicsObjects = 500; // Maximum expected physics objects
-
-// function updatePhysicsGraph(objectCount) {
-//   // Calculate scaled Y position (inverted)
-//   const scaledY = 20 - (
-//     ((Math.max(0, Math.min(maxPhysicsObjects, objectCount)) / maxPhysicsObjects) * 20)
-//   );
-
-//   // Update points array
-//   physicsPoints.push(scaledY);
-//   if (physicsPoints.length > maxPoints) physicsPoints.shift();
-
-//   // Create points string with exact same spacing as FPS graph
-//   const points = physicsPoints.map((y, i) => `${i * (100 / maxPoints)},${y}`).join(" ");
-//   physicsLine.setAttribute("points", points);
-  
-//   // Update label
-//   physicsValue.textContent = objectCount.toString();
-// }
-
-// Update physics graph every second - bind this context
-// const updatePhysicsGraphBound = () => {
-//   const physicsObjectCount = this.physicsmanager?.World?.bodies?.length || 0;
-//   updatePhysicsGraph(physicsObjectCount);
-// };
-//etInterval(updatePhysicsGraphBound, 1000);
+    this.physicsmanager = new PhysicsManager({ scene: this.webgpuscene });
+    this.physicsmanager.World.addBody(floorBody);
+    
+    // Initialize performance monitor after physics manager
+    this.performanceMonitor = new PerformanceMonitor(this.webgpu, this.physicsmanager, this.annotationRenderer.domElement);
  
     this.CameraControls = new CameraControls(
       this.camera,
@@ -600,7 +288,7 @@ const maxPhysicsObjects = 500; // Maximum expected physics objects
       }
     });
 
-    document.addEventListener("keydown", (event) => {
+    document.addEventListener("keydown", (_event) => {
       // if (event.key === "c") {
       //   const car = new Entity();
       //   const carcontroller = new CarComponent({});
@@ -635,8 +323,8 @@ const maxPhysicsObjects = 500; // Maximum expected physics objects
     });
 
     // Add 'p' key to display physics stats
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "p" || event.key === "P") {
+    document.addEventListener("keydown", (_event) => {
+      if (_event.key === "p" || _event.key === "P") {
         const stats = this.getPhysicsStats();
         console.log('=== PHYSICS WORLD STATS ===');
         console.log(`Total Bodies: ${stats.totalBodies}`);
@@ -713,17 +401,6 @@ const maxPhysicsObjects = 500; // Maximum expected physics objects
 
     this.webgpuscene.add(this.sunLight);
 
-    const floorShape = new CANNON.Plane();
-    const floorBody = new CANNON.Body({ mass: 0 });
-    floorBody.addShape(floorShape);
-    floorBody.quaternion.setFromAxisAngle(
-      new CANNON.Vec3(1, 0, 0),
-      -Math.PI / 2
-    );
-
-    this.physicsmanager = new PhysicsManager({ scene: this.webgpuscene });
-    this.physicsmanager.World.addBody(floorBody);
- 
     this.clock = new THREE.Clock();
 
     this.UIManager = new UIManager(this);
@@ -932,16 +609,31 @@ const maxPhysicsObjects = 500; // Maximum expected physics objects
       "CharacterComponent"
     ) as CharacterComponent;
     if (charcomponent) {
-      let color = new THREE.Color(0xffffff);
-
-      //get a random child of the _model that is a mesh and set the color of the spot light to match it
-      let mesh = charcomponent._model.children[0].children.find(
-        (c) => c instanceof THREE.Mesh
-      );
-      if (mesh) {
-        console.log(mesh);
-        //@ts-ignore
-        color = (mesh as THREE.Mesh).material.color;
+      // Only try to access model if it's loaded
+      if (charcomponent._model && charcomponent._model.children && charcomponent._model.children.length > 0) {
+        //get a random child of the _model that is a mesh and set the color of the spot light to match it
+        let mesh = charcomponent._model.children[0].children.find(
+          (c) => c instanceof THREE.Mesh
+        );
+        if (mesh) {
+          console.log(mesh);
+          //@ts-ignore
+          // color = (mesh as THREE.Mesh).material.color;
+        }
+      } else {
+        console.log("CharacterComponent model not yet loaded, deferring MainEntity setup");
+        // Set up a timeout to retry when model is loaded
+        const checkModelLoaded = () => {
+          if (charcomponent._model && charcomponent._model.children && charcomponent._model.children.length > 0) {
+            console.log("Model loaded, completing MainEntity setup");
+            charcomponent.activate();
+          } else {
+            // Check again in a short while
+            setTimeout(checkModelLoaded, 100);
+          }
+        };
+        setTimeout(checkModelLoaded, 100);
+        return; // Exit early if model not loaded
       }
 
       charcomponent.activate();
@@ -956,12 +648,11 @@ const maxPhysicsObjects = 500; // Maximum expected physics objects
   }
 
   async update(delta: number) {
-  this.webgpu.render(this.webgpuscene, this.camera);
+    this.webgpu.render(this.webgpuscene, this.camera);
     //  TWEEN.update();
-    this.fpsGraph?.begin();
-  //  this.stats.begin();
-   this.#stats_.begin();
+    //  this.stats.begin();
     //   this.stats.begin();
+     this.performanceMonitor?.beginFrame();
     this.annotationRenderer.render(this.annoationsScene, this.camera);
     this.html2dRenderer.render(this.html2dScene, this.camera);
     //  this.html3dRenderer.render(this.html3dScene, this.camera);
@@ -977,10 +668,12 @@ const maxPhysicsObjects = 500; // Maximum expected physics objects
       // Synchronize physics bodies with Three.js meshes for streaming objects
       this.updateStreamingPhysics();
     }
+
     
-    this.fpsGraph?.end();
- this.#stats_.end();
-   // this.stats.end();
+    // Update performance monitor with current delta
+    this.performanceMonitor?.endFrame();
+
+    // this.stats.end();
 
     this.updateLight();
   }
@@ -994,10 +687,6 @@ const maxPhysicsObjects = 500; // Maximum expected physics objects
     this.html3dRenderer?.setSize(window.innerWidth, window.innerHeight);
 
     // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
-  }
-
-  private resetview(): void {
-    // Repeat type enforcement for orbit controls target tween
   }
 
   async spawnCar() {
@@ -1118,7 +807,6 @@ const maxPhysicsObjects = 500; // Maximum expected physics objects
       }
     } else if (intersects.length > 0) {
       const p = intersects[0].point;
-      let quaternion = new THREE.Quaternion();
       this.zoomTo(p, 5);
     }
 

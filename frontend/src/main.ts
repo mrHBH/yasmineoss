@@ -196,7 +196,7 @@ class Main {
    // this.maincController.MainEntity = hamza;
 
     hbhc.face();
-    hamza.Broadcast({
+    await hamza.Broadcast({
       topic: "walk",
       data: { position: new THREE.Vector3(5, 0, -10) },
     });
@@ -250,39 +250,39 @@ class Main {
 
     //  await environmentbot2.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(uitester2, "uitester6");
-        const musicstreamerenity = new Entity();
-        const musicstreamerenitycontrol = new CharacterComponent({
-          modelpath: "models/gltf/Xbot.glb",
-          animationspathslist: this.maincController.animations,
-          behaviourscriptname: "musicStreamer.js",
-        });
-        musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
+      //   const musicstreamerenity = new Entity();
+      //   const musicstreamerenitycontrol = new CharacterComponent({
+      //     modelpath: "models/gltf/Xbot.glb",
+      //     animationspathslist: this.maincController.animations,
+      //     behaviourscriptname: "musicStreamer.js",
+      //   });
+      //   musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
         
-        // Store component creation info for streaming
-        musicstreamerenity._componentCreationInfo = [
-          { 
-            type: 'CharacterComponent', 
-            config: {
-              modelpath: "models/gltf/Xbot.glb",
-              animationspathslist: this.maincController.animations,
-              behaviourscriptname: "musicStreamer.js",
-            }
-          },
-          { type: 'AIInput', config: {} },
-          { 
-            type: 'AudioComponent', 
-            config: {
-              audioConfig: {},
-              visualizerConfig: { enabled: true }
-            }
-          }
-        ];
+      //   // Store component creation info for streaming
+      //   musicstreamerenity._componentCreationInfo = [
+      //     { 
+      //       type: 'CharacterComponent', 
+      //       config: {
+      //         modelpath: "models/gltf/Xbot.glb",
+      //         animationspathslist: this.maincController.animations,
+      //         behaviourscriptname: "musicStreamer.js",
+      //       }
+      //     },
+      //     { type: 'AIInput', config: {} },
+      //     { 
+      //       type: 'AudioComponent', 
+      //       config: {
+      //         audioConfig: {},
+      //         visualizerConfig: { enabled: true }
+      //       }
+      //     }
+      //   ];
         
-        await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
-        await musicstreamerenity.AddComponent(new AIInput());
-        await musicstreamerenity.AddComponent(new AudioComponent());
-      //  await musicstreamerenity.AddComponent(new KeyboardInput());
-        await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
+      //   await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
+      //   await musicstreamerenity.AddComponent(new AIInput());
+      //   await musicstreamerenity.AddComponent(new AudioComponent());
+      // //  await musicstreamerenity.AddComponent(new KeyboardInput());
+      //   await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
     
     // Initialize minimap system after all entities are created
     // Note: MinimapComponent can work standalone, no need for separate entity
@@ -532,9 +532,9 @@ class Main {
     });
     
  
-    //  await environmentbot2.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(uitester2, "uitester6", false); // Main entity should not be streamable
-    uitestercontroller3.face();
+    // //  await environmentbot2.AddComponent(new KeyboardInput());
+    // await this.entityManager.AddEntity(uitester2, "uitester6", false); // Main entity should not be streamable
+    // uitestercontroller3.face();
     this.maincController.MainEntity = uitester2;
 
    // this.maincController.UIManager.toggleScrollmode();
@@ -580,17 +580,17 @@ class Main {
       data: { position: new THREE.Vector3(0, 0, 0) },
     });
     //add script entity environmentbot to the scene
-    const uitesterbot = new Entity();
-     const uitester6 = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: this.maincController.animations,
-      behaviourscriptname: "uitester6.js",
-    });
+    // const uitesterbot = new Entity();
+    //  const uitester6 = new CharacterComponent({
+    //   modelpath: "models/gltf/ybot2.glb",
+    //   animationspathslist: this.maincController.animations,
+    //   behaviourscriptname: "uitester6.js",
+    // });
 
-    await uitesterbot.AddComponent(uitester6);
+    // await uitesterbot.AddComponent(uitester6);
 
-    await uitesterbot.AddComponent(new AIInput());
-    await uitesterbot.AddComponent(new KeyboardInput());
+    // await uitesterbot.AddComponent(new AIInput());
+    // await uitesterbot.AddComponent(new KeyboardInput());
 
     //  await environmentbot2.AddComponent(new KeyboardInput());
     // await this.entityManager.AddEntity(uitesterbot, "uitester66"); // Commented out test entity
