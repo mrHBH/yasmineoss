@@ -131,10 +131,10 @@ class MainController {
     // }) as THREE.WebGPURenderer;
     //webgl
     this.webgpu =  new  THREE.WebGLRenderer({
-      antialias: true,
-       logarithmicDepthBuffer: true,
-      // alpha: true,
-      // depth: true,
+      antialias: false,
+       logarithmicDepthBuffer: false,
+       alpha: false,
+       depth: true,
 
 
      // powerPreference: "high-performance",
@@ -146,7 +146,7 @@ class MainController {
     // this.webgpu.outputEncoding = THREE.sRGBEncoding;
     // this.webgpu.physicallyCorrectLights = true;
 
-    this.webgpu.setPixelRatio(window.devicePixelRatio);
+    this.webgpu.setPixelRatio(window.devicePixelRatio*0.5);
 
     this.webgpu.setClearColor(new THREE.Color(0x202020));
 
