@@ -30,7 +30,7 @@ class StreamingTile extends THREE.Group {
   constructor(physicsWorld: CANNON.World) {
     super();
     this.physicsWorld = physicsWorld;
-  }
+  } 
 
   private static getSharedBoxGeometry(): THREE.BoxGeometry {
     if (!this.sharedBoxGeometry) {
