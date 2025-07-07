@@ -129,6 +129,10 @@ class MainController {
   targetEntitySet: boolean = false; // Add target entity set flag
   ActiveEntities: any[] = []; // Add active entities array
 
+  // Camera movement speed and state
+  private cameraMoveSpeed: number = 5;
+  private cameraKeys: Set<string> = new Set();
+
   constructor(entityManager: EntityManager) {
     this.webglscene.background = new THREE.Color(0x202020);
     this.walls = [];
@@ -296,6 +300,28 @@ class MainController {
     document.addEventListener("pointerup", (event) => this.onPointerUp(event), false);
 
     document.addEventListener("keydown", (event) => {
+      // Handle camera movement keys - track pressed keys for smooth continuous movement
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        this.cameraKeys.add(event.key);
+        event.preventDefault();
+        return;
+      }
+      
+      // Handle speed adjustment
+      if (event.key === '+' || event.key === '=') {
+        this.cameraMoveSpeed += 1;
+        console.log(`Camera speed: ${this.cameraMoveSpeed}`);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === '-') {
+        this.cameraMoveSpeed = Math.max(0.5, this.cameraMoveSpeed - 1);
+        console.log(`Camera speed: ${this.cameraMoveSpeed}`);
+        event.preventDefault();
+        return;
+      }
+      
+      // Handle other key events
       if (event.key === "r") {
         //reset all cars by calling Reset on the car component
         for (let entity of this.entitymanager.Entities) {
@@ -312,6 +338,14 @@ class MainController {
               .Reset();
           }
         }
+      }
+    });
+
+    // Add keyup listener to track key releases for smooth camera movement
+    document.addEventListener("keyup", (event) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        this.cameraKeys.delete(event.key);
+        event.preventDefault();
       }
     });
 
@@ -700,6 +734,9 @@ class MainController {
   }
 
   async update(delta: number) {
+    // Process camera movement based on currently pressed keys
+    this.processCameraMovement(delta);
+    
     this.webglrenderer.render(this.webglscene, this.camera);
     //  TWEEN.update();
     //  this.stats.begin();
@@ -731,6 +768,38 @@ class MainController {
     // this.stats.end();
 
     this.updateLight();
+  }
+
+  // Process camera movement based on currently pressed keys
+  private processCameraMovement(delta: number): void {
+    if (this.cameraKeys.size === 0) return;
+
+    // Calculate movement speeds with delta time for smooth, framerate-independent movement
+    const moveSpeed = this.cameraMoveSpeed * delta * 60; // Multiply by 60 for 60fps baseline
+    
+    // Diagonal movement support - calculate combined movement
+    let forwardMovement = 0;
+    let sideMovement = 0;
+    
+    if (this.cameraKeys.has('ArrowUp')) forwardMovement += 1;
+    if (this.cameraKeys.has('ArrowDown')) forwardMovement -= 1;
+    if (this.cameraKeys.has('ArrowRight')) sideMovement += 1;
+    if (this.cameraKeys.has('ArrowLeft')) sideMovement -= 1;
+    
+    // Normalize diagonal movement to prevent faster movement when moving diagonally
+    const magnitude = Math.sqrt(forwardMovement * forwardMovement + sideMovement * sideMovement);
+    if (magnitude > 0) {
+      forwardMovement = (forwardMovement / magnitude) * moveSpeed;
+      sideMovement = (sideMovement / magnitude) * moveSpeed;
+      
+      // Apply movements with no animation (false) for immediate response
+      if (forwardMovement !== 0) {
+        this.CameraControls.forward(forwardMovement, false);
+      }
+      if (sideMovement !== 0) {
+        this.CameraControls.truck(sideMovement, 0, false);
+      }
+    }
   }
 
   onWindowResize(): void {
