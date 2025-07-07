@@ -10,9 +10,9 @@ export const STREAMING_CONSTANTS = {
   NUM_TILES: 10,
   
   // Entity streaming configuration
-  ENTITY_STREAMING_TILE_SIZE: 70, // Smaller than visual tiles for performance
-  ENTITY_DISPOSAL_DISTANCE_MULTIPLIER: 1, // Entities disposed at 1x tile size
-  ENTITY_RESTORE_DISTANCE_MULTIPLIER: 1, // Entities restored at 1x tile size
+  ENTITY_STREAMING_TILE_SIZE: 150, // Smaller than visual tiles for performance
+  ENTITY_DISPOSAL_DISTANCE_MULTIPLIER: 2, // Entities disposed at 1x tile size
+  ENTITY_RESTORE_DISTANCE_MULTIPLIER: 1.5, // Entities restored at 1x tile size
   ENTITY_STREAMING_CHECK_INTERVAL: 1000, // ms
   ENTITY_NUM_TILES: 3, // Smaller range than visual tiles
   
@@ -35,7 +35,7 @@ export const STREAMING_CONSTANTS = {
   // Entity streaming performance
   MAX_ENTITIES_RESTORED_PER_FRAME: 1, // Max entities to restore per frame to prevent stutters (reduced from 2)
   ENTITY_RESTORATION_FRAME_DELAY: 4, // ms delay between restoration batches (reduced for faster loading)
-  ASYNC_COMPONENT_LOADING: true, // Load components asynchronously to prevent blocking
+  ASYNC_COMPONENT_LOADING: false, // Load components asynchronously to prevent blocking
   
   // Entity streaming optimization
   ENTITY_PRELOAD_DISTANCE_MULTIPLIER: 1.5, // Start loading entities at 1.5x tile size

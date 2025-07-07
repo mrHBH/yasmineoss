@@ -73,7 +73,7 @@ class DynamicuiComponent extends Component {
 
   async InitEntity(): Promise<void> {
  
-    this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
+    this._entity._entityManager._mc.webglscene.add(this._webgpugroup);
     this._entity._entityManager._mc.html2dScene.add(this._css2dgroup);
      this._entity._RegisterHandler("zoom", async (data: any) => {
       if (data?.value) {
@@ -239,7 +239,7 @@ class DynamicuiComponent extends Component {
   }
 
    async Destroy(): Promise<void> {
-    this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+    this._entity._entityManager._mc.webglscene.remove(this._webgpugroup);
     this._entity._entityManager._mc.html2dScene.remove(this._css2dgroup);
     this._htmlElement.remove();
     

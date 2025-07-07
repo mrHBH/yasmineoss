@@ -38,9 +38,9 @@ class Main {
     if (!LoadingManager.assets) {
       console.warn("LoadingManager not initialized before creating Bob");
       LoadingManager.initialize(
-        this.maincController.webgpu, 
+        this.maincController.webglrenderer, 
         {
-          scene: this.maincController.webgpuscene,
+          scene: this.maincController.webglscene,
           camera: this.maincController.camera
         }
       );
@@ -142,9 +142,9 @@ class Main {
     // Initialize LoadingManager with renderer and scene 
     // This needs to happen before any assets are loaded
     LoadingManager.initialize(
-      this.maincController.webgpu, 
+      this.maincController.webglrenderer, 
       {
-        scene: this.maincController.webgpuscene,
+        scene: this.maincController.webglscene,
         camera: this.maincController.camera
       }
     );
@@ -535,7 +535,7 @@ class Main {
     // //  await environmentbot2.AddComponent(new KeyboardInput());
     // await this.entityManager.AddEntity(uitester2, "uitester6", false); // Main entity should not be streamable
     // uitestercontroller3.face();
-    this.maincController.MainEntity = uitester2;
+    // this.maincController.MainEntity = uitester2;
 
    // this.maincController.UIManager.toggleScrollmode();
 

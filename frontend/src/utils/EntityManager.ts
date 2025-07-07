@@ -114,14 +114,14 @@ class EntityManager {
         }
         this._lastStreamingCheck = now;
 
-        if (!this._mc || !this._mc.MainEntity) {
+        if (!this._mc) {
             return;
         }
+        // use MainEntity if set, otherwise fallback to camera position
+        const mainEntityPos = this._mc.MainEntity ? this._mc.MainEntity.Position : this._mc.camera.position;
 
-        const mainEntityPos = this._mc.MainEntity.Position;
-        
-        // Check for entities that should be disposed
-        const entitiesToDispose: Entity[] = [];
+    // Check for entities that should be disposed
+    const entitiesToDispose: Entity[] = [];
         for (const entity of this._entities) {
             if (entity.shouldBeDisposed(mainEntityPos) && !this._entitiesBeingRestored.has(entity.name)) {
                 entitiesToDispose.push(entity);

@@ -144,8 +144,8 @@ class HelicopterComponent extends Component {
     this.heliBodyMesh.receiveShadow = true;
 
     //this._webgpugroup.add(this.heliBodyMesh);
-    this._entity._entityManager._mc.webgpuscene.add(this.heliBodyMesh);
-    this._entity._entityManager._mc.webgpuscene.add(this.rotorMesh);
+    this._entity._entityManager._mc.webglscene.add(this.heliBodyMesh);
+    this._entity._entityManager._mc.webglscene.add(this.rotorMesh);
 
     this.body.position.set(
       this._entity.Position.x,
@@ -352,8 +352,8 @@ this.rotorMesh.rotateY(this.thrust[1]/100 * e.data.delta );
     this.world.removeBody(this.rotorBody);
     this.world.removeBody(this.body);
 
-    this._entity._entityManager._mc.webgpuscene.remove(this.heliBodyMesh);
-    this._entity._entityManager._mc.webgpuscene.remove(this.rotorMesh);
+    this._entity._entityManager._mc.webglscene.remove(this.heliBodyMesh);
+    this._entity._entityManager._mc.webglscene.remove(this.rotorMesh);
 
 
     if (this.soundCarEngine) {

@@ -87,6 +87,13 @@ class CharacterComponent extends Component {
         this._model.userData.entity = this._entity;
         this._webgpugroup.add(this._model);
 
+        // Set entity reference on all mesh children for selection
+        this._model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.userData.entity = this._entity;
+          }
+        });
+
         // Small delay to yield control
         await new Promise(resolve => setTimeout(resolve, 2));
 
@@ -203,10 +210,10 @@ class CharacterComponent extends Component {
       }
     };
     this.movementController.onAddArrow = (arrow) => {
-      this._entity._entityManager._mc.webgpuscene.add(arrow);
+      this._entity._entityManager._mc.webglscene.add(arrow);
     };
     this.movementController.onRemoveArrow = (arrow) => {
-      this._entity._entityManager._mc.webgpuscene.remove(arrow);
+      this._entity._entityManager._mc.webglscene.remove(arrow);
     };
     this.movementController.getCurrentState = () => {
       return this.animationManager ? this.animationManager.getCurrentState() : "Ideling";
@@ -390,7 +397,7 @@ class CharacterComponent extends Component {
 
   async InitEntity(): Promise<void> {
 
-    this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
+    this._entity._entityManager._mc.webglscene.add(this._webgpugroup);
     this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
     
     // Only add physics controller to world if it's initialized
@@ -554,7 +561,7 @@ class CharacterComponent extends Component {
       queueMicrotask(async () => {
         try {
           // Correctly access the WebGLRenderer instance
-          const webGLRenderer = this._entity._entityManager?._mc?.webgpu;
+          const webGLRenderer = this._entity._entityManager?._mc?.webglrenderer;
 
           if (webGLRenderer && webGLRenderer.info && webGLRenderer.info.memory) {
             console.log(`[Before Destroy Actions - ${this._entity.name}] WebGL Textures: ${webGLRenderer.info.memory.textures}`);
@@ -621,8 +628,8 @@ class CharacterComponent extends Component {
           }
 
           // Remove groups from scenes
-          if (this._entity._entityManager._mc.webgpuscene) {
-            this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+          if (this._entity._entityManager._mc.webglscene) {
+            this._entity._entityManager._mc.webglscene.remove(this._webgpugroup);
           }
           if (this._entity._entityManager._mc.annoationsScene) {
             this._entity._entityManager._mc.annoationsScene.remove(this._css2dgroup);

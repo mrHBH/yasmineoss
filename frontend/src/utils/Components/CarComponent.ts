@@ -451,7 +451,7 @@ class CarComponent extends Component {
     this.carChassis.rotation.y = -Math.PI / 2;
     this._webgpugroup.add(this.carChassis);
 
-    this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
+    this._entity._entityManager._mc.webglscene.add(this._webgpugroup);
 
     this.body.position.set(0, 5, 0);
     this.body.angularVelocity.set(0, 0, 0);
@@ -522,7 +522,7 @@ class CarComponent extends Component {
           wheel.chassisConnectionPointLocal.z
         )
       );
-      this._entity._entityManager._mc.webgpuscene.add(wheelMesh1);
+      this._entity._entityManager._mc.webglscene.add(wheelMesh1);
 
       wheelBody.addShape(cylinderShape, new CANNON.Vec3(), quaternion);
       this.wheelBodies.push(wheelBody);
@@ -704,11 +704,11 @@ class CarComponent extends Component {
     
     // Remove the wheel meshes
     this.wheelMeshes.forEach((wheel) => {
-      this._entity._entityManager._mc.webgpuscene.remove(wheel);
+      this._entity._entityManager._mc.webglscene.remove(wheel);
     });
 
     // Remove the car mesh
-    this._entity._entityManager._mc.webgpuscene.remove(this._webgpugroup);
+    this._entity._entityManager._mc.webglscene.remove(this._webgpugroup);
     if (this.soundCarEngine) {
       this.soundCarEngine.disconnect();
       this.soundCarEngine = null;

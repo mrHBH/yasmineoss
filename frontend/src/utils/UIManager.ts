@@ -96,7 +96,7 @@ class UIManager {
     this.attentionCursor = ArrowHelper;
     //make draggable along the path
 
-    this.mc.webgpuscene.add(this.attentionCursor);
+    this.mc.webglscene.add(this.attentionCursor);
   }
   async adduiElement(name: string, html: string, position: THREE.Vector3 , size: THREE.Vector2 = new THREE.Vector2(2500,6000) , quaternion= new THREE.Quaternion()):  Promise< twoDUIComponent> {
     
@@ -661,7 +661,7 @@ class UIManager {
     this.splineObject.geometry.setFromPoints(points);
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
-    this.mc.webgpuscene.remove(this.splineObject);
+    this.mc.webglscene.remove(this.splineObject);
     // this.splineObject = new THREE.Line(geometry, material);
     //  this.mc.webgpuscene.add(this.splineObject);
   }
@@ -696,7 +696,7 @@ class UIManager {
  
  
     for (let i = 0; i < this.controlpointsmeshes?.length; i++) {
-      this.mc.webgpuscene.remove(this.controlpointsmeshes[i]);
+      this.mc.webglscene.remove(this.controlpointsmeshes[i]);
     }
 
     //destroy all entities with ui component

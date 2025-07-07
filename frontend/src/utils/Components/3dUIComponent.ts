@@ -67,7 +67,7 @@ class threeDUIComponent extends Component {
   }
 
   async InitEntity(): Promise<void> {
-    this._entity._entityManager._mc.webgpuscene.add(this._webgpugroup);
+    this._entity._entityManager._mc.webglscene.add(this._webgpugroup);
     this._entity._entityManager._mc.html3dScene.add(this._css3dgroup);
     this._entity._RegisterHandler("zoom", async () => {
       await this.zoom();

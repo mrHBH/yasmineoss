@@ -51,7 +51,7 @@ class Main {
     LoadingManager.initialize(
       this.maincController.renderer, 
       {
-        scene: this.maincController.webgpuscene,
+        scene: this.maincController.webglscene,
         camera: this.maincController.camera
       }
     );

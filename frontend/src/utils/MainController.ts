@@ -2,6 +2,7 @@ import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import { MeshPhysicalNodeMaterial, mod, WebGPURenderer } from "three/webgpu";
+import "./SelectionBox.css";
 
 // import WebGPURenderer from "three/examples/jsm/renderers/webgpu/WebGPURenderer.js";
 import { InfiniteGridHelper } from "./InfiniteGridHelper";
@@ -19,6 +20,10 @@ import { KeyboardInput } from "./Components/KeyboardInput.js";
 import { HelicopterComponent } from "./Components/HelicopterComponent.js";
 import { SoundGeneratorAudioListener } from "./Sound_generator_worklet_wasm.js";
 import CameraControls from "camera-controls";
+	
+
+import { SelectionBox } from "./SelectionBox.js";
+import { SelectionHelper } from "./SelectionBoxHelper.js";
 
 // import { CustomCursor } from "./CustomCursor.js";
 // import { StaticCLI } from "../SimpleCLI.js";
@@ -45,7 +50,7 @@ CameraControls.install({ THREE: THREE });
 class MainController {
   camera: THREE.PerspectiveCamera;
   //  CameraControls: OrbitControls;
-  webgpu: THREE.WebGLRenderer;
+  webglrenderer: THREE.WebGLRenderer;
   annotationRenderer: CSS2DRenderer;
   annoationsScene: THREE.Scene = new THREE.Scene();
   entitymanager: EntityManager;
@@ -53,7 +58,7 @@ class MainController {
   html2dScene: THREE.Scene = new THREE.Scene();
   html3dScene: THREE.Scene = new THREE.Scene();
   physicsmanager: PhysicsManager;
-  webgpuscene: THREE.Scene = new THREE.Scene();
+  webglscene: THREE.Scene = new THREE.Scene();
   clock: THREE.Clock;
   grid: any;
   html3dRenderer: CSS3DRenderer;
@@ -78,6 +83,11 @@ class MainController {
   private dragThreshold: number = 5; // pixels
   private rightMouseDown: boolean = false;
   private mouseDownPosition: { x: number; y: number } = { x: 0, y: 0 };
+  
+  // Selection box tracking
+  private leftMouseDown: boolean = false;
+  private leftMouseDownPosition: { x: number; y: number } = { x: 0, y: 0 };
+  private selectionBoxStarted: boolean = false;
   
   animations: { url: string; skipTracks?: number[] }[] = [
     { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
@@ -112,9 +122,15 @@ class MainController {
     { url: "animations/gltf/ybot2@TurningRight.glb" },
   ];
   stats: any;
+  selectionBox: SelectionBox;
+  selectionBoxHelper: SelectionHelper;
+  input: any; // Add input property
+  targetEntity: any; // Add target entity property
+  targetEntitySet: boolean = false; // Add target entity set flag
+  ActiveEntities: any[] = []; // Add active entities array
 
   constructor(entityManager: EntityManager) {
-    this.webgpuscene.background = new THREE.Color(0x202020);
+    this.webglscene.background = new THREE.Color(0x202020);
     this.walls = [];
 
     // Detect if we're on mobile or desktop
@@ -128,28 +144,32 @@ class MainController {
     //   powerPreference: "high-performance",
     // }) as THREE.WebGPURenderer;
     //webgl
-    this.webgpu =  new  THREE.WebGLRenderer({
+    this.webglrenderer =  new  THREE.WebGLRenderer({
       antialias: !isMobile,  // Enable antialiasing on desktop only
        logarithmicDepthBuffer: !isMobile,
        alpha: false,
        depth: true,
        powerPreference: "high-performance",
-    })  
+    })
+    
+    // Selection box will be initialized after camera is created
 
+ 
     // Enable shadows on desktop only
-    this.webgpu.shadowMap.enabled = !isMobile;
-    this.webgpu.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.webgpu.toneMapping = THREE.ACESFilmicToneMapping;
+    this.webglrenderer.shadowMap.enabled = !isMobile;
+    this.webglrenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.webglrenderer.toneMapping = THREE.ACESFilmicToneMapping;
     // Note: outputEncoding and physicallyCorrectLights are deprecated in newer Three.js versions
 
     // Set pixel ratio based on device type
     const pixelRatio = isMobile ? window.devicePixelRatio * 0.5 : Math.min(window.devicePixelRatio * 1.25, 2);
-    this.webgpu.setPixelRatio(pixelRatio);
+    this.webglrenderer.setPixelRatio(pixelRatio);
 
-    this.webgpu.setClearColor(new THREE.Color(0x202020));
+    this.webglrenderer.setClearColor(new THREE.Color(0x202020));
 
     const fog = new THREE.Fog(0x202020, 0.1, 150);
-  //  this.webgpuscene.fog = fog;
+    //this.webglscene.fog = fog;
+
     this.entitymanager = entityManager;
     this.entitymanager._mc = this;
     this.annotationRenderer = new CSS2DRenderer();
@@ -169,13 +189,13 @@ class MainController {
     this.html2dRenderer.domElement.style.pointerEvents = "auto";
     this.html2dRenderer.domElement.style.zIndex = "2";
 
-    this.webgpu.domElement.style.position = "absolute";
-    this.webgpu.setSize(window.innerWidth, window.innerHeight);
+    this.webglrenderer.domElement.style.position = "absolute";
+    this.webglrenderer.setSize(window.innerWidth, window.innerHeight);
 
-    this.webgpu.domElement.style.top = "0px";
-    this.webgpu.domElement.style.pointerEvents = "none";
-    this.webgpu.domElement.style.zIndex = "3";
-    this.webgpu.domElement.id = "webgpu";
+    this.webglrenderer.domElement.style.top = "0px";
+    this.webglrenderer.domElement.style.pointerEvents = "none";
+    this.webglrenderer.domElement.style.zIndex = "3";
+    this.webglrenderer.domElement.id = "webgpu";
 
     this.html3dRenderer = new CSS3DRenderer();
     this.html3dRenderer.domElement.style.position = "absolute";
@@ -186,7 +206,7 @@ class MainController {
 
     document.body.appendChild(this.annotationRenderer.domElement);
     document.body.appendChild(this.html2dRenderer.domElement);
-    document.body.appendChild(this.webgpu.domElement);
+    document.body.appendChild(this.webglrenderer.domElement);
     document.body.appendChild(this.html3dRenderer.domElement);
 
     //disable visbile scrollbars
@@ -204,7 +224,11 @@ class MainController {
     // this.camera.position.multiplyScalar(0.8);
     //this.camera.lookAt(0, 5, 0);
 
-    this.webgpuscene.add(this.camera);
+    this.webglscene.add(this.camera);
+    
+    // Initialize selection box after camera is created
+    this.selectionBox = new SelectionBox(this.camera, this.webglrenderer, this.webglscene);
+    this.selectionBoxHelper = new SelectionHelper(this.webglrenderer, 'selectBox');
     
     // Initialize physics manager first
     const floorShape = new CANNON.Plane();
@@ -215,11 +239,11 @@ class MainController {
       -Math.PI / 2
     );
 
-    this.physicsmanager = new PhysicsManager({ scene: this.webgpuscene });
+    this.physicsmanager = new PhysicsManager({ scene: this.webglscene });
     this.physicsmanager.World.addBody(floorBody);
     
     // Initialize performance monitor after physics manager
-    this.performanceMonitor = new PerformanceMonitor(this.webgpu, this.physicsmanager, this.annotationRenderer.domElement);
+    this.performanceMonitor = new PerformanceMonitor(this.webglrenderer, this.physicsmanager, this.annotationRenderer.domElement);
  
     this.CameraControls = new CameraControls(
       this.camera,
@@ -228,11 +252,9 @@ class MainController {
 
     //add event listener that prevents context menu from propagating after right button drag
       
- 
-      
     this.CameraControls.saveState();
     this.CameraControls.mouseButtons = {
-      left: CameraControls.ACTION.TRUCK,
+      left: CameraControls.ACTION.NONE,
       middle: CameraControls.ACTION.ZOOM,
       right: CameraControls.ACTION.ROTATE,
       wheel: CameraControls.ACTION.DOLLY,
@@ -267,6 +289,11 @@ class MainController {
     document.addEventListener("mousedown", (event) => this.onMouseDown(event), false);
     document.addEventListener("mousemove", (event) => this.onMouseMove(event), false);
     document.addEventListener("mouseup", (event) => this.onMouseUp(event), false);
+
+    // Add selection box event listeners
+    document.addEventListener("pointerdown", (event) => this.onPointerDown(event), false);
+    document.addEventListener("pointermove", (event) => this.onPointerMove(event), false);
+    document.addEventListener("pointerup", (event) => this.onPointerUp(event), false);
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "r") {
@@ -338,12 +365,19 @@ class MainController {
       }
     });
 
+    // Add Escape key to clear selection
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        this.clearSelection();
+      }
+    });
+
     const light = new THREE.PointLight(0xffffff, 3);
     light.position.set(0, 1, 5);
     light.castShadow = true;
     light.shadow.camera.near = 0.001;
     //this.webgpuscene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
-    this.webgpuscene.add(light);
+    this.webglscene.add(light);
 
     this.grid = new InfiniteGridHelper(
       this.camera,
@@ -399,7 +433,7 @@ class MainController {
     // const helper = new THREE.CameraHelper(this.sunLight.shadow.camera);
     // this.webgpuscene.add(helper);
 
-    this.webgpuscene.add(this.sunLight);
+    this.webglscene.add(this.sunLight);
 
     this.clock = new THREE.Clock();
 
@@ -407,7 +441,7 @@ class MainController {
     
     // Initialize StreamingWorld with physics world reference
     this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
-    this.webgpuscene.add(this.streamingWorld);
+    this.webglscene.add(this.streamingWorld);
     console.log("StreamingWorld initialized and added to scene");
   }
 
@@ -438,7 +472,7 @@ class MainController {
     if (rotation) {
       wall.rotation.copy(rotation);
     }
-    this.webgpuscene.add(wall);
+    this.webglscene.add(wall);
 
     // Create physics body
     const shape = new CANNON.Box(
@@ -558,46 +592,64 @@ class MainController {
 
     raycaster.setFromCamera(
       new THREE.Vector2(
-        (event.clientX / this.webgpu.domElement.clientWidth) * 2 - 1, // These should already be numbers but reaffirming for clarity.
-        -(event.clientY / this.webgpu.domElement.clientHeight) * 2 + 1
+        (event.clientX / this.webglrenderer.domElement.clientWidth) * 2 - 1, // These should already be numbers but reaffirming for clarity.
+        -(event.clientY / this.webglrenderer.domElement.clientHeight) * 2 + 1
       ),
       this.camera
     );
 
-    //recursively get a list of all objects that have a component as userdata , break as soon as the first one is found for every object
-
-    // for (let i = 0; i < intersectionObjects.length; i++) {
-    //     intersectionObjects[i].traverse((child) => {
-    //         if (child instanceof THREE.Mesh) {
-    //             child.geometry.computeBoundsTree();
-    //         }
-    //     });
-    // }
     const intersects = raycaster.intersectObjects(
-      this.webgpuscene.children,
+      this.webglscene.children,
       true
     );
+    
     if (intersects.length == 0) {
       //allow default context menu
       event.stopPropagation();
       return;
     }
 
-    console.log(intersects[0].point);
-    //add an arrow pointing towards the point
-    if (intersects[0].point && this.mainEntity) {
-      if (event.altKey) {
-        console.log("Alt + Double Click detected!");
-
+    console.log('Right-click at:', intersects[0].point);
+    
+    // Handle Alt+Right-click for teleportation
+    if (event.altKey && intersects[0].point) {
+      if (this.ActiveEntities.length > 0) {
+        console.log("Alt + Right-click: Teleporting selected entities");
+        this.ActiveEntities.forEach(entity => {
+          entity.Position = intersects[0].point;
+        });
+      } else if (this.mainEntity) {
+        console.log("Alt + Right-click: Teleporting main entity");
         this.mainEntity.Position = intersects[0].point;
-        return;
       }
-      this.mainEntity.Broadcast({
-        topic: "walk",
-        data: {
-          position: intersects[0].point,
-        },
-      });
+      return;
+    }
+
+    // Handle normal right-click for movement commands
+    if (intersects[0].point) {
+      if (this.ActiveEntities.length > 0) {
+        // Send walk command to all selected entities
+        console.log(`Sending walk command to ${this.ActiveEntities.length} selected entities`);
+        this.ActiveEntities.forEach(entity => {
+          entity.Broadcast({
+            topic: "walk",
+            data: {
+              position: intersects[0].point,
+            },
+          });
+        });
+      } else if (this.mainEntity) {
+        // Fallback to main entity if no active entities
+        console.log("Sending walk command to main entity");
+        this.mainEntity.Broadcast({
+          topic: "walk",
+          data: {
+            position: intersects[0].point,
+          },
+        });
+      } else {
+        console.log("No entities selected - right-click ignored");
+      }
     }
   }
 
@@ -648,7 +700,7 @@ class MainController {
   }
 
   async update(delta: number) {
-    this.webgpu.render(this.webgpuscene, this.camera);
+    this.webglrenderer.render(this.webglscene, this.camera);
     //  TWEEN.update();
     //  this.stats.begin();
     //   this.stats.begin();
@@ -662,7 +714,10 @@ class MainController {
     
     // Update StreamingWorld based on main entity position or camera position
     if (this.streamingWorld) {
-      const centerPosition = this.mainEntity ? this.mainEntity.Position : this.camera.position;
+      // Use camera position as streaming center if no entities are selected
+      const centerPosition = (this.ActiveEntities.length > 0 && this.mainEntity) 
+        ? this.mainEntity.Position 
+        : this.camera.position;
       this.streamingWorld.update(centerPosition);
       
       // Synchronize physics bodies with Three.js meshes for streaming objects
@@ -681,7 +736,7 @@ class MainController {
   onWindowResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
-    this.webgpu.setSize(window.innerWidth, window.innerHeight);
+    this.webglrenderer.setSize(window.innerWidth, window.innerHeight);
     this.annotationRenderer?.setSize(window.innerWidth, window.innerHeight);
     this.html2dRenderer?.setSize(window.innerWidth, window.innerHeight);
     this.html3dRenderer?.setSize(window.innerWidth, window.innerHeight);
@@ -761,7 +816,7 @@ class MainController {
           child.receiveShadow = true;
         }
       });
-      this.webgpuscene.add(scene);
+      this.webglscene.add(scene);
       console.log(scene);
     });
   }
@@ -773,14 +828,14 @@ class MainController {
 
     raycaster.setFromCamera(
       new THREE.Vector2(
-        (event.clientX / this.webgpu.domElement.clientWidth) * 2 - 1, // These should already be numbers but reaffirming for clarity.
-        -(event.clientY / this.webgpu.domElement.clientHeight) * 2 + 1
+        (event.clientX / this.webglrenderer.domElement.clientWidth) * 2 - 1, // These should already be numbers but reaffirming for clarity.
+        -(event.clientY / this.webglrenderer.domElement.clientHeight) * 2 + 1
       ),
       this.camera
     );
 
     const intersects = raycaster.intersectObjects(
-      this.webgpuscene.children,
+      this.webglscene.children,
       true
     );
 
@@ -873,6 +928,36 @@ class MainController {
   followEntity(entity: Entity) {
     this.mainEntity = entity;
     this.isFollowing = true;
+  }
+
+  // Clear all selected entities and reset to camera-centered streaming
+  clearSelection(): void {
+    console.log('Clearing selection...');
+    
+    // Deactivate current main entity
+    if (this.mainEntity) {
+      const charComponent = this.mainEntity.getComponent('CharacterComponent') as CharacterComponent;
+      if (charComponent) {
+        charComponent.deactivate();
+      }
+    }
+    
+    // Remove keyboard components from all active entities
+    this.ActiveEntities.forEach(entity => {
+      const keyboardComponent = entity.getComponent('KeyboardInput');
+      if (keyboardComponent) {
+        entity.RemoveComponent(keyboardComponent);
+        console.log(`Removed keyboard input from ${entity.name}`);
+      }
+    });
+    
+    // Clear all selection state
+    this.ActiveEntities = [];
+    this.mainEntity = null;
+    this.targetEntity = null;
+    this.targetEntitySet = false;
+    
+    console.log('Selection cleared - camera becomes streaming center');
   }
 
   // Get physics world statistics for memory leak detection
@@ -1005,6 +1090,225 @@ class MainController {
       setTimeout(() => {
         this.isDragging = false;
       }, 10);
+    }
+  }
+
+  // Selection box event handlers
+  private onPointerDown(event: PointerEvent): void {
+    // Handle left mouse button for selection box (without Ctrl/Alt for box selection)
+    if (event.button === 0 && !event.ctrlKey && !event.altKey) {
+      this.leftMouseDown = true;
+      this.leftMouseDownPosition = { x: event.clientX, y: event.clientY };
+      this.selectionBoxStarted = false;
+      
+      // Store initial position but don't start selection box yet
+      this.selectionBox.startPoint.set(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1,
+        0.5
+      );
+    }
+    
+    // Handle Ctrl+Click for single entity selection/deselection
+    if (event.button === 0 && event.ctrlKey) {
+      this.handleCtrlClick(event);
+    }
+  }
+
+  private handleCtrlClick(event: PointerEvent): void {
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(
+      new THREE.Vector2(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1
+      ),
+      this.camera
+    );
+
+    const intersects = raycaster.intersectObjects(this.webglscene.children, true);
+    
+    if (intersects.length > 0) {
+      // Find the entity from the clicked object
+      let clickedEntity = null;
+      for (const intersect of intersects) {
+        if (intersect.object.userData?.entity) {
+          clickedEntity = intersect.object.userData.entity;
+          break;
+        }
+      }
+      
+      if (clickedEntity) {
+        const entityIndex = this.ActiveEntities.indexOf(clickedEntity);
+        
+        if (entityIndex === -1) {
+          // Add entity to selection
+          this.ActiveEntities.push(clickedEntity);
+          
+          // Add keyboard input if not present
+          const existingKeyboard = clickedEntity.getComponent('KeyboardInput');
+          if (!existingKeyboard) {
+            clickedEntity.AddComponent(new KeyboardInput());
+            console.log(`Added keyboard input to ${clickedEntity.name}`);
+          }
+          
+          // Set as main entity if it's the first one
+          if (this.ActiveEntities.length === 1) {
+            this.mainEntity = clickedEntity;
+            this.targetEntity = clickedEntity;
+            this.targetEntitySet = true;
+            
+            const charComponent = clickedEntity.getComponent('CharacterComponent') as CharacterComponent;
+            if (charComponent) {
+              charComponent.activate();
+            }
+          }
+          
+          console.log(`Added ${clickedEntity.name} to selection`);
+        } else {
+          // Remove entity from selection
+          this.ActiveEntities.splice(entityIndex, 1);
+          
+          // Remove keyboard input
+          const keyboardComponent = clickedEntity.getComponent('KeyboardInput');
+          if (keyboardComponent) {
+            clickedEntity.RemoveComponent(keyboardComponent);
+            console.log(`Removed keyboard input from ${clickedEntity.name}`);
+          }
+          
+          // Deactivate if it was the main entity
+          if (this.mainEntity === clickedEntity) {
+            const charComponent = clickedEntity.getComponent('CharacterComponent') as CharacterComponent;
+            if (charComponent) {
+              charComponent.deactivate();
+            }
+            
+            // Set new main entity if there are other active entities
+            if (this.ActiveEntities.length > 0) {
+              this.mainEntity = this.ActiveEntities[0];
+              this.targetEntity = this.ActiveEntities[0];
+              
+              const newCharComponent = this.mainEntity.getComponent('CharacterComponent') as CharacterComponent;
+              if (newCharComponent) {
+                newCharComponent.activate();
+              }
+            } else {
+              this.mainEntity = null;
+              this.targetEntity = null;
+              this.targetEntitySet = false;
+            }
+          }
+          
+          console.log(`Removed ${clickedEntity.name} from selection`);
+        }
+        
+        console.log(`Active entities: ${this.ActiveEntities.map(e => e.name)}`);
+      }
+    }
+  }
+
+  private onPointerMove(event: PointerEvent): void {
+    // Check if we should start the selection box
+    if (this.leftMouseDown && !this.selectionBoxStarted && !event.ctrlKey && !event.altKey) {
+      const deltaX = Math.abs(event.clientX - this.leftMouseDownPosition.x);
+      const deltaY = Math.abs(event.clientY - this.leftMouseDownPosition.y);
+      
+      // Only start selection box if we've dragged beyond threshold
+      if (deltaX > this.dragThreshold || deltaY > this.dragThreshold) {
+        this.selectionBoxStarted = true;
+        this.selectionBoxHelper.onPointerDown(this.leftMouseDownPosition.x, this.leftMouseDownPosition.y);
+      }
+    }
+    
+    // Update selection box if it's started
+    if (this.selectionBoxHelper.isDown) {
+      this.selectionBoxHelper.onPointerMove(event);
+      this.selectionBox.endPoint.set(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1,
+        0.5
+      );
+    }
+  }
+
+  private onPointerUp(event: PointerEvent): void {
+    // Reset left mouse tracking
+    if (event.button === 0) {
+      this.leftMouseDown = false;
+      this.selectionBoxStarted = false;
+    }
+    
+    if (this.selectionBoxHelper.isDown) {
+      this.selectionBoxHelper.onPointerUp(event);
+      this.selectionBox.endPoint.set(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1,
+        0.5
+      );
+      
+      // Get selected objects
+      const selectedObjects = this.selectionBox.select(this.webglscene.children);
+      
+      // Extract unique entities from selected objects
+      const entitySet = new Set<Entity>();
+      selectedObjects.forEach(obj => {
+        if (obj.userData?.entity) {
+          entitySet.add(obj.userData.entity);
+        }
+      });
+      
+      const selectedEntities = Array.from(entitySet);
+      console.log('Selected entities:', selectedEntities.map(e => e.name));
+      
+      // Deactivate previous main entities
+      if (this.mainEntity) {
+        const charComponent = this.mainEntity.getComponent('CharacterComponent') as CharacterComponent;
+        if (charComponent) {
+          charComponent.deactivate();
+        }
+      }
+      
+      // Clear previous active entities and their keyboard components
+      this.ActiveEntities.forEach(entity => {
+        const keyboardComponent = entity.getComponent('KeyboardInput');
+        if (keyboardComponent) {
+          entity.RemoveComponent(keyboardComponent);
+        }
+      });
+      
+      // Update active entities
+      this.ActiveEntities = selectedEntities;
+      
+      // Handle selection results
+      if (selectedEntities.length === 0) {
+        // No entities selected - clear main entity
+        this.mainEntity = null;
+        this.targetEntity = null;
+        this.targetEntitySet = false;
+        console.log('No entities selected - camera becomes streaming center');
+      } else {
+        // Add keyboard input to all selected entities
+        selectedEntities.forEach(async (entity) => {
+          const existingKeyboard = entity.getComponent('KeyboardInput');
+          if (!existingKeyboard) {
+            await entity.AddComponent(new KeyboardInput());
+            console.log(`Added keyboard input to ${entity.name}`);
+          }
+        });
+        
+        // Set first entity as main entity
+        this.mainEntity = selectedEntities[0];
+        this.targetEntity = selectedEntities[0];
+        this.targetEntitySet = true;
+        
+        // Activate the main entity
+        const charComponent = this.mainEntity.getComponent('CharacterComponent') as CharacterComponent;
+        if (charComponent) {
+          charComponent.activate();
+        }
+        
+        console.log(`Main entity set to: ${this.mainEntity.name}`);
+        console.log(`Total selected entities: ${selectedEntities.length}`);
+      }
     }
   }
 }
