@@ -3,20 +3,8 @@ import * as THREE from 'three';
 export class SelectionBox {
   private camera: THREE.Camera;
   private scene: THREE.Scene;
-  private frustum: THREE.Frustum;
   private center: THREE.Vector3;
-  private vecNear: THREE.Vector3;
-  private vecTopLeft: THREE.Vector3;
-  private vecTopRight: THREE.Vector3;
-  private vecDownRight: THREE.Vector3;
-  private vecDownLeft: THREE.Vector3;
-  private vecFarTopLeft: THREE.Vector3;
-  private vecFarTopRight: THREE.Vector3;
-  private vecFarDownRight: THREE.Vector3;
-  private vecFarDownLeft: THREE.Vector3;
   private vectemp1: THREE.Vector3;
-  private vectemp2: THREE.Vector3;
-  private vectemp3: THREE.Vector3;
 
   public startPoint: THREE.Vector3;
   public endPoint: THREE.Vector3;
@@ -28,157 +16,124 @@ export class SelectionBox {
     this.startPoint = new THREE.Vector3();
     this.endPoint = new THREE.Vector3();
     this.collection = [];
-    this.frustum = new THREE.Frustum();
     this.center = new THREE.Vector3();
-    this.vecNear = new THREE.Vector3();
-    this.vecTopLeft = new THREE.Vector3();
-    this.vecTopRight = new THREE.Vector3();
-    this.vecDownRight = new THREE.Vector3();
-    this.vecDownLeft = new THREE.Vector3();
-    this.vecFarTopLeft = new THREE.Vector3();
-    this.vecFarTopRight = new THREE.Vector3();
-    this.vecFarDownRight = new THREE.Vector3();
-    this.vecFarDownLeft = new THREE.Vector3();
     this.vectemp1 = new THREE.Vector3();
-    this.vectemp2 = new THREE.Vector3();
-    this.vectemp3 = new THREE.Vector3();
   }
 
   public select(selectables?: THREE.Object3D[]): THREE.Object3D[] {
     this.collection = [];
-    this.updateFrustum(this.startPoint, this.endPoint);
-    console.log('SelectionBox: Starting selection with', selectables?.length || this.scene.children.length, 'root objects');
-    this.searchChildInFrustum(this.frustum, selectables || this.scene.children);
+    
+    // Use a more accurate selection method based on screen bounds
+    const objects = selectables || this.scene.children;
+    console.log('SelectionBox: Starting selection with', objects.length, 'root objects');
+    
+    this.searchObjectsInScreenBounds(objects);
+    
     console.log('SelectionBox: Selection complete, found', this.collection.length, 'selectable objects');
     return this.collection;
   }
 
-  private updateFrustum(startPoint: THREE.Vector3, endPoint: THREE.Vector3): void {
-    startPoint = startPoint || this.startPoint;
-    endPoint = endPoint || this.endPoint;
+  private searchObjectsInScreenBounds(objects: THREE.Object3D[]): void {
+    // Calculate selection bounds in normalized device coordinates (NDC)
+    const minX = Math.min(this.startPoint.x, this.endPoint.x);
+    const maxX = Math.max(this.startPoint.x, this.endPoint.x);
+    const minY = Math.min(this.startPoint.y, this.endPoint.y);
+    const maxY = Math.max(this.startPoint.y, this.endPoint.y);
 
-    // Ensure we have a proper camera
-    if (!this.camera || !(this.camera instanceof THREE.PerspectiveCamera)) {
-      console.warn('SelectionBox: Camera must be a PerspectiveCamera');
-      return;
-    }
+    console.log('SelectionBox: Selection bounds (NDC):', { minX, maxX, minY, maxY });
 
-    const camera = this.camera as THREE.PerspectiveCamera;
-    
-    this.camera.updateProjectionMatrix();
-    this.camera.updateMatrixWorld();
-
-    if (startPoint.x !== endPoint.x || startPoint.y !== endPoint.y) {
-      this.vecNear.setFromMatrixPosition(this.camera.matrixWorld);
-      this.vecTopLeft.copy(startPoint);
-      this.vecTopRight.set(endPoint.x, startPoint.y, 0);
-      this.vecDownRight.copy(endPoint);
-      this.vecDownLeft.set(startPoint.x, endPoint.y, 0);
-
-      this.vecTopLeft.unproject(this.camera);
-      this.vecTopRight.unproject(this.camera);
-      this.vecDownRight.unproject(this.camera);
-      this.vecDownLeft.unproject(this.camera);
-
-      this.vectemp1.copy(this.vecTopLeft).sub(this.vecNear);
-      this.vectemp2.copy(this.vecTopRight).sub(this.vecNear);
-      this.vectemp3.copy(this.vecDownRight).sub(this.vecNear);
-      this.vectemp1.normalize();
-      this.vectemp2.normalize();
-      this.vectemp3.normalize();
-
-      this.vectemp1.multiplyScalar(camera.far);
-      this.vectemp2.multiplyScalar(camera.far);
-      this.vectemp3.multiplyScalar(camera.far);
-      this.vectemp1.add(this.vecNear);
-      this.vectemp2.add(this.vecNear);
-      this.vectemp3.add(this.vecNear);
-
-      this.vecFarTopLeft.copy(this.vectemp1);
-      this.vecFarTopRight.copy(this.vectemp2);
-      this.vecFarDownRight.copy(this.vectemp3);
-
-      this.vectemp1.copy(this.vecDownLeft).sub(this.vecNear);
-      this.vectemp1.normalize();
-      this.vectemp1.multiplyScalar(camera.far);
-      this.vectemp1.add(this.vecNear);
-      this.vecFarDownLeft.copy(this.vectemp1);
-
-      this.frustum.setFromProjectionMatrix(
-        new THREE.Matrix4().multiplyMatrices(
-          camera.projectionMatrix,
-          camera.matrixWorldInverse
-        )
-      );
-
-      // Create selection frustum
-      const planes = this.frustum.planes;
+    for (const object of objects) {
+      this.checkObjectInBounds(object, minX, maxX, minY, maxY);
       
-      // Near plane
-      this.vectemp1.copy(this.vecTopLeft).sub(this.vecTopRight);
-      this.vectemp2.copy(this.vecTopLeft).sub(this.vecDownLeft);
-      this.vectemp1.cross(this.vectemp2).normalize();
-      planes[0].setFromNormalAndCoplanarPoint(this.vectemp1, this.vecTopLeft);
-
-      // Right plane
-      this.vectemp1.copy(this.vecTopRight).sub(this.vecDownRight);
-      this.vectemp2.copy(this.vecTopRight).sub(this.vecNear);
-      this.vectemp1.cross(this.vectemp2).normalize();
-      planes[1].setFromNormalAndCoplanarPoint(this.vectemp1, this.vecTopRight);
-
-      // Bottom plane
-      this.vectemp1.copy(this.vecDownRight).sub(this.vecDownLeft);
-      this.vectemp2.copy(this.vecDownRight).sub(this.vecNear);
-      this.vectemp1.cross(this.vectemp2).normalize();
-      planes[2].setFromNormalAndCoplanarPoint(this.vectemp1, this.vecDownRight);
-
-      // Left plane
-      this.vectemp1.copy(this.vecDownLeft).sub(this.vecTopLeft);
-      this.vectemp2.copy(this.vecDownLeft).sub(this.vecNear);
-      this.vectemp1.cross(this.vectemp2).normalize();
-      planes[3].setFromNormalAndCoplanarPoint(this.vectemp1, this.vecDownLeft);
-
-      // Top plane
-      this.vectemp1.copy(this.vecTopLeft).sub(this.vecTopRight);
-      this.vectemp2.copy(this.vecTopLeft).sub(this.vecNear);
-      this.vectemp1.cross(this.vectemp2).normalize();
-      planes[4].setFromNormalAndCoplanarPoint(this.vectemp1, this.vecTopLeft);
-
-      // Far plane
-      this.vectemp1.copy(this.vecFarTopRight).sub(this.vecFarTopLeft);
-      this.vectemp2.copy(this.vecFarTopRight).sub(this.vecFarDownRight);
-      this.vectemp1.cross(this.vectemp2).normalize();
-      planes[5].setFromNormalAndCoplanarPoint(this.vectemp1, this.vecFarTopRight);
+      // Always check children regardless of object type
+      if (object.children.length > 0) {
+        this.searchObjectsInScreenBounds(object.children);
+      }
     }
   }
 
-  private searchChildInFrustum(frustum: THREE.Frustum, objects: THREE.Object3D[]): void {
-    for (const object of objects) {
-      // Check if this object itself is selectable
-      if (object instanceof THREE.Mesh || object instanceof THREE.Line || object instanceof THREE.Points) {
-        if (object.geometry) {
-          if (object.geometry.boundingSphere === null) {
-            object.geometry.computeBoundingSphere();
-          }
+  private checkObjectInBounds(object: THREE.Object3D, minX: number, maxX: number, minY: number, maxY: number): void {
+    // Only check selectable objects
+    if (!(object instanceof THREE.Mesh || object instanceof THREE.Line || object instanceof THREE.Points)) {
+      return;
+    }
 
-          if (object.geometry.boundingSphere) {
-            this.center.copy(object.geometry.boundingSphere.center);
-            this.center.applyMatrix4(object.matrixWorld);
+    if (!object.geometry) {
+      return;
+    }
 
-            if (frustum.containsPoint(this.center)) {
-              this.collection.push(object);
-              console.log('SelectionBox: Selected object:', object.type, object.name || 'unnamed', 'hasEntity:', !!object.userData?.entity);
-              if (object.userData?.entity) {
-                console.log('SelectionBox: Entity name:', object.userData.entity.name);
-              }
-            }
-          }
-        }
+    // Compute bounding box for more accurate selection
+    if (object.geometry.boundingBox === null) {
+      object.geometry.computeBoundingBox();
+    }
+
+    if (!object.geometry.boundingBox) {
+      return;
+    }
+
+    // Get the 8 corners of the bounding box in world space
+    const bbox = object.geometry.boundingBox.clone();
+    const corners = [
+      new THREE.Vector3(bbox.min.x, bbox.min.y, bbox.min.z),
+      new THREE.Vector3(bbox.max.x, bbox.min.y, bbox.min.z),
+      new THREE.Vector3(bbox.min.x, bbox.max.y, bbox.min.z),
+      new THREE.Vector3(bbox.max.x, bbox.max.y, bbox.min.z),
+      new THREE.Vector3(bbox.min.x, bbox.min.y, bbox.max.z),
+      new THREE.Vector3(bbox.max.x, bbox.min.y, bbox.max.z),
+      new THREE.Vector3(bbox.min.x, bbox.max.y, bbox.max.z),
+      new THREE.Vector3(bbox.max.x, bbox.max.y, bbox.max.z)
+    ];
+
+    // Transform corners to world space
+    corners.forEach(corner => {
+      corner.applyMatrix4(object.matrixWorld);
+    });
+
+    // Project all corners to screen space and check if any are within bounds
+    let anyCornerInside = false;
+    
+    for (const corner of corners) {
+      this.vectemp1.copy(corner);
+      this.vectemp1.project(this.camera);
+      
+      const x = this.vectemp1.x;
+      const y = this.vectemp1.y;
+      
+      // Check if this corner is within the selection bounds
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+        anyCornerInside = true;
+        break; // Early exit if we find one corner inside
+      }
+    }
+
+    // Also check if the object's center is within bounds (fallback for very small objects)
+    if (!anyCornerInside) {
+      // Compute bounding sphere as fallback
+      if (object.geometry.boundingSphere === null) {
+        object.geometry.computeBoundingSphere();
       }
 
-      // Always check children regardless of object type
-      if (object.children.length > 0) {
-        this.searchChildInFrustum(frustum, object.children);
+      if (object.geometry.boundingSphere) {
+        this.center.copy(object.geometry.boundingSphere.center);
+        this.center.applyMatrix4(object.matrixWorld);
+        this.vectemp1.copy(this.center);
+        this.vectemp1.project(this.camera);
+
+        const centerInBounds = this.vectemp1.x >= minX && this.vectemp1.x <= maxX && 
+                              this.vectemp1.y >= minY && this.vectemp1.y <= maxY;
+        
+        if (centerInBounds) {
+          anyCornerInside = true;
+        }
+      }
+    }
+
+    if (anyCornerInside) {
+      this.collection.push(object);
+      console.log('SelectionBox: Selected object:', object.type, object.name || 'unnamed', 
+                  'hasEntity:', !!object.userData?.entity);
+      if (object.userData?.entity) {
+        console.log('SelectionBox: Entity name:', object.userData.entity.name);
       }
     }
   }

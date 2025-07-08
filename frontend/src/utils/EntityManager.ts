@@ -64,6 +64,9 @@ class EntityManager {
        await entity.Destroy().then(() => {
             this._entities = this._entities.filter(e => e !== entity);
             this._entitiesMap.delete(entity.id);
+            
+            // Clean up any cached entity states for this entity across all tiles
+            this.cleanupEntityFromCache(entity.name);
         }
         );
     }
@@ -147,26 +150,72 @@ class EntityManager {
         // Remove from restoration tracking if it was being restored
         this._entitiesBeingRestored.delete(entity.name);
 
-        // Save entity state
-        const entityState = entity.saveEntityState();
-        
-        if (!this._streamedEntityStates.has(tileKey)) {
-            this._streamedEntityStates.set(tileKey, []);
-        }
-        
-        const tileStates = this._streamedEntityStates.get(tileKey)!;
-        // Check if we already have state for this entity (by name)
-        const existingIndex = tileStates.findIndex(state => state.name === entity.name);
-        if (existingIndex >= 0) {
-            tileStates[existingIndex] = entityState;
-        } else {
-            tileStates.push(entityState);
-        }
+        // Check if entity has moved significantly from its origin tile
+        const TILE_SIZE = EntityManager.STREAMING_TILE_SIZE;
+        const currentTilePos = entity.Position.clone();
+        currentTilePos.divideScalar(TILE_SIZE);
+        currentTilePos.round();
+        currentTilePos.multiplyScalar(TILE_SIZE);
+        const currentTileKey = currentTilePos.x + '/' + currentTilePos.z;
 
-        console.log(`Disposing streamed entity ${entity.name} from tile ${tileKey}`);
+        // If entity has moved to a different tile, update its origin tile and don't cache it in the old tile
+        if (currentTileKey !== tileKey) {
+            console.log(`Entity ${entity.name} has moved from tile ${tileKey} to ${currentTileKey}, updating origin tile`);
+            entity.setOriginTile(currentTileKey, true);
+            
+            // Remove any existing cache for this entity in the old tile
+            if (this._streamedEntityStates.has(tileKey)) {
+                const tileStates = this._streamedEntityStates.get(tileKey)!;
+                const filteredStates = tileStates.filter(state => state.name !== entity.name);
+                if (filteredStates.length === 0) {
+                    this._streamedEntityStates.delete(tileKey);
+                } else {
+                    this._streamedEntityStates.set(tileKey, filteredStates);
+                }
+            }
+            
+            // Cache in the new tile instead
+            const entityState = entity.saveEntityState();
+            if (!this._streamedEntityStates.has(currentTileKey)) {
+                this._streamedEntityStates.set(currentTileKey, []);
+            }
+            
+            const currentTileStates = this._streamedEntityStates.get(currentTileKey)!;
+            const existingIndex = currentTileStates.findIndex(state => state.name === entity.name);
+            if (existingIndex >= 0) {
+                currentTileStates[existingIndex] = entityState;
+            } else {
+                currentTileStates.push(entityState);
+            }
+            
+            console.log(`Disposing streamed entity ${entity.name} from current tile ${currentTileKey}`);
+        } else {
+            // Entity is still in its origin tile, cache normally
+            const entityState = entity.saveEntityState();
+            
+            if (!this._streamedEntityStates.has(tileKey)) {
+                this._streamedEntityStates.set(tileKey, []);
+            }
+            
+            const tileStates = this._streamedEntityStates.get(tileKey)!;
+            const existingIndex = tileStates.findIndex(state => state.name === entity.name);
+            if (existingIndex >= 0) {
+                tileStates[existingIndex] = entityState;
+            } else {
+                tileStates.push(entityState);
+            }
+
+            console.log(`Disposing streamed entity ${entity.name} from tile ${tileKey}`);
+        }
         
-        // Remove entity immediately but handle cleanup gracefully
-        this.RemoveEntity(entity);
+        // Remove entity from active list but don't clean up cached states (streaming disposal)
+        this._entities = this._entities.filter(e => e !== entity);
+        this._entitiesMap.delete(entity.id);
+        
+        // Destroy the entity but don't trigger cache cleanup
+        entity.Destroy().catch(err => {
+            console.error("Error during entity destruction:", err);
+        });
     }
 
     private finishEntityDisposal(entitiesToDispose: Entity[]): void {
@@ -208,21 +257,41 @@ class EntityManager {
         const entityStates = this._streamedEntityStates.get(tileKey);
         if (!entityStates) return;
 
-        // Check if we already have queued restoration for this tile
-        const alreadyQueued = this._entityRestorationQueue.some(item => item.tileKey === tileKey);
-        if (alreadyQueued) return;
-
-        // Queue all entities from this tile for restoration
+        // Queue all entities from this tile for restoration (check each entity individually)
+        const validEntitiesForRestoration = [];
         for (const entityState of entityStates) {
             // Check if entity with this name already exists or is being restored
             const existingEntity = this._entities.find(e => e._name === entityState.name);
             const beingRestored = this._entitiesBeingRestored.has(entityState.name);
-            if (!existingEntity && !beingRestored) {
+            
+            // Check if this specific entity is already queued for restoration
+            const alreadyQueued = this._entityRestorationQueue.some(
+                item => item.entityState.name === entityState.name
+            );
+            
+            // Additional check: if entity exists but is on a different tile, remove it from this tile's cache
+            if (existingEntity && existingEntity.getOriginTileKey() !== tileKey) {
+                console.log(`Entity ${entityState.name} has moved from tile ${tileKey} to ${existingEntity.getOriginTileKey()}, removing from cache`);
+                continue; // Skip this entity, it will be removed from cache below
+            }
+            
+            if (!existingEntity && !beingRestored && !alreadyQueued) {
                 this._entityRestorationQueue.push({ tileKey, entityState });
+                validEntitiesForRestoration.push(entityState);
             }
         }
 
-        console.log(`Queued ${entityStates.length} entities for restoration from tile ${tileKey}`);
+        // Remove entities that have moved to other tiles from this tile's cache
+        if (validEntitiesForRestoration.length !== entityStates.length) {
+            this._streamedEntityStates.set(tileKey, validEntitiesForRestoration);
+            if (validEntitiesForRestoration.length === 0) {
+                this._streamedEntityStates.delete(tileKey);
+            }
+        }
+
+        if (validEntitiesForRestoration.length > 0) {
+            console.log(`Queued ${validEntitiesForRestoration.length} entities for restoration from tile ${tileKey}`);
+        }
     }
 
     private processEntityRestorationQueue(): void {
@@ -248,20 +317,8 @@ class EntityManager {
         // Process batch asynchronously to prevent blocking
         queueMicrotask(async () => {
             try {
-                const restoredTiles = new Set<string>();
-                
                 for (const { tileKey, entityState } of batch) {
                     await this.restoreEntity(entityState);
-                    restoredTiles.add(tileKey);
-                }
-
-                // Clean up restored tile states
-                for (const tileKey of restoredTiles) {
-                    // Only remove if all entities from this tile have been processed
-                    const remainingFromTile = this._entityRestorationQueue.filter(item => item.tileKey === tileKey);
-                    if (remainingFromTile.length === 0) {
-                        this._streamedEntityStates.delete(tileKey);
-                    }
                 }
 
                 if (batch.length > 0) {
@@ -466,6 +523,28 @@ class EntityManager {
             cachedTiles: this._streamedEntityStates.size,
             totalEntities: this._entities.length
         };
+    }
+
+    // Clean up any cached entity states for this entity across all tiles
+    private cleanupEntityFromCache(entityName: string): void {
+        for (const [tileKey, entityStates] of this._streamedEntityStates.entries()) {
+            const filteredStates = entityStates.filter(state => state.name !== entityName);
+            if (filteredStates.length === 0) {
+                this._streamedEntityStates.delete(tileKey);
+            } else if (filteredStates.length !== entityStates.length) {
+                this._streamedEntityStates.set(tileKey, filteredStates);
+            }
+        }
+        
+        // Also remove from restoration queue
+        this._entityRestorationQueue = this._entityRestorationQueue.filter(
+            item => item.entityState.name !== entityName
+        );
+        
+        // Remove from restoration tracking
+        this._entitiesBeingRestored.delete(entityName);
+        
+        console.log(`Cleaned up cached states for entity ${entityName} from all tiles`);
     }
 }
 
