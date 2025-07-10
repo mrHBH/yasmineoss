@@ -406,10 +406,7 @@ class EntityManager {
                         const { CharacterComponent } = await import("./Components/CharacterComponent.ts");
                         component = new CharacterComponent(compInfo.config);
                         break;
-                    case 'AIInput':
-                        const { AIInput } = await import("./Components/AIInput");
-                        component = new AIInput();
-                        break;
+               
                     case 'KeyboardInput':
                         const { KeyboardInput } = await import("./Components/KeyboardInput");
                         component = new KeyboardInput();
@@ -454,10 +451,7 @@ class EntityManager {
                             const { CharacterComponent } = await import("./Components/CharacterComponent.ts");
                             component = new CharacterComponent(compInfo.config);
                             break;
-                        case 'AIInput':
-                            const { AIInput } = await import("./Components/AIInput");
-                            component = new AIInput();
-                            break;
+         
                         case 'KeyboardInput':
                             const { KeyboardInput } = await import("./Components/KeyboardInput");
                             component = new KeyboardInput();

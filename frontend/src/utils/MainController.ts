@@ -20,7 +20,7 @@ import { KeyboardInput } from "./Components/KeyboardInput.js";
 import { HelicopterComponent } from "./Components/HelicopterComponent.js";
 import { SoundGeneratorAudioListener } from "./Sound_generator_worklet_wasm.js";
 import CameraControls from "camera-controls";
-	
+
 
 import { SelectionBox } from "./SelectionBox.js";
 import { SelectionHelper } from "./SelectionBoxHelper.js";
@@ -35,8 +35,11 @@ import { CharacterComponent } from "./Components/CharacterComponent.js";
 // // import {  VolumeNodeMaterial, vec3, materialReference, smoothstep, If, Break, tslFn } from 'three/tsl';
 // import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import { LoadingManager } from "./LoadingManager.js";
-import { AIInput } from "./Components/AIInput.js";
 import { StreamingWorld } from './StreamingWorld.js';
+import { DaylightSystem } from './DaylightSystem.js';
+
+
+
 // import { BoxLineGeometry } from "three/examples/jsm/Addons.js";
 // let customcursor = new CustomCursor();
 
@@ -77,6 +80,9 @@ class MainController {
   
   // Add StreamingWorld property
   streamingWorld: StreamingWorld;
+  
+  // Add DaylightSystem property
+  daylightSystem: DaylightSystem;
   
   // Physics stats tracking
   private isDragging: boolean = false;
@@ -151,10 +157,12 @@ class MainController {
     this.webglrenderer =  new  THREE.WebGLRenderer({
       antialias: !isMobile,  // Enable antialiasing on desktop only
        logarithmicDepthBuffer: !isMobile,
-       alpha: false,
+       alpha: true,
        depth: true,
        powerPreference: "high-performance",
     })
+
+
     
     // Selection box will be initialized after camera is created
 
@@ -171,8 +179,12 @@ class MainController {
 
     this.webglrenderer.setClearColor(new THREE.Color(0x202020));
 
-    const fog = new THREE.Fog(0x202020, 0.1, 150);
-    //this.webglscene.fog = fog;
+    const fog = new THREE.Fog(0x202020, 0.1, 100);
+     this.webglscene.fog = fog;
+
+
+
+
 
     this.entitymanager = entityManager;
     this.entitymanager._mc = this;
@@ -220,8 +232,8 @@ class MainController {
     this.camera = new THREE.PerspectiveCamera(
       45,
       window.innerWidth / window.innerHeight,
-      0.005,
-      1000
+      0.000005,
+      100000
     );
     
     // this.camera.position.set(2.5, 20, 5);
@@ -263,16 +275,9 @@ class MainController {
       right: CameraControls.ACTION.ROTATE,
       wheel: CameraControls.ACTION.DOLLY,
     };
-
-    // Create a point light
-    // const lightz = new THREE.PointLight(0xffffff, 1000, 10000);
-    // lightz.position.set(5, 10, 0); // Position the light above and to the side of the mirror
-    // lightz.castShadow = true; // Enable shadow casting
-
-    // // Add the light to the scene
-    // this.webgpuscene.add(lightz);
-
-    // this.camera.attach(lightz);
+    
+  
+   
 
     window.addEventListener("resize", () => this.onWindowResize());
     //disable context menu
@@ -321,6 +326,41 @@ class MainController {
         return;
       }
       
+      // Handle day/night cycle controls
+      if (event.key === "9") {
+        // Add 1 hour (1/24 of a day)
+        const currentTime = this.getTimeOfDay();
+        const newTime = (currentTime + 1/24) % 1; // Wrap around at 1
+        this.setTimeOfDay(newTime);
+        console.log(`Time advanced 1 hour. Current time: ${(newTime * 24).toFixed(1)} hours`);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "8") {
+        // Subtract 1 hour (1/24 of a day)
+        const currentTime = this.getTimeOfDay();
+        let newTime = currentTime - 1/24;
+        if (newTime < 0) newTime += 1; // Wrap around at 0
+        this.setTimeOfDay(newTime);
+        console.log(`Time reversed 1 hour. Current time: ${(newTime * 24).toFixed(1)} hours`);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "7") {
+        // Toggle automatic day/night cycle (full cycle in 10 seconds)
+        const isAuto = this.daylightSystem?.getAutomatic() || false;
+        this.setDayNightAutomatic(!isAuto);
+        if (!isAuto) {
+          // Set speed for 10 second full cycle: 1 / 10 = 0.1 per second
+          this.setDayNightSpeed(0.1); // This will complete a full cycle in 10 seconds
+          console.log("Started automatic day/night cycle (10 second cycle)");
+        } else {
+          console.log("Stopped automatic day/night cycle");
+        }
+        event.preventDefault();
+        return;
+      }
+      
       // Handle other key events
       if (event.key === "r") {
         //reset all cars by calling Reset on the car component
@@ -349,28 +389,7 @@ class MainController {
       }
     });
 
-    document.addEventListener("keydown", (_event) => {
-      // if (event.key === "c") {
-      //   const car = new Entity();
-      //   const carcontroller = new CarComponent({});
-      //   const keyboardinput = new KeyboardInput();
-      //   this.initSound();
-      //   car.Position = new THREE.Vector3(0, 1, 0);
-      //   car.AddComponent(carcontroller).then(() => {
-      //     car.AddComponent(keyboardinput);
-      //     this.entitymanager.AddEntity(car, "Car" + Math.random()).then(() => {
-      //       this.mainEntity = car;
-      //     });
-      //     //create a quaternion that when multiplied by another quaternion it rotates it 90 degrees around the y axsi
-      //     this.UIManager.fpsquatoffset =
-      //       new THREE.Quaternion().setFromAxisAngle(
-      //         new THREE.Vector3(0, 1, 0),
-      //         Math.PI / 2
-      //       );
-      //   });
-      // }
-    });
-
+  
     document.addEventListener("keydown", (event) => {
       if (event.key === "k") {
         //remove all entities with car component
@@ -383,29 +402,8 @@ class MainController {
       }
     });
 
-    // Add 'p' key to display physics stats
-    document.addEventListener("keydown", (_event) => {
-      if (_event.key === "p" || _event.key === "P") {
-        const stats = this.getPhysicsStats();
-        console.log('=== PHYSICS WORLD STATS ===');
-        console.log(`Total Bodies: ${stats.totalBodies}`);
-        console.log(`Dynamic Bodies: ${stats.dynamicBodies}`);
-        console.log(`Static Bodies: ${stats.staticBodies}`);
-        console.log(`Constraints: ${stats.constraints}`);
-        console.log(`Contacts: ${stats.contacts}`);
-        console.log(`Streaming Tiles: ${stats.streamingTiles}`);
-        console.log(`Streaming Objects: ${stats.streamingObjects}`);
-        console.log('===========================');
-      }
-    });
-
-    // Add Escape key to clear selection
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        this.clearSelection();
-      }
-    });
-
+ 
+ 
     const light = new THREE.PointLight(0xffffff, 3);
     light.position.set(0, 1, 5);
     light.castShadow = true;
@@ -413,59 +411,24 @@ class MainController {
     //this.webgpuscene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
     this.webglscene.add(light);
 
-    this.grid = new InfiniteGridHelper(
-      this.camera,
-      100,
-      100,
-      new THREE.Color(0x888888),
-      new THREE.Color(0x444444)
-    );
-    this.grid.castShadow = false;
-    this.grid.position.y = -0.025;
-   // this.webgpuscene.add(this.grid);
-
-   
-   
-      
-    //add a groud plane that can receive shadows
-    const groundGeometry = new THREE.PlaneGeometry(100, 100);
-   
-    const groundMaterial = new THREE.MeshStandardMaterial({
-      color: 0x666666,
-      metalness: 0.0,
-      roughness: 0.8,
-      transparent: true,
-      opacity: 0.8,
-    });
+ 
     
-    groundGeometry.computeVertexNormals();
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.castShadow = false;
-    ground.receiveShadow = true;
-   
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0;
-
-    //this.webgpuscene.add(ground);
 
     this.sunLight = new THREE.DirectionalLight(0xeeeeff, 5);
 
     this.sunLight.castShadow = true;
     this.sunLight.shadow.camera.near = 0.0001;
     this.sunLight.shadow.camera.far = 80;
-    this.sunLight.shadow.camera.right = 32;
-    this.sunLight.shadow.camera.left = -32;
-    this.sunLight.shadow.camera.top = 32;
-    this.sunLight.shadow.camera.bottom = -32;
+    this.sunLight.shadow.camera.right = 64;
+    this.sunLight.shadow.camera.left = -64;
+    this.sunLight.shadow.camera.top = 64;
+    this.sunLight.shadow.camera.bottom = -64;
     this.sunLight.shadow.mapSize.width = 2048;
     this.sunLight.shadow.mapSize.height = 2048;
     this.sunLight.shadow.bias = -0.0005;
     this.sunLight.shadow.normalBias = 0.02;
     this.sunLight.position.set(5, 15, 5); // Position light at an angle for better shadows
-
-    // Helper to visualize the shadow camera (useful for debugging)
-    // const helper = new THREE.CameraHelper(this.sunLight.shadow.camera);
-    // this.webgpuscene.add(helper);
+ 
 
     this.webglscene.add(this.sunLight);
 
@@ -476,8 +439,12 @@ class MainController {
     // Initialize StreamingWorld with physics world reference
     this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
     this.webglscene.add(this.streamingWorld);
-    console.log("StreamingWorld initialized and added to scene");
-  }
+    
+    // Initialize DaylightSystem
+    this.daylightSystem = new DaylightSystem(this.webglscene, this.webglrenderer, this.camera);
+    this.daylightSystem.loadNightSky(); // Load night sky texture asynchronously
+   }
+
 
   calculateScreenDimensions = (camera, targetDistance) => {
     // Get camera FOV in radians
@@ -738,13 +705,11 @@ class MainController {
     this.processCameraMovement(delta);
     
     this.webglrenderer.render(this.webglscene, this.camera);
-    //  TWEEN.update();
-    //  this.stats.begin();
-    //   this.stats.begin();
+    
      this.performanceMonitor?.beginFrame();
     this.annotationRenderer.render(this.annoationsScene, this.camera);
     this.html2dRenderer.render(this.html2dScene, this.camera);
-    //  this.html3dRenderer.render(this.html3dScene, this.camera);
+    this.html3dRenderer.render(this.html3dScene, this.camera);
     this.physicsmanager?.Update(delta);
     this.UIManager?.Update();
     this.CameraControls?.update(delta / 2);
@@ -764,6 +729,9 @@ class MainController {
     
     // Update performance monitor with current delta
     this.performanceMonitor?.endFrame();
+    
+    // Update DaylightSystem
+    this.daylightSystem?.update(delta);
 
     // this.stats.end();
 
@@ -852,44 +820,7 @@ class MainController {
 
     return carcontroller;
   }
-
-  //name and class (xbot ,ybot)
-  async spawnchar(name: string, classname: string) {
-    let modelpath = "models/gltf/ybot2.glb";
-    if (classname === "xbot") {
-      modelpath = "models/gltf/Xbot.glb";
-      //add script entity environmentbot to the scene
-    }
-    //add script entity environmentbot to the scene
-    const hamza = new Entity();
-    hamza.Position = new THREE.Vector3(0, 1, 6);
-    const environmentcontroller2 = new CharacterComponent({
-      modelpath: modelpath,
-      animationspathslist: this.animations,
-    });
-    await hamza.AddComponent(environmentcontroller2);
-    await hamza.AddComponent(new AIInput());
-    await hamza.AddComponent(new KeyboardInput());
-    await this.entitymanager.AddEntity(hamza, name);
-    return environmentcontroller2;
-  }
-
-  async LoadScene() {
-    await LoadingManager.loadGLTF(
-      "models/gltf/tiny_low_poly_town_-_modular_set.glb"
-    ).then((scene) => {
-      // make all childs able to cast shadows and receive shadows
-      scene.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
-      });
-      this.webglscene.add(scene);
-      console.log(scene);
-    });
-  }
-
+ 
   private async onDoubleClick(event: MouseEvent): Promise<void> {
     const raycaster = new THREE.Raycaster();
     //@ts-ignore
@@ -994,10 +925,7 @@ class MainController {
     }
   }
 
-  followEntity(entity: Entity) {
-    this.mainEntity = entity;
-    this.isFollowing = true;
-  }
+ 
 
   // Clear all selected entities and reset to camera-centered streaming
   clearSelection(): void {
@@ -1379,6 +1307,27 @@ class MainController {
         console.log(`Total selected entities: ${selectedEntities.length}`);
       }
     }
+  }
+
+  // Day/Night cycle control methods
+  setTimeOfDay(time: number): void {
+    this.daylightSystem?.setTimeOfDay(time);
+  }
+
+  getTimeOfDay(): number {
+    return this.daylightSystem?.getTimeOfDay() || 0.5;
+  }
+
+  setDayNightAutomatic(automatic: boolean): void {
+    this.daylightSystem?.setAutomatic(automatic);
+  }
+
+  setDayNightSpeed(speed: number): void {
+    this.daylightSystem?.setTransitionSpeed(speed);
+  }
+
+  isDaytime(): boolean {
+    return this.daylightSystem?.isDaytime() || true;
   }
 }
 

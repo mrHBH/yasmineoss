@@ -10,7 +10,6 @@ import { CharacterComponent } from "./utils/Components/CharacterComponent";
 
 import { EntityManager } from "./utils/EntityManager";
 import { MainController } from "./utils/MainController";
-import { AIInput } from "./utils/Components/AIInput";
 import { KeyboardInput } from "./utils/Components/KeyboardInput";
 import { AudioComponent } from "./utils/Components/AudioComponent";
 // Add this import statement
@@ -61,7 +60,6 @@ class Main {
           behaviourscriptname: "botbasicbehavior.js",
         }
       },
-      { type: 'AIInput', config: {} },
       { 
         type: 'AudioComponent', 
         config: {
@@ -72,7 +70,6 @@ class Main {
     ];
 
     await bob.AddComponent(bobcontroller);
-    await bob.AddComponent(new AIInput());
     await bob.AddComponent(new AudioComponent());
     // await bob.AddComponent(new KeyboardInput());
     
@@ -114,7 +111,6 @@ class Main {
             behaviourscriptname: "botbasicbehavior.js",
           }
         },
-        { type: 'AIInput', config: {} },
         { 
           type: 'AudioComponent', 
           config: {
@@ -125,7 +121,6 @@ class Main {
       ];
       
       await testEntity.AddComponent(testController);
-      await testEntity.AddComponent(new AIInput());
       await testEntity.AddComponent(new AudioComponent());
       
       const testName = `TestEntity-${distance}m`;
@@ -178,7 +173,6 @@ class Main {
           behaviourscriptname: "Hamza02.js",
         }
       },
-      { type: 'AIInput', config: {} },
       { 
         type: 'AudioComponent', 
         config: {
@@ -189,7 +183,6 @@ class Main {
     ];
     
     await hamza.AddComponent(hbhc);
-    await hamza.AddComponent(new AIInput());
     await hamza.AddComponent(new AudioComponent());
    // await hamza.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
@@ -219,7 +212,6 @@ class Main {
           behaviourscriptname: "uitester2.js",
         }
       },
-      { type: 'AIInput', config: {} },
       { type: 'KeyboardInput', config: {} },
       { 
         type: 'AudioComponent', 
@@ -231,7 +223,6 @@ class Main {
     ];
     
     await uitester2.AddComponent(uitestercontroller3);
-    await uitester2.AddComponent(new AIInput());
     await uitester2.AddComponent(new KeyboardInput());
     await uitester2.AddComponent(new AudioComponent());
 
@@ -558,7 +549,6 @@ class Main {
           behaviourscriptname: "letterCounterBot.js",
         }
       },
-      { type: 'AIInput', config: {} },
       { 
         type: 'AudioComponent', 
         config: {
@@ -569,7 +559,7 @@ class Main {
     ];
 
     await letterCounterBot.AddComponent(letterCounterBotcontroller2);
-    await letterCounterBot.AddComponent(new AIInput());
+    //await letterCounterBot.AddComponent(new AIInput());
     await letterCounterBot.AddComponent(new AudioComponent());
  //   await letterCounterBot.AddComponent(new KeyboardInput());
 

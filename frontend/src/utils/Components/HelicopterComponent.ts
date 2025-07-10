@@ -10,7 +10,6 @@ import {
   AudioSoundGenerator,
 } from "../Sound_generator_worklet_wasm.js";
 import Engine from "../Engine.js"; 
-import { MeshPhongNodeMaterial,PointsNodeMaterial ,  uniform, skinning , MeshPhysicalNodeMaterial, MeshBasicNodeMaterial ,MeshStandardNodeMaterial , LineBasicNodeMaterial, vec2, distance, NodeMaterial, smoothstep, Break, materialReference, float, sub, VolumeNodeMaterial, vec3, tslFn, all   } from 'three/tsl';
 class HelicopterComponent extends Component {
   body: CANNON.Body;
   vehicle: CANNON.RaycastVehicle;

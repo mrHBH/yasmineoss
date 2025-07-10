@@ -39,6 +39,20 @@ class CharacterComponent extends Component {
   public currentStep: number;
   public document: { htmltext: string };
 
+  // AI input state - integrated directly into CharacterComponent
+  private _aiInputKeys: {
+    forward: boolean;
+    backward: boolean;
+    left: boolean;
+    right: boolean;
+    space: boolean;
+    shift: boolean;
+    backspace: boolean;
+    attack1: boolean;
+    attack2: boolean;
+    action: boolean;
+  };
+
   // Activation circle for visual feedback
   public activationCircle: THREE.Line;
   
@@ -56,6 +70,20 @@ class CharacterComponent extends Component {
     this._webgpugroup = new THREE.Group();
     this._css2dgroup = new THREE.Group();
     this._css3dgroup = new THREE.Group();
+
+    // Initialize AI input keys
+    this._aiInputKeys = {
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+      space: false,
+      shift: false,
+      backspace: false,
+      attack1: false,
+      attack2: false,
+      action: false,
+    };
 
     // Initialize behavior controller
     this.behaviorController = new CharacterBehaviorController(behaviourscriptname);
@@ -416,6 +444,12 @@ class CharacterComponent extends Component {
       console.log(`UI manager not yet initialized for ${this._entity.name}, name tag will be created when loaded`);
     }
     
+    // Initialize AI input if no external input component is present
+    // This will be overridden if KeyboardInput or another input component is added
+    if (!this.Input) {
+      this.initializeAIInput();
+    }
+    
     // Register entity handlers
     this._entity._RegisterHandler("walk", async (data: any) => {
       await this.walkToPos(data.position);
@@ -426,7 +460,8 @@ class CharacterComponent extends Component {
     });
 
     this._entity._RegisterHandler("inputdestroyed", (_data: any) => {
-      this.Input = null;
+      // Reset to AI input when external input is destroyed
+      this.initializeAIInput();
     });
 
     this._entity._RegisterHandler("loadscript", (data: any) => {
@@ -706,6 +741,49 @@ class CharacterComponent extends Component {
     if (this.fsmController) loaded++;
     
     return loaded / total;
+  }
+
+  // AI Input methods - integrated directly into CharacterComponent
+  private initializeAIInput(): void {
+    // Create an AI input object that mimics the structure of KeyboardInput
+    this.Input = {
+      _keys: this._aiInputKeys,
+      // Add analog input structure for compatibility
+      _analog: {
+        force: 0,
+        angle: 0,
+        direction: { x: 0, y: 0 },
+        isActive: false,
+        rotationIntensity: 0,
+        rotationDirection: 0,
+      }
+    };
+    
+    // Broadcast that input is initialized
+    this._entity.Broadcast({
+      topic: "inputinitialized",
+      data: { input: this.Input },
+    });
+  }
+
+  // Method to programmatically set AI input keys
+  public setAIInputKey(key: string, value: boolean): void {
+    if (this._aiInputKeys.hasOwnProperty(key)) {
+      this._aiInputKeys[key] = value;
+    }
+  }
+
+  // Method to get current AI input state
+  public getAIInputKeys(): any {
+    return { ...this._aiInputKeys };
+  }
+
+  // Method to randomly change AI input (for testing/demo purposes)
+  public randomizeAIInput(): void {
+    this._aiInputKeys.forward = Math.random() > 0.5;
+    this._aiInputKeys.backward = Math.random() > 0.5;
+    this._aiInputKeys.left = Math.random() > 0.5;
+    this._aiInputKeys.right = Math.random() > 0.5;
   }
 }
 
