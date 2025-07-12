@@ -186,7 +186,6 @@ class Main {
     await hamza.AddComponent(new AudioComponent());
    // await hamza.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
-   // this.maincController.MainEntity = hamza;
 
     hbhc.face();
     await hamza.Broadcast({
@@ -202,6 +201,7 @@ class Main {
       behaviourscriptname: "uitester2.js",
     });
     
+
     // Store component creation info for streaming
     uitester2._componentCreationInfo = [
       { 
@@ -241,6 +241,7 @@ class Main {
 
     //  await environmentbot2.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(uitester2, "uitester6");
+        this.maincController.MainEntity = uitester2;
       //   const musicstreamerenity = new Entity();
       //   const musicstreamerenitycontrol = new CharacterComponent({
       //     modelpath: "models/gltf/Xbot.glb",

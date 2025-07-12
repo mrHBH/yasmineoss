@@ -29,6 +29,11 @@ class UIManager {
   private birdEyeviewOffset = new THREE.Vector3(0, 0, 0);
   private fpsposoffset = new THREE.Vector3(0, 0, 0);
   currentUIelement:    twoDUIComponent;
+  private selectionMode: boolean = false;
+
+  get isSelectionMode(): boolean {
+    return this.selectionMode;
+  }
  
   splineObject: THREE.Line<
     THREE.BufferGeometry<THREE.NormalBufferAttributes>,
@@ -444,6 +449,14 @@ class UIManager {
         uk-icon="icon:  bluesky"
       ></a>
     </li>
+    <li>
+      <a
+        href="#"
+        id="selectmode"
+        uk-tooltip="Select Units"
+        uk-icon="icon:  move"
+      ></a>
+    </li>
     
     
     
@@ -483,6 +496,11 @@ class UIManager {
     document.getElementById("birdeyemode")?.addEventListener("click", () => {
       //toggle the first person view
       this.toggleBirdEyemode();
+    });
+
+    document.getElementById("selectmode")?.addEventListener("click", () => {
+      //toggle selection mode
+      this.toggleSelectionMode();
     });
     // document.getElementById("togglemousecontrolsbutton")?.click();
 
@@ -540,6 +558,131 @@ class UIManager {
     }
     else {
       this.enableFPSNavigation();
+    }
+  }
+
+  toggleSelectionMode() {
+    if (this.selectionMode) {
+      this.disableSelectionMode();
+    } else {
+      this.enableSelectionMode();
+    }
+  }
+
+  private enableSelectionMode(): void {
+    this.selectionMode = true;
+    
+    // Disable other navigation modes
+    if (this.scrollmodenavigation) {
+      this.disableScrollModeNavigation();
+    }
+    if (this.fpsnavigation) {
+      this.disableFPSNavigation();
+    }
+    if (this.birdviewnavigation) {
+      this.disableBirdViewNavigation();
+    }
+    
+    // Disable camera controls to prevent interference with selection
+    this.mc.CameraControls.enabled = false;
+    
+    // Update button appearance and tooltip
+    const selectButton = document.getElementById("selectmode");
+    if (selectButton) {
+      selectButton.classList.add("uk-text-danger");
+      selectButton.setAttribute("uk-tooltip", "Selection Mode Active - Click to disable");
+    }
+    
+    // Show hint to user
+    this.showSelectionHint();
+  }
+
+  private disableSelectionMode(): void {
+    this.selectionMode = false;
+    
+    // Re-enable camera controls
+    this.mc.CameraControls.enabled = true;
+    
+    // Update button appearance and tooltip
+    const selectButton = document.getElementById("selectmode");
+    if (selectButton) {
+      selectButton.classList.remove("uk-text-danger");
+      selectButton.setAttribute("uk-tooltip", "Select Units");
+    }
+    
+    // Hide selection hint
+    this.hideSelectionHint();
+  }
+
+  private showSelectionHint(): void {
+    // Create or update hint element
+    let hintElement = document.getElementById("selection-hint");
+    if (!hintElement) {
+      hintElement = document.createElement("div");
+      hintElement.id = "selection-hint";
+      hintElement.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        font-size: 16px;
+        z-index: 1000;
+        pointer-events: none;
+        text-align: center;
+        font-family: Arial, sans-serif;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.3s ease-in-out;
+      `;
+      document.body.appendChild(hintElement);
+      
+      // Add CSS animation
+      const style = document.createElement("style");
+      style.textContent = `
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+          to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    hintElement.innerHTML = `
+      <strong>Selection Mode Active</strong><br>
+      Click and drag to select units<br>
+      <small>Click the select button again to disable</small>
+    `;
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      if (hintElement && hintElement.parentNode) {
+        hintElement.style.animation = "fadeOut 0.3s ease-in-out";
+        setTimeout(() => {
+          if (hintElement && hintElement.parentNode) {
+            hintElement.remove();
+          }
+        }, 300);
+      }
+    }, 3000);
+    
+    // Add fadeOut animation
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes fadeOut {
+        from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        to { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  private hideSelectionHint(): void {
+    const hintElement = document.getElementById("selection-hint");
+    if (hintElement) {
+      hintElement.remove();
     }
   }
 

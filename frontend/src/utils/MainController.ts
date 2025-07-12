@@ -1098,6 +1098,11 @@ class MainController {
 
   // Selection box event handlers
   private onPointerDown(event: PointerEvent): void {
+    // Check if UIManager selection mode is active - if so, disable default selection
+    if (!this.UIManager.isSelectionMode) {
+      return; // Don't handle selection when UIManager selection mode is NOT active
+    }
+    
     // Handle left mouse button for selection box (without Ctrl/Alt for box selection)
     if (event.button === 0 && !event.ctrlKey && !event.altKey) {
       this.leftMouseDown = true;
