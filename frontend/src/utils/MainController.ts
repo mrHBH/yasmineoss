@@ -156,8 +156,8 @@ class MainController {
     //webgl
     this.webglrenderer =  new  THREE.WebGLRenderer({
       antialias: !isMobile,  // Enable antialiasing on desktop only
-       logarithmicDepthBuffer: !isMobile,
-       alpha: true,
+       logarithmicDepthBuffer: true,
+       alpha: false,
        depth: true,
        powerPreference: "high-performance",
     })
@@ -232,7 +232,7 @@ class MainController {
     this.camera = new THREE.PerspectiveCamera(
       45,
       window.innerWidth / window.innerHeight,
-      0.000005,
+      0.005,
       100000
     );
     
@@ -732,6 +732,12 @@ class MainController {
     
     // Update DaylightSystem
     this.daylightSystem?.update(delta);
+
+    // Update fog color to match sky
+    if (this.daylightSystem && this.webglscene.fog) {
+      const fogColor = this.daylightSystem.getFogColor();
+      (this.webglscene.fog as THREE.Fog).color.copy(fogColor);
+    }
 
     // this.stats.end();
 

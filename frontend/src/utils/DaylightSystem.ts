@@ -19,9 +19,9 @@ export class DaylightSystem {
   private ktx2Loader: KTX2Loader;
   
   // Day/night cycle
-  private timeOfDay: number = 0.5; // 0 = midnight, 0.5 = noon, 1 = midnight
+  private timeOfDay: number = 0.8; // 0 = midnight, 0.5 = noon, 1 = midnight
   private transitionSpeed: number = 0.0001; // How fast time progresses
-  private isAutomatic: boolean = true;
+  private isAutomatic: boolean = false;
   
   // Sky parameters
   private effectController = {
@@ -80,11 +80,11 @@ export class DaylightSystem {
   private initSky(): void {
     // Add Sky
     this.sky = new Sky();
-    this.sky.scale.setScalar(4500);
+    this.sky.scale.setScalar(45);
     this.scene.add(this.sky);
 
     // Create spherical sky for day
- //   this.createSphericalSky();
+  // this.createSphericalSky();
     
     // Create clouds
   //  this.createClouds();
@@ -244,6 +244,42 @@ export class DaylightSystem {
   // Check if it's currently day or night
   isDaytime(): boolean {
     return this.calculateSunElevation() > 0;
+  }
+
+  // Get current fog color that matches the sky
+  getFogColor(): THREE.Color {
+    const elevation = this.calculateSunElevation();
+    
+    // Night fog color (deep blue-gray)
+    const nightFogColor = new THREE.Color(0x101020);
+    
+    // Day fog color (light gray-blue, matches the sky shader's horizon)
+    const dayFogColor = new THREE.Color(0x505060);
+    
+    // Sunrise/sunset fog color (warm orange-pink)
+    const sunsetFogColor = new THREE.Color(0x604040);
+    
+    if (elevation <= -30) {
+      // Pure night
+      return nightFogColor;
+    } else if (elevation >= 30) {
+      // Pure day
+      return dayFogColor;
+    } else if (elevation >= -10 && elevation <= 10) {
+      // Sunrise/sunset period - use warmer colors
+      const transitionFactor = Math.abs(elevation) / 10; // 0 at horizon, 1 at ±10 degrees
+      return new THREE.Color().lerpColors(sunsetFogColor, 
+        elevation > 0 ? dayFogColor : nightFogColor, 
+        transitionFactor);
+    } else {
+      // Transition between night/day and sunrise/sunset
+      const transitionFactor = elevation > 0 
+        ? (elevation - 10) / 20  // 10 to 30 degrees
+        : (elevation + 30) / 20; // -30 to -10 degrees
+      
+      const targetColor = elevation > 0 ? dayFogColor : nightFogColor;
+      return new THREE.Color().lerpColors(sunsetFogColor, targetColor, transitionFactor);
+    }
   }
 
   dispose(): void {
