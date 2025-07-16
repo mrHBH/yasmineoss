@@ -61,7 +61,7 @@ class DynamicuiWorkerComponent extends Component {
 
     const planeMaterial = new THREE.MeshLambertMaterial();
     planeMaterial.color.set("black");
-    planeMaterial.opacity = 0;
+    planeMaterial.opacity = 0.2;
     planeMaterial.blending = THREE.NoBlending;
     planeMaterial.transparent = false;
     planeMaterial.side = THREE.DoubleSide;

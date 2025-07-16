@@ -154,7 +154,7 @@ class KeyboardInput extends Component {
       multitouch: false,
       maxNumberOfNipples: 1,
       dataOnly: false,
-      mode:  "static",
+      mode:  "dynamic",
       position: { bottom: '75px', right: '75px' },
       restJoystick: true,
       restOpacity: 0.5,

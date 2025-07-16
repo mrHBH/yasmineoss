@@ -328,39 +328,38 @@ class Main {
     //  await environmentbot2.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(uitester2, "uitester6");
         this.maincController.MainEntity = uitester2;
-      //   const musicstreamerenity = new Entity();
-      //   const musicstreamerenitycontrol = new CharacterComponent({
-      //     modelpath: "models/gltf/Xbot.glb",
-      //     animationspathslist: this.maincController.animations,
-      //     behaviourscriptname: "musicStreamer.js",
-      //   });
-      //   musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
+        const musicstreamerenity = new Entity();
+        const musicstreamerenitycontrol = new CharacterComponent({
+          modelpath: "models/gltf/Xbot.glb",
+          animationspathslist: this.maincController.animations,
+          behaviourscriptname: "musicStreamer.js",
+        });
+        musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
         
-      //   // Store component creation info for streaming
-      //   musicstreamerenity._componentCreationInfo = [
-      //     { 
-      //       type: 'CharacterComponent', 
-      //       config: {
-      //         modelpath: "models/gltf/Xbot.glb",
-      //         animationspathslist: this.maincController.animations,
-      //         behaviourscriptname: "musicStreamer.js",
-      //       }
-      //     },
-      //     { type: 'AIInput', config: {} },
-      //     { 
-      //       type: 'AudioComponent', 
-      //       config: {
-      //         audioConfig: {},
-      //         visualizerConfig: { enabled: true }
-      //       }
-      //     }
-      //   ];
+        // Store component creation info for streaming
+        musicstreamerenity._componentCreationInfo = [
+          { 
+            type: 'CharacterComponent', 
+            config: {
+              modelpath: "models/gltf/Xbot.glb",
+              animationspathslist: this.maincController.animations,
+              behaviourscriptname: "musicStreamer.js",
+            }
+          },
+          { type: 'AIInput', config: {} },
+          { 
+            type: 'AudioComponent', 
+            config: {
+              audioConfig: {},
+              visualizerConfig: { enabled: true }
+            }
+          }
+        ];
         
-      //   await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
-      //   await musicstreamerenity.AddComponent(new AIInput());
-      //   await musicstreamerenity.AddComponent(new AudioComponent());
-      // //  await musicstreamerenity.AddComponent(new KeyboardInput());
-      //   await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
+        await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
+        await musicstreamerenity.AddComponent(new AudioComponent());
+      //  await musicstreamerenity.AddComponent(new KeyboardInput());
+        await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
     
     // Initialize minimap system after all entities are created
     // Note: MinimapComponent can work standalone, no need for separate entity
@@ -373,7 +372,7 @@ class Main {
     // console.log("🌐 Entity Streaming System: All entities are now automatically streamable!");
     // console.log("📊 Use 's' key to view streaming stats, 't' key to create test entities");
 
-   // this.maincController.UIManager.toggleScrollmode();
+    this.maincController.UIManager.toggleScrollmode();
 
     
     // Add event listener for 'b' key press to create Bob

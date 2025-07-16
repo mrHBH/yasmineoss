@@ -217,9 +217,9 @@ import { HtmlGenerator, parse } from 'latex.js';
     const planeMaterial = new THREE.MeshPhysicalMaterial();
     planeMaterial.color.set("black");
     planeMaterial.reflectivity = 0.5
-    planeMaterial.opacity = 0;
+    planeMaterial.opacity = 0.8;
     planeMaterial.blending = THREE.NoBlending;
-    planeMaterial.transparent = false;
+    planeMaterial.transparent = true;
     planeMaterial.side = THREE.DoubleSide;
     this._webgpuplane = new THREE.Mesh(
       new THREE.PlaneGeometry(

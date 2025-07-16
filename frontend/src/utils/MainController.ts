@@ -77,27 +77,27 @@ class MainController {
   CameraControls: CameraControls;
   //mesh + body
   walls: any[] = [];
-  
+
   // Add StreamingWorld property
   streamingWorld: StreamingWorld;
-  
+
   // Add DaylightSystem property
   daylightSystem: DaylightSystem;
-  
+
   // Daylight system control
-  private enableDaylightSystem: boolean = false;
-  
+  private enableDaylightSystem: boolean = true;
+
   // Physics stats tracking
   private isDragging: boolean = false;
   private dragThreshold: number = 5; // pixels
   private rightMouseDown: boolean = false;
   private mouseDownPosition: { x: number; y: number } = { x: 0, y: 0 };
-  
+
   // Selection box tracking
   private leftMouseDown: boolean = false;
   private leftMouseDownPosition: { x: number; y: number } = { x: 0, y: 0 };
   private selectionBoxStarted: boolean = false;
-  
+
   animations: { url: string; skipTracks?: number[] }[] = [
     { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
     //s { url: "animations/gltf/ybot2@BackwardWalkingM.glb", skipTracks: [1] },
@@ -115,7 +115,7 @@ class MainController {
     // { url: "animations/gltf/ybot2@Jumping.glb" },
     { url: "animations/gltf/ybot2@JumpingFromRun.glb", skipTracks: [0] },
     // { url: "animations/gltf/ybot2@Kickedfall.glb", skipTracks: [1] },
-    { url: "animations/gltf/ybot2@Landing.glb", skipTracks: [0 ] },
+    { url: "animations/gltf/ybot2@Landing.glb", skipTracks: [0] },
     // { url: "animations/gltf/ybot2@Pain.glb", skipTracks: [1] },
     // { url: "animations/gltf/ybot2@PlayingGuitar.glb", skipTracks: [1] },
     // { url: "animations/gltf/ybot2@PlayingPiano.glb", skipTracks: [0] },
@@ -147,9 +147,9 @@ class MainController {
     this.walls = [];
 
     // Detect if we're on mobile or desktop
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                     window.innerWidth <= 768 || 
-                     'ontouchstart' in window;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      window.innerWidth <= 768 ||
+      'ontouchstart' in window;
 
     // this.webgpu = new THREE.WebGPURenderer({
     //   antialias: true,
@@ -157,19 +157,19 @@ class MainController {
     //   powerPreference: "high-performance",
     // }) as THREE.WebGPURenderer;
     //webgl
-    this.webglrenderer =  new  THREE.WebGLRenderer({
+    this.webglrenderer = new THREE.WebGLRenderer({
       antialias: !isMobile,  // Enable antialiasing on desktop only
-       logarithmicDepthBuffer: true,
-       alpha: false,
-       depth: true,
-       powerPreference: "high-performance",
+      logarithmicDepthBuffer: true,
+      alpha: true,
+      depth: true,
+      powerPreference: "high-performance",
     })
 
 
-    
+
     // Selection box will be initialized after camera is created
 
- 
+
     // Enable shadows on desktop only
     this.webglrenderer.shadowMap.enabled = !isMobile;
     this.webglrenderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -183,7 +183,7 @@ class MainController {
     this.webglrenderer.setClearColor(new THREE.Color(0x202020));
 
     const fog = new THREE.Fog(0x202020, 0.1, 100);
-     this.webglscene.fog = fog;
+    this.webglscene.fog = fog;
 
 
 
@@ -238,17 +238,17 @@ class MainController {
       0.005,
       100000
     );
-    
+
     // this.camera.position.set(2.5, 20, 5);
     // this.camera.position.multiplyScalar(0.8);
     //this.camera.lookAt(0, 5, 0);
 
     this.webglscene.add(this.camera);
-    
+
     // Initialize selection box after camera is created
     this.selectionBox = new SelectionBox(this.camera, this.webglrenderer, this.webglscene);
     this.selectionBoxHelper = new SelectionHelper(this.webglrenderer, 'selectBox');
-    
+
     // Initialize physics manager first
     const floorShape = new CANNON.Plane();
     const floorBody = new CANNON.Body({ mass: 0 });
@@ -260,27 +260,27 @@ class MainController {
 
     this.physicsmanager = new PhysicsManager({ scene: this.webglscene });
     this.physicsmanager.World.addBody(floorBody);
-    
+
     // Initialize performance monitor after physics manager
     this.performanceMonitor = new PerformanceMonitor(this.webglrenderer, this.physicsmanager, this.annotationRenderer.domElement);
- 
+
     this.CameraControls = new CameraControls(
       this.camera,
       this.html2dRenderer.domElement
     );
 
     //add event listener that prevents context menu from propagating after right button drag
-      
+
     this.CameraControls.saveState();
     this.CameraControls.mouseButtons = {
-      left: CameraControls.ACTION.NONE,
+      left: CameraControls.ACTION.OFFSET,
       middle: CameraControls.ACTION.ZOOM,
       right: CameraControls.ACTION.ROTATE,
       wheel: CameraControls.ACTION.DOLLY,
     };
-    
-  
-   
+
+
+
 
     window.addEventListener("resize", () => this.onWindowResize());
     //disable context menu
@@ -314,7 +314,7 @@ class MainController {
         event.preventDefault();
         return;
       }
-      
+
       // Handle speed adjustment
       if (event.key === '+' || event.key === '=') {
         this.cameraMoveSpeed += 1;
@@ -328,12 +328,12 @@ class MainController {
         event.preventDefault();
         return;
       }
-      
+
       // Handle day/night cycle controls
       if (event.key === "9") {
         // Add 1 hour (1/24 of a day)
         const currentTime = this.getTimeOfDay();
-        const newTime = (currentTime + 1/24) % 1; // Wrap around at 1
+        const newTime = (currentTime + 1 / 24) % 1; // Wrap around at 1
         this.setTimeOfDay(newTime);
         console.log(`Time advanced 1 hour. Current time: ${(newTime * 24).toFixed(1)} hours`);
         event.preventDefault();
@@ -342,7 +342,7 @@ class MainController {
       if (event.key === "8") {
         // Subtract 1 hour (1/24 of a day)
         const currentTime = this.getTimeOfDay();
-        let newTime = currentTime - 1/24;
+        let newTime = currentTime - 1 / 24;
         if (newTime < 0) newTime += 1; // Wrap around at 0
         this.setTimeOfDay(newTime);
         console.log(`Time reversed 1 hour. Current time: ${(newTime * 24).toFixed(1)} hours`);
@@ -363,7 +363,7 @@ class MainController {
         event.preventDefault();
         return;
       }
-      
+
       // Handle other key events
       if (event.key === "r") {
         //reset all cars by calling Reset on the car component
@@ -392,7 +392,7 @@ class MainController {
       }
     });
 
-  
+
     document.addEventListener("keydown", (event) => {
       if (event.key === "k") {
         //remove all entities with car component
@@ -405,8 +405,8 @@ class MainController {
       }
     });
 
- 
- 
+
+
     const light = new THREE.PointLight(0xffffff, 3);
     light.position.set(0, 1, 5);
     light.castShadow = true;
@@ -414,8 +414,8 @@ class MainController {
     //this.webgpuscene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
     this.webglscene.add(light);
 
- 
-    
+
+
 
     this.sunLight = new THREE.DirectionalLight(0xeeeeff, 5);
 
@@ -431,24 +431,24 @@ class MainController {
     this.sunLight.shadow.bias = -0.0005;
     this.sunLight.shadow.normalBias = 0.02;
     this.sunLight.position.set(5, 15, 5); // Position light at an angle for better shadows
- 
+
 
     this.webglscene.add(this.sunLight);
 
     this.clock = new THREE.Clock();
 
     this.UIManager = new UIManager(this);
-    
+
     // Initialize StreamingWorld with physics world reference
     this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
     this.webglscene.add(this.streamingWorld);
-    
+
     // Initialize DaylightSystem conditionally
     if (this.enableDaylightSystem) {
       this.daylightSystem = new DaylightSystem(this.webglscene, this.webglrenderer, this.camera);
       this.daylightSystem.loadNightSky(); // Load night sky texture asynchronously
     }
-   }
+  }
 
 
   calculateScreenDimensions = (camera, targetDistance) => {
@@ -590,8 +590,8 @@ class MainController {
       event.stopPropagation();
       return;
     }
-    
-    
+
+
     const raycaster = new THREE.Raycaster();
     //@ts-ignore
     raycaster.firstHitOnly = true;
@@ -608,33 +608,33 @@ class MainController {
       this.webglscene.children,
       true
     );
-    
+
     // Filter out sky and helper geometries
     const validIntersects = intersects.filter(intersect => {
       const object = intersect.object;
-      
+
       // Skip sky-related objects
-      if (object.name?.toLowerCase().includes('sky') || 
-          object.userData?.type === 'sky' ||
-          (object as any).material?.name?.toLowerCase().includes('sky')) {
+      if (object.name?.toLowerCase().includes('sky') ||
+        object.userData?.type === 'sky' ||
+        (object as any).material?.name?.toLowerCase().includes('sky')) {
         return false;
       }
-      
+
       // Skip helper geometries (circles, lines, etc.)
-      if (object.userData?.isHelper || 
-          object.userData?.type === 'helper' ||
-          object.name?.toLowerCase().includes('helper') ||
-          object.name?.toLowerCase().includes('circle') ||
-          object.type === 'LineSegments' ||
-          object.type === 'Line' ||
-          (object as any).geometry?.type === 'CircleGeometry' ||
-          (object as any).geometry?.type === 'RingGeometry') {
+      if (object.userData?.isHelper ||
+        object.userData?.type === 'helper' ||
+        object.name?.toLowerCase().includes('helper') ||
+        object.name?.toLowerCase().includes('circle') ||
+        object.type === 'LineSegments' ||
+        object.type === 'Line' ||
+        (object as any).geometry?.type === 'CircleGeometry' ||
+        (object as any).geometry?.type === 'RingGeometry') {
         return false;
       }
-      
+
       return true;
     });
-    
+
     if (validIntersects.length == 0) {
       //allow default context menu
       event.stopPropagation();
@@ -642,7 +642,7 @@ class MainController {
     }
 
     console.log('Right-click at:', validIntersects[0].point);
-    
+
     // Handle Alt+Right-click for teleportation
     if (event.altKey && validIntersects[0].point) {
       if (this.ActiveEntities.length > 0) {
@@ -734,33 +734,33 @@ class MainController {
   async update(delta: number) {
     // Process camera movement based on currently pressed keys
     this.processCameraMovement(delta);
-    
+
     this.webglrenderer.render(this.webglscene, this.camera);
-    
-     this.performanceMonitor?.beginFrame();
+
+    this.performanceMonitor?.beginFrame();
     this.annotationRenderer.render(this.annoationsScene, this.camera);
     this.html2dRenderer.render(this.html2dScene, this.camera);
     //this.html3dRenderer.render(this.html3dScene, this.camera);
     this.physicsmanager?.Update(delta);
     this.UIManager?.Update();
     this.CameraControls?.update(delta / 2);
-    
+
     // Update StreamingWorld based on main entity position or camera position
     if (this.streamingWorld) {
       // Use camera position as streaming center if no entities are selected
-      const centerPosition = (this.ActiveEntities.length > 0 && this.mainEntity) 
-        ? this.mainEntity.Position 
+      const centerPosition = (this.ActiveEntities.length > 0 && this.mainEntity)
+        ? this.mainEntity.Position
         : this.camera.position;
       this.streamingWorld.update(centerPosition);
-      
+
       // Synchronize physics bodies with Three.js meshes for streaming objects
       this.updateStreamingPhysics();
     }
 
-    
+
     // Update performance monitor with current delta
     this.performanceMonitor?.endFrame();
-    
+
     // Update DaylightSystem conditionally
     if (this.enableDaylightSystem) {
       this.daylightSystem?.update(delta);
@@ -777,22 +777,22 @@ class MainController {
 
     // Calculate movement speeds with delta time for smooth, framerate-independent movement
     const moveSpeed = this.cameraMoveSpeed * delta * 60; // Multiply by 60 for 60fps baseline
-    
+
     // Diagonal movement support - calculate combined movement
     let forwardMovement = 0;
     let sideMovement = 0;
-    
+
     if (this.cameraKeys.has('ArrowUp')) forwardMovement += 1;
     if (this.cameraKeys.has('ArrowDown')) forwardMovement -= 1;
     if (this.cameraKeys.has('ArrowRight')) sideMovement += 1;
     if (this.cameraKeys.has('ArrowLeft')) sideMovement -= 1;
-    
+
     // Normalize diagonal movement to prevent faster movement when moving diagonally
     const magnitude = Math.sqrt(forwardMovement * forwardMovement + sideMovement * sideMovement);
     if (magnitude > 0) {
       forwardMovement = (forwardMovement / magnitude) * moveSpeed;
       sideMovement = (sideMovement / magnitude) * moveSpeed;
-      
+
       // Apply movements with no animation (false) for immediate response
       if (forwardMovement !== 0) {
         this.CameraControls.forward(forwardMovement, false);
@@ -853,7 +853,7 @@ class MainController {
 
     return carcontroller;
   }
- 
+
   private async onDoubleClick(event: MouseEvent): Promise<void> {
     const raycaster = new THREE.Raycaster();
     //@ts-ignore
@@ -909,19 +909,19 @@ class MainController {
 
     // Set the light's target
     this.sunLight.target.position.copy(target);
-    
+
     // Position the light at an offset from the target for better shadows
     // This creates more stable and realistic shadows
     const lightOffsetY = 10; // Height above the scene
     const lightOffsetX = 5;  // Offset to the side
     const lightOffsetZ = -5; // Offset forward/back
-    
+
     this.sunLight.position.set(
       target.x + lightOffsetX,
       target.y + lightOffsetY,
       target.z + lightOffsetZ
     );
-    
+
     // Make sure to update the light target
     this.sunLight.target.updateMatrixWorld();
   }
@@ -958,12 +958,12 @@ class MainController {
     }
   }
 
- 
+
 
   // Clear all selected entities and reset to camera-centered streaming
   clearSelection(): void {
     console.log('Clearing selection...');
-    
+
     // Deactivate current main entity
     if (this.mainEntity) {
       const charComponent = this.mainEntity.getComponent('CharacterComponent') as CharacterComponent;
@@ -971,7 +971,7 @@ class MainController {
         charComponent.deactivate();
       }
     }
-    
+
     // Remove keyboard components from all active entities
     this.ActiveEntities.forEach(entity => {
       const keyboardComponent = entity.getComponent('KeyboardInput');
@@ -980,13 +980,13 @@ class MainController {
         console.log(`Removed keyboard input from ${entity.name}`);
       }
     });
-    
+
     // Clear all selection state
     this.ActiveEntities = [];
     this.mainEntity = null;
     this.targetEntity = null;
     this.targetEntitySet = false;
-    
+
     console.log('Selection cleared - camera becomes streaming center');
   }
 
@@ -1105,7 +1105,7 @@ class MainController {
     if (this.rightMouseDown) {
       const deltaX = Math.abs(event.clientX - this.mouseDownPosition.x);
       const deltaY = Math.abs(event.clientY - this.mouseDownPosition.y);
-      
+
       if (deltaX > this.dragThreshold || deltaY > this.dragThreshold) {
         this.isDragging = true;
       }
@@ -1115,7 +1115,7 @@ class MainController {
   private onMouseUp(event: MouseEvent): void {
     if (event.button === 2 && this.rightMouseDown) { // Right mouse button
       this.rightMouseDown = false;
-      
+
       // Reset dragging state after a short delay to ensure context menu gets the correct state
       setTimeout(() => {
         this.isDragging = false;
@@ -1129,13 +1129,13 @@ class MainController {
     if (!this.UIManager.isSelectionMode) {
       return; // Don't handle selection when UIManager selection mode is NOT active
     }
-    
+
     // Handle left mouse button for selection box (without Ctrl/Alt for box selection)
     if (event.button === 0 && !event.ctrlKey && !event.altKey) {
       this.leftMouseDown = true;
       this.leftMouseDownPosition = { x: event.clientX, y: event.clientY };
       this.selectionBoxStarted = false;
-      
+
       // Store initial position but don't start selection box yet
       this.selectionBox.startPoint.set(
         (event.clientX / window.innerWidth) * 2 - 1,
@@ -1143,7 +1143,7 @@ class MainController {
         0.5
       );
     }
-    
+
     // Handle Ctrl+Click for single entity selection/deselection
     if (event.button === 0 && event.ctrlKey) {
       this.handleCtrlClick(event);
@@ -1161,7 +1161,7 @@ class MainController {
     );
 
     const intersects = raycaster.intersectObjects(this.webglscene.children, true);
-    
+
     if (intersects.length > 0) {
       // Find the entity from the clicked object
       let clickedEntity = null;
@@ -1171,57 +1171,57 @@ class MainController {
           break;
         }
       }
-      
+
       if (clickedEntity) {
         const entityIndex = this.ActiveEntities.indexOf(clickedEntity);
-        
+
         if (entityIndex === -1) {
           // Add entity to selection
           this.ActiveEntities.push(clickedEntity);
-          
+
           // Add keyboard input if not present
           const existingKeyboard = clickedEntity.getComponent('KeyboardInput');
           if (!existingKeyboard) {
             clickedEntity.AddComponent(new KeyboardInput());
             console.log(`Added keyboard input to ${clickedEntity.name}`);
           }
-          
+
           // Set as main entity if it's the first one
           if (this.ActiveEntities.length === 1) {
             this.mainEntity = clickedEntity;
             this.targetEntity = clickedEntity;
             this.targetEntitySet = true;
-            
+
             const charComponent = clickedEntity.getComponent('CharacterComponent') as CharacterComponent;
             if (charComponent) {
               charComponent.activate();
             }
           }
-          
+
           console.log(`Added ${clickedEntity.name} to selection`);
         } else {
           // Remove entity from selection
           this.ActiveEntities.splice(entityIndex, 1);
-          
+
           // Remove keyboard input
           const keyboardComponent = clickedEntity.getComponent('KeyboardInput');
           if (keyboardComponent) {
             clickedEntity.RemoveComponent(keyboardComponent);
             console.log(`Removed keyboard input from ${clickedEntity.name}`);
           }
-          
+
           // Deactivate if it was the main entity
           if (this.mainEntity === clickedEntity) {
             const charComponent = clickedEntity.getComponent('CharacterComponent') as CharacterComponent;
             if (charComponent) {
               charComponent.deactivate();
             }
-            
+
             // Set new main entity if there are other active entities
             if (this.ActiveEntities.length > 0) {
               this.mainEntity = this.ActiveEntities[0];
               this.targetEntity = this.ActiveEntities[0];
-              
+
               const newCharComponent = this.mainEntity.getComponent('CharacterComponent') as CharacterComponent;
               if (newCharComponent) {
                 newCharComponent.activate();
@@ -1232,10 +1232,10 @@ class MainController {
               this.targetEntitySet = false;
             }
           }
-          
+
           console.log(`Removed ${clickedEntity.name} from selection`);
         }
-        
+
         console.log(`Active entities: ${this.ActiveEntities.map(e => e.name)}`);
       }
     }
@@ -1246,14 +1246,14 @@ class MainController {
     if (this.leftMouseDown && !this.selectionBoxStarted && !event.ctrlKey && !event.altKey) {
       const deltaX = Math.abs(event.clientX - this.leftMouseDownPosition.x);
       const deltaY = Math.abs(event.clientY - this.leftMouseDownPosition.y);
-      
+
       // Only start selection box if we've dragged beyond threshold
       if (deltaX > this.dragThreshold || deltaY > this.dragThreshold) {
         this.selectionBoxStarted = true;
         this.selectionBoxHelper.onPointerDown(this.leftMouseDownPosition.x, this.leftMouseDownPosition.y);
       }
     }
-    
+
     // Update selection box if it's started
     if (this.selectionBoxHelper.isDown) {
       this.selectionBoxHelper.onPointerMove(event);
@@ -1271,7 +1271,7 @@ class MainController {
       this.leftMouseDown = false;
       this.selectionBoxStarted = false;
     }
-    
+
     if (this.selectionBoxHelper.isDown) {
       this.selectionBoxHelper.onPointerUp(event);
       this.selectionBox.endPoint.set(
@@ -1279,10 +1279,10 @@ class MainController {
         -(event.clientY / window.innerHeight) * 2 + 1,
         0.5
       );
-      
+
       // Get selected objects
       const selectedObjects = this.selectionBox.select(this.webglscene.children);
-      
+
       // Extract unique entities from selected objects
       const entitySet = new Set<Entity>();
       selectedObjects.forEach(obj => {
@@ -1290,10 +1290,10 @@ class MainController {
           entitySet.add(obj.userData.entity);
         }
       });
-      
+
       const selectedEntities = Array.from(entitySet);
       console.log('Selected entities:', selectedEntities.map(e => e.name));
-      
+
       // Deactivate previous main entities
       if (this.mainEntity) {
         const charComponent = this.mainEntity.getComponent('CharacterComponent') as CharacterComponent;
@@ -1301,7 +1301,7 @@ class MainController {
           charComponent.deactivate();
         }
       }
-      
+
       // Clear previous active entities and their keyboard components
       this.ActiveEntities.forEach(entity => {
         const keyboardComponent = entity.getComponent('KeyboardInput');
@@ -1309,10 +1309,10 @@ class MainController {
           entity.RemoveComponent(keyboardComponent);
         }
       });
-      
+
       // Update active entities
       this.ActiveEntities = selectedEntities;
-      
+
       // Handle selection results
       if (selectedEntities.length === 0) {
         // No entities selected - clear main entity
@@ -1329,18 +1329,18 @@ class MainController {
             console.log(`Added keyboard input to ${entity.name}`);
           }
         });
-        
+
         // Set first entity as main entity
         this.mainEntity = selectedEntities[0];
         this.targetEntity = selectedEntities[0];
         this.targetEntitySet = true;
-        
+
         // Activate the main entity
         const charComponent = this.mainEntity.getComponent('CharacterComponent') as CharacterComponent;
         if (charComponent) {
           charComponent.activate();
         }
-        
+
         console.log(`Main entity set to: ${this.mainEntity.name}`);
         console.log(`Total selected entities: ${selectedEntities.length}`);
       }
