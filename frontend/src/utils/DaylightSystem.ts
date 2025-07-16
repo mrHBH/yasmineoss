@@ -80,14 +80,14 @@ export class DaylightSystem {
   private initSky(): void {
     // Add Sky
     this.sky = new Sky();
-    this.sky.scale.setScalar(45);
+    this.sky.scale.setScalar(4500);
     this.scene.add(this.sky);
 
     // Create spherical sky for day
   // this.createSphericalSky();
     
     // Create clouds
-  //  this.createClouds();
+    this.createClouds();
 
     // Initialize with day settings
     this.updateSkyUniforms();

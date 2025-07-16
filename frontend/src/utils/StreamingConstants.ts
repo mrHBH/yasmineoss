@@ -36,7 +36,7 @@ export const STREAMING_CONSTANTS = {
   // Entity streaming performance
   MAX_ENTITIES_RESTORED_PER_FRAME: 1, // Max entities to restore per frame to prevent stutters (reduced from 2)
   ENTITY_RESTORATION_FRAME_DELAY: 4, // ms delay between restoration batches (reduced for faster loading)
-  ASYNC_COMPONENT_LOADING: false, // Load components asynchronously to prevent blocking
+  ASYNC_COMPONENT_LOADING: true, // Load components asynchronously to prevent blocking
   
   // Entity streaming optimization
   ENTITY_PRELOAD_DISTANCE_MULTIPLIER: 1.5, // Start loading entities at 1.5x tile size
