@@ -128,8 +128,8 @@ export class CharacterFSMController {
     const currentState = this.animationManager.getCurrentState();
     const acceleration = this.animationManager.getAcceleration(currentState);
 
-    // Update physics
-    this.physicsController.updatePhysics(deltaTime, webgpuGroup, input, acceleration);
+    // Update physics and pass current state for rotation control
+    this.physicsController.updatePhysics(deltaTime, webgpuGroup, input, acceleration, currentState);
 
     // Handle state transitions based on physics
     this.handleFallingLandingTransitions();

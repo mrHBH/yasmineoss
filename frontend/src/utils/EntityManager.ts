@@ -22,8 +22,8 @@ class EntityManager {
     
     // Streaming configuration - update this to match your streaming world tile size
     private static readonly STREAMING_TILE_SIZE = STREAMING_CONSTANTS.ENTITY_STREAMING_TILE_SIZE;
-    private static readonly DISPOSAL_DISTANCE_MULTIPLIER = STREAMING_CONSTANTS.ENTITY_DISPOSAL_DISTANCE_MULTIPLIER; // Entities disposed at 1x tile size
-    private static readonly RESTORE_DISTANCE_MULTIPLIER = STREAMING_CONSTANTS.ENTITY_RESTORE_DISTANCE_MULTIPLIER; // Entities restored at 1x tile size
+    private static readonly DISPOSAL_DISTANCE_MULTIPLIER = STREAMING_CONSTANTS.ENTITY_DISPOSAL_DISTANCE_MULTIPLIER; // Entities disposed at 3x tile size
+    private static readonly RESTORE_DISTANCE_MULTIPLIER = STREAMING_CONSTANTS.ENTITY_RESTORE_DISTANCE_MULTIPLIER; // Entities restored at 2x tile size
 
     
     constructor() {
@@ -120,14 +120,34 @@ class EntityManager {
         if (!this._mc) {
             return;
         }
+        
         // use MainEntity if set, otherwise fallback to camera position
         const mainEntityPos = this._mc.MainEntity ? this._mc.MainEntity.Position : this._mc.camera.position;
+        
+        // Debug: log main entity position and streaming entities every few seconds
+        if (now % 5000 < this._streamingCheckInterval) {
+            const streamableEntities = this._entities.filter(e => e._isStreamedEntity);
+            console.log(`🔄 Entity streaming check at position: ${mainEntityPos.x.toFixed(1)}, ${mainEntityPos.z.toFixed(1)}`);
+            console.log(`📊 Found ${streamableEntities.length} streamable entities out of ${this._entities.length} total`);
+            
+            streamableEntities.forEach(entity => {
+                const distance = entity.Position.distanceTo(mainEntityPos);
+                const shouldDispose = distance > (entity._maxDistanceFromMainEntity || 150);
+                console.log(`  ${entity.name}: Distance ${distance.toFixed(1)}, Max: ${entity._maxDistanceFromMainEntity}, Should dispose: ${shouldDispose}`);
+            });
+        }
 
-    // Check for entities that should be disposed
-    const entitiesToDispose: Entity[] = [];
+        // Check for entities that should be disposed
+        const entitiesToDispose: Entity[] = [];
         for (const entity of this._entities) {
-            if (entity.shouldBeDisposed(mainEntityPos) && !this._entitiesBeingRestored.has(entity.name)) {
-                entitiesToDispose.push(entity);
+            if (entity._isStreamedEntity && !this._entitiesBeingRestored.has(entity.name)) {
+                const distance = entity.Position.distanceTo(mainEntityPos);
+                const shouldDispose = distance > (entity._maxDistanceFromMainEntity || 150); // Default 150 units
+                
+                if (shouldDispose) {
+                    console.log(`Entity ${entity.name} should be disposed. Distance: ${distance.toFixed(1)}, Max: ${entity._maxDistanceFromMainEntity}`);
+                    entitiesToDispose.push(entity);
+                }
             }
         }
 
@@ -213,7 +233,9 @@ class EntityManager {
         this._entitiesMap.delete(entity.id);
         
         // Destroy the entity but don't trigger cache cleanup
-        entity.Destroy().catch(err => {
+        entity.Destroy().then(() => {
+            console.log(`✅ Entity ${entity.name} successfully disposed and destroyed`);
+        }).catch(err => {
             console.error("Error during entity destruction:", err);
         });
     }
@@ -317,7 +339,7 @@ class EntityManager {
         // Process batch asynchronously to prevent blocking
         queueMicrotask(async () => {
             try {
-                for (const { tileKey, entityState } of batch) {
+                for (const { entityState } of batch) {
                     await this.restoreEntity(entityState);
                 }
 
@@ -495,7 +517,10 @@ class EntityManager {
         const tileKey = tilePos.x + '/' + tilePos.z;
         
         entity.setOriginTile(tileKey, true);
+        // Set disposal distance based on tile size and multiplier
         entity._maxDistanceFromMainEntity = TILE_SIZE * EntityManager.DISPOSAL_DISTANCE_MULTIPLIER;
+        
+        console.log(`Registered entity ${entity.name} for streaming at tile ${tileKey} with disposal distance ${entity._maxDistanceFromMainEntity}`);
     }
 
     // Helper method to store component creation info for streaming entities

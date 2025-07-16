@@ -302,15 +302,17 @@ class LoadingManager {
       if (currentCount <= 0) {
         console.warn(`LoadingManager: Attempted to release animation ${url} with no references`);
         return;
-      }      const newCount = currentCount - 1;
-        this.animationRefCounts.set(url, newCount);
-        console.log(`🎭 LoadingManager: Decremented animation ref count for ${url} to ${newCount}`);
-        
-        if (newCount === 0) {
-          console.log(`🔥 LoadingManager: No more references to animation ${url}, removing from cache`);
-          this.animationRefCounts.delete(url);
-          this.animationClips.delete(url);
-        }
+      }
+      
+      const newCount = currentCount - 1;
+      this.animationRefCounts.set(url, newCount);
+      console.log(`🎭 LoadingManager: Decremented animation ref count for ${url} to ${newCount}`);
+      
+      if (newCount === 0) {
+        console.log(`🔥 LoadingManager: No more references to animation ${url}, removing from cache`);
+        this.animationRefCounts.delete(url);
+        this.animationClips.delete(url);
+      }
     });
   }
 
@@ -346,19 +348,21 @@ class LoadingManager {
     if (currentCount <= 0) {
       console.warn(`LoadingManager: Attempted to release asset ${url} with no references`);
       return;
-    }      const newCount = currentCount - 1;
-      this.assetRefCounts.set(url, newCount);
-      console.log(`📉 LoadingManager: Decremented ref count for ${url} to ${newCount}`, {
-        totalAssets: this.assets.size,
-        allRefCounts: Object.fromEntries(this.assetRefCounts)
-      });
-      
-      if (newCount === 0) {
-        // Last reference, actually dispose the asset
-        console.log(`🔥 LoadingManager: No more references to ${url}, disposing asset`);
-        this.assetRefCounts.delete(url);
-        this.disposeAsset(url);
-      }
+    }
+    
+    const newCount = currentCount - 1;
+    this.assetRefCounts.set(url, newCount);
+    console.log(`📉 LoadingManager: Decremented ref count for ${url} to ${newCount}`, {
+      totalAssets: this.assets.size,
+      allRefCounts: Object.fromEntries(this.assetRefCounts)
+    });
+    
+    if (newCount === 0) {
+      // Last reference, actually dispose the asset
+      console.log(`🔥 LoadingManager: No more references to ${url}, disposing asset`);
+      this.assetRefCounts.delete(url);
+      this.disposeAsset(url);
+    }
   }
 
   // Dispose of assets to free memory
@@ -542,6 +546,121 @@ class LoadingManager {
       animationRefCounts: new Map(this.animationRefCounts),
       animationSetRefCounts: new Map(this.animationSetRefCounts)
     };
+  }
+
+  // Warm-up function to preload commonly used assets
+  static async warmUp(keepLoaded: boolean = true): Promise<void> {
+    console.log("🔥 LoadingManager: Starting warm-up process...");
+    
+    // Define core assets to preload
+    const coreAssets = [
+      "models/gltf/ybot2.glb",
+      "models/gltf/Xbot.glb"
+    ];
+    
+    // Define core animations to preload
+    const coreAnimations = [
+      { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@Driving.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@DyingForward.glb", skipTracks: [1] },
+      { url: "animations/gltf/ybot2@Falling.glb", skipTracks: [0] },
+      { url: "animations/gltf/ybot2@Ideling.glb" },
+      { url: "animations/gltf/ybot2@JumpingFromStill.glb" },
+      { url: "animations/gltf/ybot2@Running.glb" },
+      { url: "animations/gltf/ybot2@Walking.glb" },
+      { url: "animations/gltf/ybot2@TurningLeft.glb" },
+      { url: "animations/gltf/ybot2@TurningRight.glb" }
+    ];
+    
+    const startTime = performance.now();
+    
+    try {
+      // Preload models
+      console.log("🔥 LoadingManager: Preloading core models...");
+      const modelPromises = coreAssets.map(async (url) => {
+        try {
+          await this.loadGLTF(url);
+          
+          // If keepLoaded is true, increment ref count to prevent cleanup
+          if (keepLoaded) {
+            const currentCount = this.assetRefCounts.get(url) || 0;
+            this.assetRefCounts.set(url, currentCount + 1);
+            console.log(`🔥 LoadingManager: Keeping ${url} loaded permanently (ref count: ${currentCount + 1})`);
+          } else {
+            // Decrement the ref count added by loadGLTF
+            this.releaseAsset(url);
+          }
+          
+          return { url, success: true };
+        } catch (error) {
+          console.error(`🔥 LoadingManager: Failed to preload model ${url}:`, error);
+          return { url, success: false, error };
+        }
+      });
+      
+      // Preload animation set
+      console.log("🔥 LoadingManager: Preloading core animations...");
+      const animationPromise = (async () => {
+        try {
+          const animationSet = await this.loadGLTFFirstAnimations(coreAnimations);
+          
+          if (keepLoaded) {
+            // Create signature for the animation set
+            const signature = coreAnimations.map(item => 
+              `${item.url}${item.skipTracks ? `|skip:${item.skipTracks.join(',')}` : ''}`
+            ).join('|');
+            
+            const currentCount = this.animationSetRefCounts.get(signature) || 0;
+            this.animationSetRefCounts.set(signature, currentCount + 1);
+            console.log(`🔥 LoadingManager: Keeping animation set loaded permanently (ref count: ${currentCount + 1})`);
+          } else {
+            // Release the animation set
+            this.releaseAnimationSet(coreAnimations);
+          }
+          
+          return { success: true, count: Object.keys(animationSet).length };
+        } catch (error) {
+          console.error("🔥 LoadingManager: Failed to preload animations:", error);
+          return { success: false, error };
+        }
+      })();
+      
+      // Wait for all preloading to complete
+      const [modelResults, animationResult] = await Promise.all([
+        Promise.all(modelPromises),
+        animationPromise
+      ]);
+      
+      const endTime = performance.now();
+      const duration = (endTime - startTime) / 1000;
+      
+      // Report results
+      const successfulModels = modelResults.filter(r => r.success).length;
+      const failedModels = modelResults.filter(r => !r.success);
+      
+      console.log("🔥 LoadingManager: Warm-up complete!");
+      console.log(`📊 Models preloaded: ${successfulModels}/${coreAssets.length}`);
+      console.log(`📊 Animations preloaded: ${animationResult.success ? animationResult.count : 0}/${coreAnimations.length}`);
+      console.log(`⏱️ Warm-up duration: ${duration.toFixed(2)}s`);
+      console.log(`🎯 Keep loaded: ${keepLoaded ? 'Yes' : 'No'}`);
+      
+      if (failedModels.length > 0) {
+        console.warn("🔥 LoadingManager: Some models failed to preload:", failedModels);
+      }
+      
+      // Log memory stats after warm-up
+      const stats = this.getMemoryStats();
+      console.log("🔥 LoadingManager: Post warm-up memory stats:", {
+        cachedAssets: stats.assets,
+        cachedAnimations: stats.animations,
+        webglTextures: stats.textures,
+        webglGeometries: stats.geometries
+      });
+      
+    } catch (error) {
+      console.error("🔥 LoadingManager: Warm-up failed:", error);
+      throw error;
+    }
   }
 
   // Force cleanup of all unreferenced assets

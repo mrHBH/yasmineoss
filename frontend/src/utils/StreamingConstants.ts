@@ -1,4 +1,5 @@
-// Streaming World Constants
+// StreamingConstants.ts - Centralized configuration for streaming system
+
 export const STREAMING_CONSTANTS = {
   // Tile configuration
   TILE_SIZE: 100,

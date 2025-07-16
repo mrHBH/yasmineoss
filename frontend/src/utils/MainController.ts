@@ -84,6 +84,9 @@ class MainController {
   // Add DaylightSystem property
   daylightSystem: DaylightSystem;
   
+  // Daylight system control
+  private enableDaylightSystem: boolean = false;
+  
   // Physics stats tracking
   private isDragging: boolean = false;
   private dragThreshold: number = 5; // pixels
@@ -440,9 +443,11 @@ class MainController {
     this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
     this.webglscene.add(this.streamingWorld);
     
-    // Initialize DaylightSystem
-    this.daylightSystem = new DaylightSystem(this.webglscene, this.webglrenderer, this.camera);
-    this.daylightSystem.loadNightSky(); // Load night sky texture asynchronously
+    // Initialize DaylightSystem conditionally
+    if (this.enableDaylightSystem) {
+      this.daylightSystem = new DaylightSystem(this.webglscene, this.webglrenderer, this.camera);
+      this.daylightSystem.loadNightSky(); // Load night sky texture asynchronously
+    }
    }
 
 
@@ -604,30 +609,56 @@ class MainController {
       true
     );
     
-    if (intersects.length == 0) {
+    // Filter out sky and helper geometries
+    const validIntersects = intersects.filter(intersect => {
+      const object = intersect.object;
+      
+      // Skip sky-related objects
+      if (object.name?.toLowerCase().includes('sky') || 
+          object.userData?.type === 'sky' ||
+          (object as any).material?.name?.toLowerCase().includes('sky')) {
+        return false;
+      }
+      
+      // Skip helper geometries (circles, lines, etc.)
+      if (object.userData?.isHelper || 
+          object.userData?.type === 'helper' ||
+          object.name?.toLowerCase().includes('helper') ||
+          object.name?.toLowerCase().includes('circle') ||
+          object.type === 'LineSegments' ||
+          object.type === 'Line' ||
+          (object as any).geometry?.type === 'CircleGeometry' ||
+          (object as any).geometry?.type === 'RingGeometry') {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    if (validIntersects.length == 0) {
       //allow default context menu
       event.stopPropagation();
       return;
     }
 
-    console.log('Right-click at:', intersects[0].point);
+    console.log('Right-click at:', validIntersects[0].point);
     
     // Handle Alt+Right-click for teleportation
-    if (event.altKey && intersects[0].point) {
+    if (event.altKey && validIntersects[0].point) {
       if (this.ActiveEntities.length > 0) {
         console.log("Alt + Right-click: Teleporting selected entities");
         this.ActiveEntities.forEach(entity => {
-          entity.Position = intersects[0].point;
+          entity.Position = validIntersects[0].point;
         });
       } else if (this.mainEntity) {
         console.log("Alt + Right-click: Teleporting main entity");
-        this.mainEntity.Position = intersects[0].point;
+        this.mainEntity.Position = validIntersects[0].point;
       }
       return;
     }
 
     // Handle normal right-click for movement commands
-    if (intersects[0].point) {
+    if (validIntersects[0].point) {
       if (this.ActiveEntities.length > 0) {
         // Send walk command to all selected entities
         console.log(`Sending walk command to ${this.ActiveEntities.length} selected entities`);
@@ -635,7 +666,7 @@ class MainController {
           entity.Broadcast({
             topic: "walk",
             data: {
-              position: intersects[0].point,
+              position: validIntersects[0].point,
             },
           });
         });
@@ -645,7 +676,7 @@ class MainController {
         this.mainEntity.Broadcast({
           topic: "walk",
           data: {
-            position: intersects[0].point,
+            position: validIntersects[0].point,
           },
         });
       } else {
@@ -709,7 +740,7 @@ class MainController {
      this.performanceMonitor?.beginFrame();
     this.annotationRenderer.render(this.annoationsScene, this.camera);
     this.html2dRenderer.render(this.html2dScene, this.camera);
-    this.html3dRenderer.render(this.html3dScene, this.camera);
+    //this.html3dRenderer.render(this.html3dScene, this.camera);
     this.physicsmanager?.Update(delta);
     this.UIManager?.Update();
     this.CameraControls?.update(delta / 2);
@@ -730,13 +761,9 @@ class MainController {
     // Update performance monitor with current delta
     this.performanceMonitor?.endFrame();
     
-    // Update DaylightSystem
-    this.daylightSystem?.update(delta);
-
-    // Update fog color to match sky
-    if (this.daylightSystem && this.webglscene.fog) {
-      const fogColor = this.daylightSystem.getFogColor();
-      (this.webglscene.fog as THREE.Fog).color.copy(fogColor);
+    // Update DaylightSystem conditionally
+    if (this.enableDaylightSystem) {
+      this.daylightSystem?.update(delta);
     }
 
     // this.stats.end();
@@ -1320,25 +1347,62 @@ class MainController {
     }
   }
 
+  // Enable/disable daylight system
+  setDaylightSystemEnabled(enabled: boolean): void {
+    if (enabled && !this.enableDaylightSystem) {
+      this.enableDaylightSystem = true;
+      this.daylightSystem = new DaylightSystem(this.webglscene, this.webglrenderer, this.camera);
+      this.daylightSystem.loadNightSky();
+      console.log('Daylight system enabled');
+    } else if (!enabled && this.enableDaylightSystem) {
+      this.enableDaylightSystem = false;
+      if (this.daylightSystem) {
+        // Clean up daylight system resources if needed
+        this.daylightSystem = null;
+      }
+      // Reset fog to default
+      if (this.webglscene.fog) {
+        (this.webglscene.fog as THREE.Fog).color.set(0x202020);
+      }
+      console.log('Daylight system disabled');
+    }
+  }
+
+  isDaylightSystemEnabled(): boolean {
+    return this.enableDaylightSystem;
+  }
+
   // Day/Night cycle control methods
   setTimeOfDay(time: number): void {
-    this.daylightSystem?.setTimeOfDay(time);
+    if (this.enableDaylightSystem) {
+      this.daylightSystem?.setTimeOfDay(time);
+    }
   }
 
   getTimeOfDay(): number {
-    return this.daylightSystem?.getTimeOfDay() || 0.5;
+    if (this.enableDaylightSystem) {
+      return this.daylightSystem?.getTimeOfDay() || 0.5;
+    }
+    return 0.5;
   }
 
   setDayNightAutomatic(automatic: boolean): void {
-    this.daylightSystem?.setAutomatic(automatic);
+    if (this.enableDaylightSystem) {
+      this.daylightSystem?.setAutomatic(automatic);
+    }
   }
 
   setDayNightSpeed(speed: number): void {
-    this.daylightSystem?.setTransitionSpeed(speed);
+    if (this.enableDaylightSystem) {
+      this.daylightSystem?.setTransitionSpeed(speed);
+    }
   }
 
   isDaytime(): boolean {
-    return this.daylightSystem?.isDaytime() || true;
+    if (this.enableDaylightSystem) {
+      return this.daylightSystem?.isDaytime() || true;
+    }
+    return true;
   }
 }
 

@@ -177,11 +177,20 @@ export class CharacterPhysicsController {
     );
   }
 
+  private isRotationDisabled(currentState?: string): boolean {
+    if (!currentState) return false;
+    
+    // Disable rotation during landing and falling states
+    const disabledStates = ['Landing', 'Falling'];
+    return disabledStates.includes(currentState);
+  }
+
   updatePhysics(
     deltaTime: number, 
     controlObject: THREE.Object3D, 
     input: any, 
-    acceleration: number
+    acceleration: number,
+    currentState?: string
   ): void {
     if (!input) return;
     const velocity = this.velocity_;
@@ -210,7 +219,10 @@ export class CharacterPhysicsController {
     );
     acc.multiplyScalar(acceleration);
 
-    if (input._keys.left) {
+    // Check if character is in a state where rotation should be disabled
+    const canRotate = !this.isRotationDisabled(currentState);
+
+    if (input._keys.left && canRotate) {
       _A.set(0, 1, 0);
       _Q.setFromAxisAngle(
         _A,
@@ -219,7 +231,7 @@ export class CharacterPhysicsController {
       _R.multiply(_Q);
     }
 
-    if (input._keys.right) {
+    if (input._keys.right && canRotate) {
       _A.set(0, 1, 0);
       _Q.setFromAxisAngle(
         _A,
