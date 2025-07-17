@@ -407,17 +407,11 @@ class MainController {
 
 
 
-    const light = new THREE.PointLight(0xffffff, 3);
-    light.position.set(0, 1, 5);
-    light.castShadow = true;
-    light.shadow.camera.near = 0.001;
-    //this.webgpuscene.add(new THREE.HemisphereLight(0xff0066, 0x0066ff, 7));
-    this.webglscene.add(light);
+   
 
 
 
-
-    this.sunLight = new THREE.DirectionalLight(0xeeeeff, 5);
+    this.sunLight = new THREE.DirectionalLight(0xeeeeff, 1);
 
     this.sunLight.castShadow = true;
     this.sunLight.shadow.camera.near = 0.0001;
@@ -430,7 +424,7 @@ class MainController {
     this.sunLight.shadow.mapSize.height = 2048;
     this.sunLight.shadow.bias = -0.0005;
     this.sunLight.shadow.normalBias = 0.02;
-    this.sunLight.position.set(5, 15, 5); // Position light at an angle for better shadows
+    this.sunLight.position.set(5, 5, 15); // Position light at an angle for better shadows
 
 
     this.webglscene.add(this.sunLight);
@@ -439,9 +433,9 @@ class MainController {
 
     this.UIManager = new UIManager(this);
 
-    // Initialize StreamingWorld with physics world reference
-    this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
-    this.webglscene.add(this.streamingWorld);
+  //  Initialize StreamingWorld with physics world reference
+   this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
+   this.webglscene.add(this.streamingWorld);
 
     // Initialize DaylightSystem conditionally
     if (this.enableDaylightSystem) {

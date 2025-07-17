@@ -102,7 +102,7 @@ class LoadingManager {
     gltf.scene.traverse((c: any) => {
       if (c.isMesh) {
         c.castShadow = true;
-        c.receiveShadow = true;
+        c.receiveShadow = false;
       }
     });
 
@@ -376,7 +376,7 @@ class LoadingManager {
       
       // Get renderer info before disposal
       const beforeInfo = this.#options.renderer?.info;
-      console.log(`🖼️ Before disposal - WebGL Textures: ${beforeInfo?.memory?.textures}, Geometries: ${beforeInfo?.memory?.geometries}`);
+      console.log(`🖼️ Before disposal - WebGL Textures: ${beforeInfo?.memory?.textures}, Geometries: ${beforeInfo?.memory?.geometries}, Programs: ${beforeInfo?.programs?.length || 0}`);
       
       // Dispose of geometries, materials, and skeletons
       gltf.scene.traverse((object: any) => {
@@ -388,17 +388,20 @@ class LoadingManager {
           }
           
           if (object.geometry) {
+            console.log(`📐 Disposing geometry for mesh: ${object.name || 'unnamed'}`);
             object.geometry.dispose();
             geometryCount++;
           }
           
           if (object.material) {
             if (Array.isArray(object.material)) {
-              object.material.forEach((material) => {
+              object.material.forEach((material, index) => {
+                console.log(`🎨 Disposing material ${index} for mesh: ${object.name || 'unnamed'}`);
                 this.disposeMaterial(material);
                 materialCount++;
               });
             } else {
+              console.log(`🎨 Disposing material for mesh: ${object.name || 'unnamed'}`);
               this.disposeMaterial(object.material);
               materialCount++;
             }
@@ -414,34 +417,22 @@ class LoadingManager {
       if (baseModelName) {
         for (const [animUrl, _] of this.animationClips.entries()) {
           if (animUrl.includes(baseModelName)) {
-            console.log(`LoadingManager: Disposing related animation: ${animUrl}`);
+            console.log(`🎭 LoadingManager: Disposing related animation: ${animUrl}`);
             this.animationClips.delete(animUrl);
             animationsRemoved++;
           }
         }
       }
       
-      //console.log(`LoadingManager: Disposed ${geometryCount} geometries, ${materialCount} materials, ${textureCount} textures, and ${animationsRemoved} animations for ${url}`);
+      console.log(`🗑️ LoadingManager: Disposed ${geometryCount} geometries, ${materialCount} materials, and ${animationsRemoved} animations for ${url}`);
+      
+      // Remove from cache
+      this.assets.delete(url);
       
       // Get renderer info after disposal
-      console.log(`🖼️ After disposal - WebGL Textures: ${this.#options.renderer?.info?.memory?.textures}, Geometries: ${this.#options.renderer?.info?.memory?.geometries}`);
-      if (this.#options.renderer) {
-        try {
-          // Access the renderer info to see stats about memory usage
-          console.log(`LoadingManager: Renderer info after asset removal - Textures: ${this.#options.renderer.info.memory?.textures}, Geometries: ${this.#options.renderer.info.memory?.geometries}`);
-          
-          // DO NOT DISPOSE THE ENTIRE RENDERER HERE.
-          // this.#options.renderer.dispose(); // This was problematic.
-
-          // Logging after asset disposal, info should reflect changes if synchronous.
-          // Note: WebGL garbage collection can be asynchronous.
-       //   console.log(`LoadingManager: Renderer info after asset removal (check logs for actual disposal timing) - Textures: ${this.#options.renderer.info.memory?.textures}, Geometries: ${this.#options.renderer.info.memory?.geometries}`);
-        } catch (error) {
-          console.warn("Error while trying to log renderer memory after asset disposal:", error);
-        }
-      }
+      const afterInfo = this.#options.renderer?.info;
+      console.log(`🖼️ After disposal - WebGL Textures: ${afterInfo?.memory?.textures}, Geometries: ${afterInfo?.memory?.geometries}, Programs: ${afterInfo?.programs?.length || 0}`);
       
-      this.assets.delete(url);
       return true;
     }
     return false;
@@ -527,7 +518,8 @@ class LoadingManager {
   // Utility method to get current memory stats
   static getMemoryStats(): { 
     textures: number, 
-    geometries: number, 
+    geometries: number,
+    programs: number,
     assets: number, 
     animations: number,
     animationSets: number,
@@ -539,6 +531,7 @@ class LoadingManager {
     return {
       textures: info?.memory?.textures || 0,
       geometries: info?.memory?.geometries || 0,
+      programs: info?.programs?.length || 0,
       assets: this.assets.size,
       animations: this.animationClips.size,
       animationSets: this.animationSets.size,
@@ -548,17 +541,18 @@ class LoadingManager {
     };
   }
 
-  // Warm-up function to preload commonly used assets
+  // Warm-up function to preload commonly used assets - only loads when explicitly called
   static async warmUp(keepLoaded: boolean = true): Promise<void> {
     console.log("🔥 LoadingManager: Starting warm-up process...");
     
-    // Define core assets to preload
+    // Only define and preload core assets when warmUp is explicitly called
+    // This prevents automatic preloading when warmUp is not used
     const coreAssets = [
       "models/gltf/ybot2.glb",
       "models/gltf/Xbot.glb"
     ];
     
-    // Define core animations to preload
+    // Only define and preload core animations when warmUp is explicitly called
     const coreAnimations = [
       { url: "animations/gltf/ybot2@BackwardWalking.glb", skipTracks: [1] },
       { url: "animations/gltf/ybot2@Driving.glb", skipTracks: [1] },
@@ -581,14 +575,17 @@ class LoadingManager {
         try {
           await this.loadGLTF(url);
           
-          // If keepLoaded is true, increment ref count to prevent cleanup
+          // NEW BEHAVIOR: 
+          // keepLoaded=true: Keep assets permanently loaded (never dispose them)
+          // keepLoaded=false: Ultra aggressive - dispose immediately after preload
           if (keepLoaded) {
-            const currentCount = this.assetRefCounts.get(url) || 0;
-            this.assetRefCounts.set(url, currentCount + 1);
-            console.log(`🔥 LoadingManager: Keeping ${url} loaded permanently (ref count: ${currentCount + 1})`);
+            // KEEP PERMANENTLY - Don't release the assets, they stay loaded forever
+            console.log(`🔥 LoadingManager: Preloaded and KEEPING ${url} permanently loaded`);
           } else {
-            // Decrement the ref count added by loadGLTF
+            // Ultra aggressive - dispose immediately, don't even wait for cleanup
             this.releaseAsset(url);
+            this.disposeAsset(url);
+            console.log(`🔥 LoadingManager: Preloaded and immediately disposed ${url} (ultra aggressive)`);
           }
           
           return { url, success: true };
@@ -605,17 +602,20 @@ class LoadingManager {
           const animationSet = await this.loadGLTFFirstAnimations(coreAnimations);
           
           if (keepLoaded) {
-            // Create signature for the animation set
-            const signature = coreAnimations.map(item => 
-              `${item.url}${item.skipTracks ? `|skip:${item.skipTracks.join(',')}` : ''}`
-            ).join('|');
-            
-            const currentCount = this.animationSetRefCounts.get(signature) || 0;
-            this.animationSetRefCounts.set(signature, currentCount + 1);
-            console.log(`🔥 LoadingManager: Keeping animation set loaded permanently (ref count: ${currentCount + 1})`);
+            // KEEP PERMANENTLY - Don't release the animation set, it stays loaded forever
+            console.log(`🔥 LoadingManager: Preloaded and KEEPING animation set permanently loaded`);
           } else {
-            // Release the animation set
+            // Ultra aggressive - dispose animation set immediately
             this.releaseAnimationSet(coreAnimations);
+            // Force cleanup of animation sets immediately
+            for (const [signature, _] of this.animationSets.entries()) {
+              const refCount = this.animationSetRefCounts.get(signature) || 0;
+              if (refCount === 0) {
+                this.animationSets.delete(signature);
+                this.animationSetRefCounts.delete(signature);
+              }
+            }
+            console.log(`🔥 LoadingManager: Preloaded and immediately disposed animation set (ultra aggressive)`);
           }
           
           return { success: true, count: Object.keys(animationSet).length };
@@ -631,6 +631,39 @@ class LoadingManager {
         animationPromise
       ]);
       
+      // Only run cleanup and disposal for keepLoaded=false (ultra aggressive mode)
+      if (!keepLoaded) {
+        console.log("🔥 LoadingManager: Forcing cleanup after warm-up (ultra aggressive mode)");
+        this.forceCleanup();
+        
+        // Additional aggressive cleanup - clear all caches completely
+        console.log("🔥 LoadingManager: Performing aggressive cleanup for warm-up disposal");
+        this.assets.clear();
+        this.animationClips.clear();
+        this.animationSets.clear();
+        this.assetRefCounts.clear();
+        this.animationRefCounts.clear();
+        this.animationSetRefCounts.clear();
+        
+        // Force WebGL context cleanup if available
+        if (this.#options.renderer) {
+          try {
+            // Clear all compiled programs to force shader cleanup
+            console.log("🔥 LoadingManager: Clearing compiled WebGL programs");
+            (this.#options.renderer as any).programs = [];
+            (this.#options.renderer.info as any).programs = [];
+            
+            // Force render info update
+            this.#options.renderer.render(this.#options.scene || new Scene(), this.#options.camera || new Camera());
+            console.log(`🔥 LoadingManager: After aggressive cleanup - WebGL Textures: ${this.#options.renderer.info.memory?.textures}, Geometries: ${this.#options.renderer.info.memory?.geometries}, Programs: ${this.#options.renderer.info.programs?.length || 0}`);
+          } catch (error) {
+            console.warn("Error during WebGL context cleanup:", error);
+          }
+        }
+      } else {
+        console.log("🔥 LoadingManager: Assets kept permanently loaded - no cleanup performed");
+      }
+      
       const endTime = performance.now();
       const duration = (endTime - startTime) / 1000;
       
@@ -642,7 +675,7 @@ class LoadingManager {
       console.log(`📊 Models preloaded: ${successfulModels}/${coreAssets.length}`);
       console.log(`📊 Animations preloaded: ${animationResult.success ? animationResult.count : 0}/${coreAnimations.length}`);
       console.log(`⏱️ Warm-up duration: ${duration.toFixed(2)}s`);
-      console.log(`🎯 Keep loaded: ${keepLoaded ? 'Yes' : 'No'}`);
+      console.log(`🎯 Keep loaded: ${keepLoaded ? 'TRUE - Assets kept permanently loaded' : 'FALSE - Ultra aggressive disposal'}`);
       
       if (failedModels.length > 0) {
         console.warn("🔥 LoadingManager: Some models failed to preload:", failedModels);
@@ -654,7 +687,8 @@ class LoadingManager {
         cachedAssets: stats.assets,
         cachedAnimations: stats.animations,
         webglTextures: stats.textures,
-        webglGeometries: stats.geometries
+        webglGeometries: stats.geometries,
+        webglPrograms: stats.programs
       });
       
     } catch (error) {
@@ -663,11 +697,62 @@ class LoadingManager {
     }
   }
 
+  // Complete reset of LoadingManager - use for testing or when you want to start fresh
+  static completeReset(): void {
+    console.log("🔄 LoadingManager: Performing complete reset");
+    
+    // Dispose all assets first
+    const allAssets = Array.from(this.assets.keys());
+    allAssets.forEach(url => {
+      this.disposeAsset(url);
+    });
+    
+    // Clear all maps
+    this.assets.clear();
+    this.animationClips.clear();
+    this.animationSets.clear();
+    this.assetRefCounts.clear();
+    this.animationRefCounts.clear();
+    this.animationSetRefCounts.clear();
+    
+    // Clear loading trackers
+    this.#loading.clear();
+    this.#loadingAnimations.clear();
+    this.#loadingAnimationSets.clear();
+    
+    // Force clear WebGL programs and shaders
+    if (this.#options.renderer) {
+      try {
+        console.log("🔄 LoadingManager: Clearing all WebGL programs");
+        (this.#options.renderer as any).programs = [];
+        (this.#options.renderer.info as any).programs = [];
+        
+        // Force garbage collection of WebGL resources
+        this.#options.renderer.forceContextLoss();
+        this.#options.renderer.forceContextRestore();
+      } catch (e) {
+        console.warn("Error during WebGL program cleanup:", e);
+      }
+    }
+    
+    // Force garbage collection if available
+    if ((window as any).gc) {
+      (window as any).gc();
+    }
+    
+    console.log("🔄 LoadingManager: Complete reset finished");
+    
+    // Log final memory stats
+    const stats = this.getMemoryStats();
+    console.log("🔄 LoadingManager: Memory stats after reset:", stats);
+  }
+
   // Force cleanup of all unreferenced assets
   static forceCleanup(): void {
     console.log("LoadingManager: Forcing cleanup of unreferenced assets");
     const unreferencedAssets: string[] = [];
     const unreferencedAnimations: string[] = [];
+    const unreferencedAnimationSets: string[] = [];
     
     // Check for unreferenced GLTF assets
     for (const [url, _] of this.assets.entries()) {
@@ -685,6 +770,16 @@ class LoadingManager {
       }
     }
     
+    // Check for unreferenced animation sets
+    for (const [signature, _] of this.animationSets.entries()) {
+      const refCount = this.animationSetRefCounts.get(signature) || 0;
+      if (refCount === 0) {
+        unreferencedAnimationSets.push(signature);
+      }
+    }
+    
+    console.log(`LoadingManager: Found ${unreferencedAssets.length} unreferenced assets, ${unreferencedAnimations.length} unreferenced animations, ${unreferencedAnimationSets.length} unreferenced animation sets`);
+    
     unreferencedAssets.forEach(url => {
       console.log(`LoadingManager: Force disposing unreferenced asset: ${url}`);
       this.disposeAsset(url);
@@ -695,13 +790,41 @@ class LoadingManager {
       this.animationClips.delete(url);
     });
     
+    unreferencedAnimationSets.forEach(signature => {
+      console.log(`LoadingManager: Force disposing unreferenced animation set: ${signature.substring(0, 50)}...`);
+      this.animationSets.delete(signature);
+    });
+    
+    // Clean up any remaining ref count entries for disposed assets
+    this.assetRefCounts.forEach((count, url) => {
+      if (count === 0 && !this.assets.has(url)) {
+        this.assetRefCounts.delete(url);
+      }
+    });
+    
+    this.animationRefCounts.forEach((count, url) => {
+      if (count === 0 && !this.animationClips.has(url)) {
+        this.animationRefCounts.delete(url);
+      }
+    });
+    
+    this.animationSetRefCounts.forEach((count, signature) => {
+      if (count === 0 && !this.animationSets.has(signature)) {
+        this.animationSetRefCounts.delete(signature);
+      }
+    });
+    
     // Force garbage collection if available
     if ((window as any).gc) {
       (window as any).gc();
     }
+    
+    console.log(`LoadingManager: Cleanup complete. Remaining: ${this.assets.size} assets, ${this.animationClips.size} animations, ${this.animationSets.size} animation sets`);
   }
 
   private static disposeMaterial(material: Material): void {
+    console.log(`🧹 LoadingManager: Disposing material: ${material.name || 'unnamed'} (${material.type})`);
+    
     // Dispose of all textures in the material using the proper disposal method
     let textureCount = 0;
     
@@ -709,7 +832,8 @@ class LoadingManager {
     for (let k in material) {
       if ((material as any)[k] instanceof Texture) {
         const tex = (material as any)[k] as Texture;
-
+        console.log(`🖼️ LoadingManager: Disposing texture property: ${k}`);
+        
         // Handle ImageBitmap textures properly
         if (tex.source?.data instanceof ImageBitmap) {
           tex.source.data.close();
@@ -735,6 +859,7 @@ class LoadingManager {
       if (value && value.isTexture && !(value instanceof Texture)) {
         // Handle cases where texture might not be instanceof Texture but has texture properties
         try {
+          console.log(`🖼️ LoadingManager: Disposing texture-like property: ${prop}`);
           if (value.source?.data instanceof ImageBitmap) {
             value.source.data.close();
           }
@@ -747,11 +872,27 @@ class LoadingManager {
       }
     }
     
+    // Force dispose of WebGL programs/shaders if renderer is available
+    if (this.#options.renderer) {
+      try {
+        // Force renderer to recompile programs by clearing the material's program cache
+        if ((material as any).program) {
+          console.log(`🔥 LoadingManager: Clearing WebGL program cache for material: ${material.name || 'unnamed'}`);
+          (material as any).program = null;
+        }
+        
+        // Trigger a render to update WebGL state
+        this.#options.renderer.compile(new Scene(), new Camera());
+      } catch (e) {
+        console.warn(`Failed to clear WebGL program cache:`, e);
+      }
+    }
+    
     // Finally dispose the material itself
     material.dispose();
     
     if (textureCount > 0) {
-      console.log(`LoadingManager: Disposed ${textureCount} textures from material`);
+      console.log(`🧹 LoadingManager: Disposed ${textureCount} textures from material`);
     }
   }
 

@@ -149,56 +149,61 @@ class Main {
     
     console.log(`${bobName} has been added to the scene!`);
   }
-  
-  // Helper method to create test entities at various distances
-  private async createTestEntities(): Promise<void> {
-    console.log('Creating test entities at various distances...');
-    const mainPos = this.maincController.MainEntity?.Position || new THREE.Vector3(0, 0, 0);
-    
-    // Create entities at different distances
-    const distances = [50, 100, 150, 250, 300];
-    for (const distance of distances) {
-      const angle = Math.random() * Math.PI * 2;
-      const x = mainPos.x + Math.cos(angle) * distance;
-      const z = mainPos.z + Math.sin(angle) * distance;
-      
-      const testEntity = new Entity();
-      testEntity.Position = new THREE.Vector3(x, 1, z);
-      
-      const testController = new CharacterComponent({
-        modelpath: "models/gltf/ybot2.glb",
-        animationspathslist: this.maincController.animations,
-        behaviourscriptname: "botbasicbehavior.js",
-      });
-      
-      testEntity._componentCreationInfo = [
-        { 
-          type: 'CharacterComponent', 
-          config: {
-            modelpath: "models/gltf/ybot2.glb",
-            animationspathslist: this.maincController.animations,
-            behaviourscriptname: "botbasicbehavior.js",
-          }
-        },
-        { 
-          type: 'AudioComponent', 
-          config: {
-            audioConfig: {},
-            visualizerConfig: { enabled: true }
-          }
+
+    private async createAlice(): Promise<void> {
+    const alice = new Entity();
+    alice.Position = new THREE.Vector3(Math.random() * 10 - 5, 1, Math.random() * 10 - 5);
+
+    // Make sure LoadingManager is initialized before using it
+    if (!LoadingManager.assets) {
+      console.warn("LoadingManager not initialized before creating Bob");
+      LoadingManager.initialize(
+        this.maincController.webglrenderer, 
+        {
+          scene: this.maincController.webglscene,
+          camera: this.maincController.camera
         }
-      ];
-      
-      await testEntity.AddComponent(testController);
-      await testEntity.AddComponent(new AudioComponent());
-      
-      const testName = `TestEntity-${distance}m`;
-      await this.entityManager.AddEntity(testEntity, testName); // Now automatically streamable
-      
-      console.log(`Created ${testName} at distance ${distance}m`);
+      );
     }
+    const alicecontroller = new CharacterComponent({
+      modelpath: "models/gltf/Xbot.glb",
+      animationspathslist: this.maincController.animations,
+        behaviourscriptname: "botbasicbehavior.js",
+    });
+
+    // Store component creation info for restoration
+    alice._componentCreationInfo = [
+      { 
+        type: 'CharacterComponent', 
+        config: {
+          modelpath: "models/gltf/ybot2.glb",
+          animationspathslist: this.maincController.animations,
+          behaviourscriptname: "botbasicbehavior.js",
+        }
+      },
+      { 
+        type: 'AudioComponent', 
+        config: {
+          audioConfig: {},
+          visualizerConfig: { enabled: true }
+        }
+      }
+    ];
+
+    await alice.AddComponent(alicecontroller);
+    await alice.AddComponent(new AudioComponent());
+    // await bob.AddComponent(new KeyboardInput());
+    
+    // Give Bob a unique name
+    this.bobCounter++;
+    const bobName = `alice-${this.bobCounter}`;
+    await this.entityManager.AddEntity(alice, bobName); // Now automatically streamable
+    
+    console.log(`${bobName} has been added to the scene!`);
   }
   
+  
+ 
   private async init(): Promise<void> {
     // Show loading spinner
     this.showLoadingSpinner();
@@ -216,12 +221,13 @@ class Main {
       }
     );
     
-    // Warm up LoadingManager with most commonly used assets
+    // Optional: Warm up LoadingManager with core assets for better performance
+    // Comment out the next 3 lines if you want no preloading at all
     console.log("🔥 Starting asset warm-up...");
-    await LoadingManager.warmUp(false); // Keep assets loaded permanently
+  await LoadingManager.warmUp(true); // TRUE = Keep core assets permanently loaded (never reload), FALSE = Ultra aggressive disposal
     console.log("✅ Asset warm-up complete!");
     
-    this.maincController.initSound();
+   // this.maincController.initSound();
     console.log("LoadingManager initialized successfully");
 
     // Wait a bit for MainController to fully initialize
@@ -270,157 +276,171 @@ class Main {
 
     // Components are already loaded, can send commands immediately
     await hbhc.face();
-    
-    // Wait a bit for the face animation to complete and behavior script to fully initialize
-    setTimeout(() => {
-      hamza.Broadcast({
+   await  hamza.Broadcast({
         topic: "walk",
         data: { position: new THREE.Vector3(5, 0, -10) },
       });
-    }, 1000); // Delay to ensure face animation is ready
+  //   // Wait a bit for the face animation to complete and behavior script to fully initialize
+  //   setTimeout(() => {
+  //     hamza.Broadcast({
+  //       topic: "walk",
+  //       data: { position: new THREE.Vector3(5, 0, -10) },
+  //     });
+  //   }, 1000); // Delay to ensure face animation is ready
 
-    const uitester2 = new Entity();
-    uitester2.Position = new THREE.Vector3(0, 1, 9);
-    const uitestercontroller3 = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: this.maincController.animations,
-      behaviourscriptname: "uitester2.js",
-    });
+  //   const uitester2 = new Entity();
+  //   uitester2.Position = new THREE.Vector3(0, 1, 9);
+  //   const uitestercontroller3 = new CharacterComponent({
+  //     modelpath: "models/gltf/ybot2.glb",
+  //     animationspathslist: this.maincController.animations,
+  //     behaviourscriptname: "uitester2.js",
+  //   });
     
 
-    // Store component creation info for streaming
-    uitester2._componentCreationInfo = [
-      { 
-        type: 'CharacterComponent', 
-        config: {
-          modelpath: "models/gltf/ybot2.glb",
-          animationspathslist: this.maincController.animations,
-          behaviourscriptname: "uitester2.js",
-        }
-      },
-      { type: 'KeyboardInput', config: {} },
-      { 
-        type: 'AudioComponent', 
-        config: {
-          audioConfig: {},
-          visualizerConfig: { enabled: true }
-        }
-      }
-    ];
+  //   // Store component creation info for streaming
+  //   uitester2._componentCreationInfo = [
+  //     { 
+  //       type: 'CharacterComponent', 
+  //       config: {
+  //         modelpath: "models/gltf/ybot2.glb",
+  //         animationspathslist: this.maincController.animations,
+  //         behaviourscriptname: "uitester2.js",
+  //       }
+  //     },
+  //     { type: 'KeyboardInput', config: {} },
+  //     { 
+  //       type: 'AudioComponent', 
+  //       config: {
+  //         audioConfig: {},
+  //         visualizerConfig: { enabled: true }
+  //       }
+  //     }
+  //   ];
     
-    await uitester2.AddComponent(uitestercontroller3);
-    await uitester2.AddComponent(new KeyboardInput());
-    await uitester2.AddComponent(new AudioComponent());
+  //   await uitester2.AddComponent(uitestercontroller3);
+  //   await uitester2.AddComponent(new KeyboardInput());
+  //   await uitester2.AddComponent(new AudioComponent());
 
-    //     const car = new Entity();
-    // const carcontroller = new CarComponent({
+  //   //     const car = new Entity();
+  //   // const carcontroller = new CarComponent({
 
-    // });
-    // car.Position = new THREE.Vector3(0, 1, 0);
-    // await car.AddComponent(carcontroller);
-    // // const keyboardinput = new KeyboardInput();
-    // await car.AddComponent( new KeyboardInput());
+  //   // });
+  //   // car.Position = new THREE.Vector3(0, 1, 0);
+  //   // await car.AddComponent(carcontroller);
+  //   // // const keyboardinput = new KeyboardInput();
+  //   // await car.AddComponent( new KeyboardInput());
 
-    // await this.entityManager.AddEntity(car, "Car");
+  //   // await this.entityManager.AddEntity(car, "Car");
 
      
 
-    //  await environmentbot2.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(uitester2, "uitester6");
-        this.maincController.MainEntity = uitester2;
-        const musicstreamerenity = new Entity();
-        const musicstreamerenitycontrol = new CharacterComponent({
-          modelpath: "models/gltf/Xbot.glb",
-          animationspathslist: this.maincController.animations,
-          behaviourscriptname: "musicStreamer.js",
-        });
-        musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
+  //   //  await environmentbot2.AddComponent(new KeyboardInput());
+  //   await this.entityManager.AddEntity(uitester2, "uitester6");
+  //       this.maincController.MainEntity = uitester2;
+  //       const musicstreamerenity = new Entity();
+  //       const musicstreamerenitycontrol = new CharacterComponent({
+  //         modelpath: "models/gltf/Xbot.glb",
+  //         animationspathslist: this.maincController.animations,
+  //         behaviourscriptname: "musicStreamer.js",
+  //       });
+  //       musicstreamerenity.Position = new THREE.Vector3(-2, 1, 0);
         
-        // Store component creation info for streaming
-        musicstreamerenity._componentCreationInfo = [
-          { 
-            type: 'CharacterComponent', 
-            config: {
-              modelpath: "models/gltf/Xbot.glb",
-              animationspathslist: this.maincController.animations,
-              behaviourscriptname: "musicStreamer.js",
-            }
-          },
-          { type: 'AIInput', config: {} },
-          { 
-            type: 'AudioComponent', 
-            config: {
-              audioConfig: {},
-              visualizerConfig: { enabled: true }
-            }
-          }
-        ];
+  //       // Store component creation info for streaming
+  //       musicstreamerenity._componentCreationInfo = [
+  //         { 
+  //           type: 'CharacterComponent', 
+  //           config: {
+  //             modelpath: "models/gltf/Xbot.glb",
+  //             animationspathslist: this.maincController.animations,
+  //             behaviourscriptname: "musicStreamer.js",
+  //           }
+  //         },
+  //         { type: 'AIInput', config: {} },
+  //         { 
+  //           type: 'AudioComponent', 
+  //           config: {
+  //             audioConfig: {},
+  //             visualizerConfig: { enabled: true }
+  //           }
+  //         }
+  //       ];
         
-        await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
-        await musicstreamerenity.AddComponent(new AudioComponent());
-      //  await musicstreamerenity.AddComponent(new KeyboardInput());
-        await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
+  //       await musicstreamerenity.AddComponent(musicstreamerenitycontrol);
+  //       await musicstreamerenity.AddComponent(new AudioComponent());
+  //     //  await musicstreamerenity.AddComponent(new KeyboardInput());
+  //       await this.entityManager.AddEntity(musicstreamerenity, "musicstreamerenity");
     
-    // Initialize minimap system after all entities are created
-    // Note: MinimapComponent can work standalone, no need for separate entity
-    // const minimapEntity = new Entity();
-    // const minimapComponent = new MinimapComponent();
-    // await minimapEntity.AddComponent(minimapComponent);
-    // await this.entityManager.AddEntity(minimapEntity, "MinimapSystem", false); // Not streamable - it's a system
-    // console.log("Minimap system initialized");
+  //   this.maincController.UIManager.toggleBirdEyemode();
 
-    // console.log("🌐 Entity Streaming System: All entities are now automatically streamable!");
-    // console.log("📊 Use 's' key to view streaming stats, 't' key to create test entities");
+//   const letterCounterBot = new Entity();
+//     letterCounterBot.Position = new THREE.Vector3(0, 1, 39);
+//     const letterCounterBotcontroller2 = new CharacterComponent({
+//       modelpath: "models/gltf/ybot2.glb",
+//       animationspathslist: this.maincController.animations,
+//       behaviourscriptname: "letterCounterBot.js",
+//     });
 
-    this.maincController.UIManager.toggleScrollmode();
+//     // Store component creation info for streaming
+//     letterCounterBot._componentCreationInfo = [
+//       { 
+//         type: 'CharacterComponent', 
+//         config: {
+//           modelpath: "models/gltf/ybot2.glb",
+//           animationspathslist: this.maincController.animations,
+//           behaviourscriptname: "letterCounterBot.js",
+//         }
+//       },
+//       { 
+//         type: 'AudioComponent', 
+//         config: {
+//           audioConfig: {},
+//           visualizerConfig: { enabled: true }
+//         }
+//       }
+//     ];
 
+//     await letterCounterBot.AddComponent(letterCounterBotcontroller2);
+//     //await letterCounterBot.AddComponent(new AIInput());
+//     await letterCounterBot.AddComponent(new AudioComponent());
+//  //   await letterCounterBot.AddComponent(new KeyboardInput());
+
+//     //  await environmentbot2.AddComponent(new KeyboardInput());
+//     await this.entityManager.AddEntity(letterCounterBot, "lca");
     
-    // Add event listener for 'b' key press to create Bob
-    // Key bindings:
-    // - 'b'/'B': Create a new Bob entity
-    // - 'm'/'M': Show memory stats 
-    // - 'c'/'C': Force cleanup
-    // - 's'/'S': Show entity streaming stats
-    // - 't'/'T': Create test entities at various distances
-    // - 'F1': Toggle physics debug mode
-    // - 'o': Toggle minimap visibility
-    // - '[': Zoom in minimap
-    // - ']': Zoom out minimap
-    // - ';': Narrow view cone angle (45°)
-    // - "'": Reset minimap zoom and position
-    // - 'p'/'P': Play music and start visualizer
-    // - 'd'/'D': Delete most recent Bob entity
-    // - 'i'/'I': Spawn car entity
+//     // Component is already loaded, can send commands immediately
+//     letterCounterBot.Broadcast({
+//       topic: "walk",
+//       data: { position: new THREE.Vector3(0, 0, 0) },
+//     });
+//     //add script entity environmentbot to the scene
+//     const uitesterbot = new Entity();
+//      const uitester6 = new CharacterComponent({
+//       modelpath: "models/gltf/ybot2.glb",
+//       animationspathslist: this.maincController.animations,
+//       behaviourscriptname: "uitester6.js",
+//     });
+
+//     await uitesterbot.AddComponent(uitester6);
+
+     
+//     await uitesterbot.AddComponent(new KeyboardInput());
+
+//     await uitesterbot.AddComponent(new KeyboardInput());
+//     await this.entityManager.AddEntity(uitesterbot, "uitester66"); // Commented out test entity
+    
+    
+
+ 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'b' || event.key === 'B') {
-        this.createBob();
+        //50% create bob or alice
+        if  (Math.random()>0.5){ this.createBob();}
+           else {
+            this.createAlice()
+           }
       }
       
-      // Add 'm' key to check memory stats
-      if (event.key === 'm' || event.key === 'M') {
-        const stats = LoadingManager.getMemoryStats();
-        console.log('=== MEMORY STATS ===');
-        console.log(`WebGL Textures: ${stats.textures}`);
-        console.log(`WebGL Geometries: ${stats.geometries}`);
-        console.log(`Cached GLTF Assets: ${stats.assets}`);
-        console.log(`Cached Animations: ${stats.animations}`);
-        console.log(`Total entities: ${this.entityManager.Entities.length}`);
-        console.log('Asset Reference Counts:', stats.assetRefCounts);
-        console.log('Animation Reference Counts:', stats.animationRefCounts);
-        console.log('===================');
-        
-        // Also log physics stats
-        const physicsStats = this.maincController.getPhysicsStats();
-        console.log('=== PHYSICS STATS ===');
-        console.log(`Total Bodies: ${physicsStats.totalBodies}`);
-        console.log(`Dynamic Bodies: ${physicsStats.dynamicBodies}`);
-        console.log(`Static Bodies: ${physicsStats.staticBodies}`);
-        console.log(`Constraints: ${physicsStats.constraints}`);
-        console.log(`Contacts: ${physicsStats.contacts}`);
-        console.log(`Streaming Tiles: ${physicsStats.streamingTiles}`);
-        console.log(`Streaming Objects: ${physicsStats.streamingObjects}`);
-        console.log('====================');
-      }
+     
       
       // Add 'c' key to force cleanup
       if (event.key === 'c' || event.key === 'C') {
@@ -430,6 +450,14 @@ class Main {
         //resetphysics debug if active
     
         console.log('Memory Stats after cleanup:', stats);
+      }
+      
+      // Add 'r' key to complete reset
+      if (event.key === 'r' || event.key === 'R') {
+        console.log('Performing complete LoadingManager reset...');
+        LoadingManager.completeReset();
+        const stats = LoadingManager.getMemoryStats();
+        console.log('Memory Stats after reset:', stats);
       }
       
       // Add 's' key to show streaming stats
@@ -465,115 +493,27 @@ class Main {
         }
         console.log('===============================');
       }
+  
       
-      // Add 't' key to create test entities at various distances
-      if (event.key === 't' || event.key === 'T') {
-        this.createTestEntities();
-      }
-      
-      //if f1 key is pressed,     if (this.maincController.physicsmanager.debug) {
-        //   this.maincController.physicsmanager.debug = false;
-        //   this.maincController.physicsmanager.debug = true;
-        // }
 
-        if (event.key === 'F1') {
+        if (event.key === 'o') {
           this.maincController.physicsmanager.debug = !this.maincController.physicsmanager.debug;
           console.log(`Physics debug mode: ${this.maincController.physicsmanager.debug}`);
         }
         
-        // Add 'M' key to toggle minimap - disabled since minimap system is commented out
-       
-        if (event.key === 'o') {
-          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
-          if (minimapEntity) {
-            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
-            if (minimapComponent && typeof minimapComponent.toggleVisibility === 'function') {
-              minimapComponent.toggleVisibility();
-              console.log('Minimap visibility toggled');
-            }
-          }
-        }
+ 
         
-        
-    //    Add '[' and ']' keys to adjust view cone size
-      //  View cone size and angle adjustment controls (disabled with MinimapSystem)
-         
-        if (event.key === '[') {
-          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
-          if (minimapEntity) {
-            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
-            if (minimapComponent && typeof minimapComponent.zoomIn === 'function') {
-              minimapComponent.zoomIn();
-              console.log('Minimap zoom increased');
-            }
-          }
-        }
-        
-        if (event.key === ']') {
-          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
-          if (minimapEntity) {
-            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
-            if (minimapComponent && typeof minimapComponent.zoomOut === 'function') {
-              minimapComponent.zoomOut();
-              console.log('Minimap zoom decreased');
-            }
-          }
-        }
-        
-       // Add ';' and ''' keys to adjust view cone angle
-        if (event.key === ';') {
-          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
-          if (minimapEntity) {
-            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
-            if (minimapComponent && typeof minimapComponent.setViewConeAngle === 'function') {
-              minimapComponent.setViewConeAngle(45); // Narrower cone
-              console.log('View cone angle decreased to 45°');
-            }
-          }
-        }
-        
-        if (event.key === "'") {
-          const minimapEntity = this.entityManager.Entities.find(e => e.name === 'MinimapSystem');
-          if (minimapEntity) {
-            const minimapComponent = minimapEntity.getComponent('MinimapComponent') as any;
-            if (minimapComponent && typeof minimapComponent.resetZoom === 'function') {
-              minimapComponent.resetZoom();
-              console.log('Minimap zoom and position reset');
-            }
-          }
-        }
-        
-        
-      // Add 'p' key to play music
-      if (event.key === 'p' || event.key === 'P') {
-        console.log('Playing music to test visualizer...');
-        const mainEntity = this.maincController.MainEntity;
-        if (mainEntity) {
-          const characterComponent = mainEntity.getComponent('CharacterComponent') as any;
-          if (characterComponent && typeof characterComponent.playPositionalMusic === 'function') {
-            characterComponent.playPositionalMusic().then((success: boolean) => {
-              if (success) {
-                console.log('Music playing! Visualizer should be active now.');
-              } else {
-                console.log('Failed to play music');
-              }
-            });
-          } else {
-            console.log('Character component or playPositionalMusic method not found');
-          }
-        } else {
-          console.log('No main entity found');
-        }
-      }
-      // Add 'd' key to delete the most recent Bob entity
+ 
+   
+      // Add 'd' key to delete the most recent Bob or Alice entity
       if (event.key === 'd' || event.key === 'D') {
-        const bobEntities = this.entityManager.Entities.filter(e => e.name.includes('Bob'));
+        const bobEntities = this.entityManager.Entities.filter(e => e.name.includes('Bob') || e.name.includes('alice'));
         if (bobEntities.length > 0) {
-          const lastBob = bobEntities[bobEntities.length - 1];
-          console.log(`Deleting entity: ${lastBob.name}`);
-          this.entityManager.RemoveEntity(lastBob);
+          const lastEntity = bobEntities[bobEntities.length - 1];
+          console.log(`Deleting entity: ${lastEntity.name}`);
+          this.entityManager.RemoveEntity(lastEntity);
         } else {
-          console.log('No Bob entities to delete');
+          console.log('No Bob or Alice entities to delete');
         }
       }
       
@@ -634,63 +574,7 @@ class Main {
    // this.maincController.UIManager.toggleScrollmode();
 
     //add script entity environmentbot to the scene
-    const letterCounterBot = new Entity();
-    letterCounterBot.Position = new THREE.Vector3(0, 1, 39);
-    const letterCounterBotcontroller2 = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: this.maincController.animations,
-      behaviourscriptname: "letterCounterBot.js",
-    });
-
-    // Store component creation info for streaming
-    letterCounterBot._componentCreationInfo = [
-      { 
-        type: 'CharacterComponent', 
-        config: {
-          modelpath: "models/gltf/ybot2.glb",
-          animationspathslist: this.maincController.animations,
-          behaviourscriptname: "letterCounterBot.js",
-        }
-      },
-      { 
-        type: 'AudioComponent', 
-        config: {
-          audioConfig: {},
-          visualizerConfig: { enabled: true }
-        }
-      }
-    ];
-
-    await letterCounterBot.AddComponent(letterCounterBotcontroller2);
-    //await letterCounterBot.AddComponent(new AIInput());
-    await letterCounterBot.AddComponent(new AudioComponent());
- //   await letterCounterBot.AddComponent(new KeyboardInput());
-
-    //  await environmentbot2.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(letterCounterBot, "lca");
-    
-    // Component is already loaded, can send commands immediately
-    letterCounterBot.Broadcast({
-      topic: "walk",
-      data: { position: new THREE.Vector3(0, 0, 0) },
-    });
-    //add script entity environmentbot to the scene
-    const uitesterbot = new Entity();
-     const uitester6 = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: this.maincController.animations,
-      behaviourscriptname: "uitester6.js",
-    });
-
-    await uitesterbot.AddComponent(uitester6);
-
-     
-    await uitesterbot.AddComponent(new KeyboardInput());
-
-    await uitesterbot.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(uitesterbot, "uitester66"); // Commented out test entity
-    
-    
+  
    // this.maincController.UIManager.toggleScrollmode();
 
     this.animate();
