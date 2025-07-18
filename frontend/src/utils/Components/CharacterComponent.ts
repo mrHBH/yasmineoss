@@ -424,24 +424,23 @@ class CharacterComponent extends Component {
   }
 
   async InitEntity(): Promise<void> {
-
     this._entity._entityManager._mc.webglscene.add(this._webgpugroup);
     this._entity._entityManager._mc.annoationsScene.add(this._css2dgroup);
     
-    // Only add physics controller to world if it's initialized
+    // Wait for critical components to be loaded before proceeding
+    // This ensures proper initialization order and prevents race conditions
+    await this.waitForCriticalComponents();
+    
+    // Add physics controller to world
     if (this.physicsController) {
       this.physicsController.addToWorld(this._entity._entityManager._mc.physicsmanager.world);
       this.physicsController.setupLeftLegPhysicsBox();
-    } else {
-      console.log(`Physics controller not yet initialized for ${this._entity.name}, will be added when loaded`);
     }
     
-    // Only create name tag if UI manager is initialized and not already created
+    // Create name tag if not already created
     if (this.uiManager && !this.nameTagCreated) {
       this.uiManager.createNameTag();
       this.nameTagCreated = true;
-    } else {
-      console.log(`UI manager not yet initialized for ${this._entity.name}, name tag will be created when loaded`);
     }
     
     // Initialize AI input if no external input component is present
@@ -725,6 +724,25 @@ class CharacterComponent extends Component {
               this.movementController && 
               this.vehicleController && 
               this.fsmController);
+  }
+
+  // Wait for critical components (physics and UI) to be ready
+  private async waitForCriticalComponents(timeout = 10000): Promise<void> {
+    const startTime = Date.now();
+    
+    while (!this.physicsController || !this.uiManager) {
+      if (Date.now() - startTime > timeout) {
+        console.warn(`Timeout waiting for critical components for ${this._entity.name}`);
+        break;
+      }
+      
+      // Wait a short time before checking again
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    
+    if (this.physicsController && this.uiManager) {
+      console.log(`Critical components ready for ${this._entity.name}`);
+    }
   }
 
   // Get loading progress (0-1)

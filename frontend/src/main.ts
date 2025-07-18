@@ -15,7 +15,7 @@ import { AudioComponent } from "./utils/Components/AudioComponent";
 // Add this import statement
 import { LoadingManager } from "./utils/LoadingManager";
 import {  CarComponent } from "./utils/Components/CarComponent";
-import { MinimapComponent } from "./utils/Components/MinimapComponent";
+import { DynamicuiWorkerComponent } from "./utils/Components/DynamicuiWorkerComponent";
 
 class Main {
   private entityManager: EntityManager;
@@ -80,22 +80,6 @@ class Main {
     }
   }
 
-  // Helper method to wait for behavior script to be fully initialized
-  private async waitForBehaviorScriptReady(characterComponent: any): Promise<void> {
-    return new Promise((resolve) => {
-      const checkReady = () => {
-        // Check if behavior script exists and is ready to receive commands
-        if (characterComponent.behaviorScript && 
-            characterComponent.behaviorScript.ready !== false) {
-          console.log('Behavior script is ready for commands');
-          resolve();
-        } else {
-          setTimeout(checkReady, 100); // Check every 100ms
-        }
-      };
-      checkReady();
-    });
-  }
 
   // Function to create and add Bob to the scene
   private async createBob(): Promise<void> {
@@ -176,7 +160,7 @@ class Main {
       { 
         type: 'CharacterComponent', 
         config: {
-          modelpath: "models/gltf/ybot2.glb",
+          modelpath: "models/gltf/Xbot.glb",
           animationspathslist: this.maincController.animations,
           behaviourscriptname: "botbasicbehavior.js",
         }
@@ -203,6 +187,24 @@ class Main {
   }
   
   
+    private async createInitialUI(): Promise<void> {
+      const dynamicuicomponent = new DynamicuiWorkerComponent("../pages/homepage--.js");
+      dynamicuicomponent.sticky = true;
+      const h = async () => {
+        let introui = new Entity();
+        
+        //      await introui.AddComponent(uicomponent);
+        await introui.AddComponent(dynamicuicomponent);
+  
+        let res = await this.maincController.entitymanager.AddEntity(introui, "homepage");
+        if (res == -1) {
+          return;
+        }
+      };
+  
+      h();
+     
+    }
  
   private async init(): Promise<void> {
     // Show loading spinner
@@ -210,7 +212,8 @@ class Main {
     
     this.entityManager = new EntityManager();
     this.maincController = new MainController(this.entityManager);
-    
+    //   await this.createInitialUI()
+
     // Initialize LoadingManager with renderer and scene 
     // This needs to happen before any assets are loaded
     LoadingManager.initialize(
@@ -224,18 +227,169 @@ class Main {
     // Optional: Warm up LoadingManager with core assets for better performance
     // Comment out the next 3 lines if you want no preloading at all
     console.log("🔥 Starting asset warm-up...");
-  await LoadingManager.warmUp(true); // TRUE = Keep core assets permanently loaded (never reload), FALSE = Ultra aggressive disposal
-    console.log("✅ Asset warm-up complete!");
-    
-   // this.maincController.initSound();
+      await LoadingManager.warmUp(false); // TRUE = Keep core assets permanently loaded (never reload), FALSE = Ultra aggressive disposal
+    console.log("✅ Asset warm-up complete!");    
+     this.maincController.initSound();
     console.log("LoadingManager initialized successfully");
 
-    // Wait a bit for MainController to fully initialize
-    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Hide loading spinner
     this.hideLoadingSpinner();
 
+    
+
+ 
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'b' || event.key === 'B') {
+        //50% create bob or alice
+        if  (Math.random()>0.5){ this.createBob();}
+           else {
+            this.createAlice()
+           }
+      }
+      
+     
+      
+      // Add 'c' key to force cleanup
+      if (event.key === 'c' || event.key === 'C') {
+        console.log('Forcing cleanup...');
+        LoadingManager.forceCleanup();
+        const stats = LoadingManager.getMemoryStats();
+        //resetphysics debug if active
+    
+        console.log('Memory Stats after cleanup:', stats);
+      }
+      
+      // Add 'r' key to complete reset
+      if (event.key === 'r' || event.key === 'R') {
+        console.log('Performing complete LoadingManager reset...');
+        LoadingManager.completeReset();
+        const stats = LoadingManager.getMemoryStats();
+        console.log('Memory Stats after reset:', stats);
+      }
+      
+      // Add 's' key to show streaming stats
+      if (event.key === 's' || event.key === 'S') {
+        const allEntities = this.entityManager.Entities;
+        const streamedEntities = allEntities.filter(e => e._isStreamedEntity);
+        const nonStreamedEntities = allEntities.filter(e => !e._isStreamedEntity);
+        const totalStreamedStates = (this.entityManager as any)._streamedEntityStates.size;
+        
+        console.log('=== ENTITY STREAMING STATS ===');
+        console.log(`Total entities: ${allEntities.length}`);
+        console.log(`Streamable entities: ${streamedEntities.length}`);
+        console.log(`Non-streamable entities: ${nonStreamedEntities.length}`);
+        console.log(`Cached tile states: ${totalStreamedStates}`);
+        console.log(`Main entity position: ${this.maincController.MainEntity?.Position.x.toFixed(1)}, ${this.maincController.MainEntity?.Position.z.toFixed(1)}`);
+        
+        // Show non-streamable entities (usually system entities)
+        if (nonStreamedEntities.length > 0) {
+          console.log('\nNon-streamable entities:');
+          nonStreamedEntities.forEach(entity => {
+            console.log(`  ${entity.name} (System entity)`);
+          });
+        }
+        
+        // Show streamable entity positions
+        if (streamedEntities.length > 0) {
+          console.log('\nStreamable entities:');
+          streamedEntities.forEach(entity => {
+            const distance = this.maincController.MainEntity ? 
+              entity.Position.distanceTo(this.maincController.MainEntity.Position) : 0;
+            console.log(`  ${entity.name}: (${entity.Position.x.toFixed(1)}, ${entity.Position.z.toFixed(1)}) - Distance: ${distance.toFixed(1)} - Tile: ${entity._originTileKey}`);
+          });
+        }
+        console.log('===============================');
+      }
+  
+      
+
+        if (event.key === 'o') {
+          this.maincController.physicsmanager.debug = !this.maincController.physicsmanager.debug;
+          console.log(`Physics debug mode: ${this.maincController.physicsmanager.debug}`);
+        }
+        
+ 
+        
+ 
+   
+      // Add 'd' key to delete the most recent Bob or Alice entity
+      if (event.key === 'd' || event.key === 'D') {
+        const bobEntities = this.entityManager.Entities.filter(e => e.name.includes('Bob') || e.name.includes('alice'));
+        if (bobEntities.length > 0) {
+          const lastEntity = bobEntities[bobEntities.length - 1];
+          console.log(`Deleting entity: ${lastEntity.name}`);
+          this.entityManager.RemoveEntity(lastEntity);
+        } else {
+          console.log('No Bob or Alice entities to delete');
+        }
+      }
+      
+      // Add 'e' key to test entity streaming disposal
+      if (event.key === 'e' || event.key === 'E') {
+        console.log('Testing entity streaming disposal...');
+        const streamingStats = this.entityManager.getStreamingStats();
+        console.log('Entity streaming stats:', streamingStats);
+        
+        // List all entities and their distances
+        if (this.maincController.MainEntity) {
+          const mainPos = this.maincController.MainEntity.Position;
+          console.log('All entities and distances:');
+          this.entityManager.Entities.forEach(entity => {
+            const distance = entity.Position.distanceTo(mainPos);
+            console.log(`  ${entity.name}: Distance ${distance.toFixed(1)}, Streamable: ${entity._isStreamedEntity}, MaxDistance: ${entity._maxDistanceFromMainEntity}`);
+          });
+        }
+      }
+    });
+
+    //if i is pressed ; spawn car
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'i' || event.key === 'I') {
+           const car = new Entity();
+
+    const carcontroller = new CarComponent({
+
+    });
+    car.Position = new THREE.Vector3(0, 1, 0);
+    
+    // Store component creation info for streaming
+    car._componentCreationInfo = [
+      { type: 'CarComponent', config: {} },
+      { type: 'KeyboardInput', config: {} }
+    ];
+    
+    const h = async () => {
+      await car.AddComponent(carcontroller);
+       
+      // const keyboardinput = new KeyboardInput();
+      await car.AddComponent(new KeyboardInput());
+      await this.entityManager.AddEntity(car, "Car");
+      this.maincController.MainEntity = car;
+     
+    };
+    h();
+
+      }
+    });
+    
+ 
+    // //  await environmentbot2.AddComponent(new KeyboardInput());
+    // await this.entityManager.AddEntity(uitester2, "uitester6", false); // Main entity should not be streamable
+    // uitestercontroller3.face();
+
+   // this.maincController.UIManager.toggleScrollmode();
+
+    //add script entity environmentbot to the scene
+  
+   // this.maincController.UIManager.toggleScrollmode();
+
+    this.animate();
+  //  await this.sceneSetup();
+  }
+
+  private async sceneSetup(): Promise<void> {
+    
     // Initialize the scene without Bob initially
 
    // this.maincController.physicsmanager.debug = false;
@@ -247,7 +401,7 @@ class Main {
     const hbhc = new CharacterComponent({
       modelpath: "models/gltf/ybot2.glb",
       animationspathslist: this.maincController.animations,
-      behaviourscriptname: "Hamza02.js",
+      behaviourscriptname: "Hamza.js",
     });
     
     // Store component creation info for streaming
@@ -270,16 +424,28 @@ class Main {
     ];
     
     await hamza.AddComponent(hbhc);
+    await hamza.AddComponent(new KeyboardInput())
     await hamza.AddComponent(new AudioComponent());
    // await hamza.AddComponent(new KeyboardInput());
     await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
 
     // Components are already loaded, can send commands immediately
     await hbhc.face();
-   await  hamza.Broadcast({
+              this.maincController.MainEntity = hamza;
+
+    await hamza.Broadcast({
         topic: "walk",
         data: { position: new THREE.Vector3(5, 0, -10) },
-      });
+    })
+
+        console.log("Hamza finished initialization");
+    await hamza.Broadcast({
+        topic: "walk",
+        data: { position: new THREE.Vector3(-15, 0, 10) },
+    })
+  
+ 
+
   //   // Wait a bit for the face animation to complete and behavior script to fully initialize
   //   setTimeout(() => {
   //     hamza.Broadcast({
@@ -427,157 +593,6 @@ class Main {
 
 //     await uitesterbot.AddComponent(new KeyboardInput());
 //     await this.entityManager.AddEntity(uitesterbot, "uitester66"); // Commented out test entity
-    
-    
-
- 
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'b' || event.key === 'B') {
-        //50% create bob or alice
-        if  (Math.random()>0.5){ this.createBob();}
-           else {
-            this.createAlice()
-           }
-      }
-      
-     
-      
-      // Add 'c' key to force cleanup
-      if (event.key === 'c' || event.key === 'C') {
-        console.log('Forcing cleanup...');
-        LoadingManager.forceCleanup();
-        const stats = LoadingManager.getMemoryStats();
-        //resetphysics debug if active
-    
-        console.log('Memory Stats after cleanup:', stats);
-      }
-      
-      // Add 'r' key to complete reset
-      if (event.key === 'r' || event.key === 'R') {
-        console.log('Performing complete LoadingManager reset...');
-        LoadingManager.completeReset();
-        const stats = LoadingManager.getMemoryStats();
-        console.log('Memory Stats after reset:', stats);
-      }
-      
-      // Add 's' key to show streaming stats
-      if (event.key === 's' || event.key === 'S') {
-        const allEntities = this.entityManager.Entities;
-        const streamedEntities = allEntities.filter(e => e._isStreamedEntity);
-        const nonStreamedEntities = allEntities.filter(e => !e._isStreamedEntity);
-        const totalStreamedStates = (this.entityManager as any)._streamedEntityStates.size;
-        
-        console.log('=== ENTITY STREAMING STATS ===');
-        console.log(`Total entities: ${allEntities.length}`);
-        console.log(`Streamable entities: ${streamedEntities.length}`);
-        console.log(`Non-streamable entities: ${nonStreamedEntities.length}`);
-        console.log(`Cached tile states: ${totalStreamedStates}`);
-        console.log(`Main entity position: ${this.maincController.MainEntity?.Position.x.toFixed(1)}, ${this.maincController.MainEntity?.Position.z.toFixed(1)}`);
-        
-        // Show non-streamable entities (usually system entities)
-        if (nonStreamedEntities.length > 0) {
-          console.log('\nNon-streamable entities:');
-          nonStreamedEntities.forEach(entity => {
-            console.log(`  ${entity.name} (System entity)`);
-          });
-        }
-        
-        // Show streamable entity positions
-        if (streamedEntities.length > 0) {
-          console.log('\nStreamable entities:');
-          streamedEntities.forEach(entity => {
-            const distance = this.maincController.MainEntity ? 
-              entity.Position.distanceTo(this.maincController.MainEntity.Position) : 0;
-            console.log(`  ${entity.name}: (${entity.Position.x.toFixed(1)}, ${entity.Position.z.toFixed(1)}) - Distance: ${distance.toFixed(1)} - Tile: ${entity._originTileKey}`);
-          });
-        }
-        console.log('===============================');
-      }
-  
-      
-
-        if (event.key === 'o') {
-          this.maincController.physicsmanager.debug = !this.maincController.physicsmanager.debug;
-          console.log(`Physics debug mode: ${this.maincController.physicsmanager.debug}`);
-        }
-        
- 
-        
- 
-   
-      // Add 'd' key to delete the most recent Bob or Alice entity
-      if (event.key === 'd' || event.key === 'D') {
-        const bobEntities = this.entityManager.Entities.filter(e => e.name.includes('Bob') || e.name.includes('alice'));
-        if (bobEntities.length > 0) {
-          const lastEntity = bobEntities[bobEntities.length - 1];
-          console.log(`Deleting entity: ${lastEntity.name}`);
-          this.entityManager.RemoveEntity(lastEntity);
-        } else {
-          console.log('No Bob or Alice entities to delete');
-        }
-      }
-      
-      // Add 'e' key to test entity streaming disposal
-      if (event.key === 'e' || event.key === 'E') {
-        console.log('Testing entity streaming disposal...');
-        const streamingStats = this.entityManager.getStreamingStats();
-        console.log('Entity streaming stats:', streamingStats);
-        
-        // List all entities and their distances
-        if (this.maincController.MainEntity) {
-          const mainPos = this.maincController.MainEntity.Position;
-          console.log('All entities and distances:');
-          this.entityManager.Entities.forEach(entity => {
-            const distance = entity.Position.distanceTo(mainPos);
-            console.log(`  ${entity.name}: Distance ${distance.toFixed(1)}, Streamable: ${entity._isStreamedEntity}, MaxDistance: ${entity._maxDistanceFromMainEntity}`);
-          });
-        }
-      }
-    });
-
-    //if i is pressed ; spawn car
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'i' || event.key === 'I') {
-           const car = new Entity();
-
-    const carcontroller = new CarComponent({
-
-    });
-    car.Position = new THREE.Vector3(0, 1, 0);
-    
-    // Store component creation info for streaming
-    car._componentCreationInfo = [
-      { type: 'CarComponent', config: {} },
-      { type: 'KeyboardInput', config: {} }
-    ];
-    
-    const h = async () => {
-      await car.AddComponent(carcontroller);
-       
-      // const keyboardinput = new KeyboardInput();
-      await car.AddComponent(new KeyboardInput());
-      await this.entityManager.AddEntity(car, "Car");
-      this.maincController.MainEntity = car;
-     
-    };
-    h();
-
-      }
-    });
-    
- 
-    // //  await environmentbot2.AddComponent(new KeyboardInput());
-    // await this.entityManager.AddEntity(uitester2, "uitester6", false); // Main entity should not be streamable
-    // uitestercontroller3.face();
-    // this.maincController.MainEntity = uitester2;
-
-   // this.maincController.UIManager.toggleScrollmode();
-
-    //add script entity environmentbot to the scene
-  
-   // this.maincController.UIManager.toggleScrollmode();
-
-    this.animate();
   }
 
   private async animate(): Promise<void> {

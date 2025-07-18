@@ -3,7 +3,6 @@ import * as THREE from "three";
 import { Entity } from "../Entity";
 import { CSS2DObject } from "../CSS2D";
 import { tween } from "shifty";
-import { watch } from "fs";
 import { StaticCLI } from "../../SimpleCLI";
 import {
   animate,
@@ -19,6 +18,8 @@ class DynamicuiWorkerComponent extends Component {
   private _css2dobject: CSS2DObject;
   private _webgpuplane: THREE.Mesh;
   private _htmlElement: HTMLElement;
+  private _titleBar: HTMLElement;
+  private _contentContainer: HTMLElement;
   private _css2dgroup: THREE.Group = new THREE.Group();
   private _webgpugroup: THREE.Group = new THREE.Group();
   private _size: THREE.Vector2;
@@ -26,18 +27,20 @@ class DynamicuiWorkerComponent extends Component {
   uiWorker: Worker;
   pagescriptpath: string;
   flat: boolean;
+  name: string = "Dynamic UI";
 
-  constructor(pagescriptpath: string) {
+  constructor(pagescriptpath: string, name: string = "Dynamic UI") {
     super();
     this.pagescriptpath = pagescriptpath;
+    this.name = name;
     this._size = new THREE.Vector2( window.innerWidth, window.innerHeight);
     this._htmlElement = document.createElement("div");
     this.flat = true;
-
+    this.createTitleBar();
   }
 
   get HtmlElement() {
-    return this._htmlElement;
+    return this._contentContainer || this._htmlElement;
   }
   get Size() {
     return this._size;
@@ -52,7 +55,112 @@ class DynamicuiWorkerComponent extends Component {
   }
 
   set HtmlElement (htmlElement: HTMLElement) {
-    this._htmlElement = htmlElement;
+    this._contentContainer = htmlElement;
+  }
+
+  createTitleBar() {
+    // Create main container
+    this._htmlElement.style.display = "flex";
+    this._htmlElement.style.flexDirection = "column";
+    this._htmlElement.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+    this._htmlElement.style.borderRadius = "5px";
+    this._htmlElement.style.overflow = "hidden";
+
+    // Create title bar
+    this._titleBar = document.createElement("div");
+    this._titleBar.style.display = "flex";
+    this._titleBar.style.alignItems = "center";
+    this._titleBar.style.justifyContent = "space-between";
+    this._titleBar.style.padding = "5px 10px";
+    this._titleBar.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+    this._titleBar.style.borderBottom = "1px solid rgba(255, 255, 255, 0.2)";
+    this._titleBar.style.minHeight = "30px";
+
+    // Create title text
+    const titleText = document.createElement("span");
+    titleText.textContent = this.name;
+    titleText.style.color = "white";
+    titleText.style.fontSize = "12px";
+    titleText.style.fontWeight = "bold";
+
+    // Create buttons container
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.style.display = "flex";
+    buttonsContainer.style.gap = "5px";
+
+    // Create reload button
+    const reloadBtn = document.createElement("span");
+    reloadBtn.className = "uk-icon";
+    reloadBtn.setAttribute("uk-icon", "icon: refresh; ratio: 0.8");
+    reloadBtn.style.cursor = "pointer";
+    reloadBtn.style.color = "#4a90e2";
+    reloadBtn.title = "Reload component";
+    reloadBtn.addEventListener("click", () => this.handleReload());
+
+    // Create sticky toggle button
+    const stickyBtn = document.createElement("span");
+    stickyBtn.className = "uk-icon";
+    stickyBtn.setAttribute("uk-icon", this.sticky ? "icon: lock; ratio: 0.8" : "icon: unlock; ratio: 0.8");
+    stickyBtn.style.cursor = "pointer";
+    stickyBtn.style.color = this.sticky ? "#ffa500" : "#666";
+    stickyBtn.title = this.sticky ? "Make non-sticky" : "Make sticky";
+    stickyBtn.addEventListener("click", () => this.toggleSticky(stickyBtn));
+
+    // Create close button
+    const closeBtn = document.createElement("span");
+    closeBtn.className = "uk-icon";
+    closeBtn.setAttribute("uk-icon", "icon: close; ratio: 0.8");
+    closeBtn.style.cursor = "pointer";
+    closeBtn.style.color = "#ff4444";
+    closeBtn.title = "Close component";
+    closeBtn.addEventListener("click", () => this.handleClose());
+
+    // Assemble buttons
+    buttonsContainer.appendChild(reloadBtn);
+    buttonsContainer.appendChild(stickyBtn);
+    buttonsContainer.appendChild(closeBtn);
+
+    // Assemble title bar
+    this._titleBar.appendChild(titleText);
+    this._titleBar.appendChild(buttonsContainer);
+
+    // Create content container
+    this._contentContainer = document.createElement("div");
+    this._contentContainer.style.flex = "1";
+    this._contentContainer.style.overflow = "auto";
+    this._contentContainer.style.padding = "10px";
+
+    // Assemble main element
+    this._htmlElement.appendChild(this._titleBar);
+    this._htmlElement.appendChild(this._contentContainer);
+  }
+
+  private handleReload() {
+    this.Reload();
+  }
+
+  private toggleSticky(stickyBtn: HTMLElement) {
+    this.sticky = !this.sticky;
+    stickyBtn.setAttribute("uk-icon", this.sticky ? "icon: lock; ratio: 0.8" : "icon: unlock; ratio: 0.8");
+    stickyBtn.style.color = this.sticky ? "#ffa500" : "#666";
+    stickyBtn.title = this.sticky ? "Make non-sticky" : "Make sticky";
+  }
+
+  private handleClose() {
+    if (this._entity) {
+      // Trigger entity destruction or removal
+      this.Destroy();
+    }
+  }
+
+  public setName(name: string) {
+    this.name = name;
+    if (this._titleBar) {
+      const titleText = this._titleBar.querySelector("span");
+      if (titleText) {
+        titleText.textContent = name;
+      }
+    }
   }
   async InitComponent(entity: Entity): Promise<void> {
     this._entity = entity;
@@ -99,7 +207,7 @@ class DynamicuiWorkerComponent extends Component {
       await this.setSizeSmoothly(data?.size as THREE.Vector2);
     });
 
-    this._entity._RegisterHandler("reset", async (data: any) => {
+    this._entity._RegisterHandler("reset", async (_data: any) => {
        
       await this.Reload();
     });
@@ -117,7 +225,7 @@ class DynamicuiWorkerComponent extends Component {
       }
       if (e.data.type === "freshhtml") {
         
-        this.HtmlElement.innerHTML = e.data.html;
+        this._contentContainer.innerHTML = e.data.html;
       }
       if (e.data.type ==="jssetup"){
         eval(e.data.js).bind(this)();
@@ -152,7 +260,7 @@ class DynamicuiWorkerComponent extends Component {
       }
       if (e.data.type === "freshhtml") {
         
-        this.HtmlElement.innerHTML = e.data.html;
+        this._contentContainer.innerHTML = e.data.html;
       }
       if (e.data.type ==="jssetup"){
         eval(e.data.js).bind(this)();
@@ -169,7 +277,6 @@ class DynamicuiWorkerComponent extends Component {
       }
  
     };
- 
     
   }
   async zoom(radius =8) {
@@ -335,14 +442,29 @@ class DynamicuiWorkerComponent extends Component {
    async Destroy(): Promise<void> {
     this._entity._entityManager._mc.webglscene.remove(this._webgpugroup);
     this._entity._entityManager._mc.html2dScene.remove(this._css2dgroup);
-    this._htmlElement.remove();
     
-
+    // Clean up UI elements
+    if (this._titleBar) {
+      // Remove event listeners by cloning elements
+      const buttons = this._titleBar.querySelectorAll("span.uk-icon");
+      buttons.forEach(button => {
+        const newButton = button.cloneNode(true);
+        if (button.parentNode) {
+          button.parentNode.replaceChild(newButton, button);
+        }
+      });
+    }
+    
+    if (this.uiWorker) {
+      this.uiWorker.terminate();
+    }
+    
+    this._htmlElement.remove();
   }
 
   findCursor() {
     // Find the span element with the data attribute data-cli-cursor
-    let cursor = this._htmlElement.querySelector('span[data-cli-cursor]');
+    let cursor = this._contentContainer.querySelector('span[data-cli-cursor]');
     let rect = cursor.getBoundingClientRect();
 
     // Calculate normalized device coordinates (NDC)

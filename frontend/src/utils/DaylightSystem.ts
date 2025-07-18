@@ -6,7 +6,6 @@ import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 export class DaylightSystem {
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
-  private camera: THREE.Camera;
   
   // Sky system
   private sky: Sky;
@@ -20,7 +19,7 @@ export class DaylightSystem {
   
   // Day/night cycle
   private timeOfDay: number = 0.8; // 0 = midnight, 0.5 = noon, 1 = midnight
-  private transitionSpeed: number = 0.0001; // How fast time progresses
+  private transitionSpeed: number = 0.00000001; // How fast time progresses
   private isAutomatic: boolean = false;
   
   // Sky parameters

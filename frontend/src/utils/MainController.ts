@@ -85,7 +85,7 @@ class MainController {
   daylightSystem: DaylightSystem;
 
   // Daylight system control
-  private enableDaylightSystem: boolean = true;
+  private enableDaylightSystem: boolean = false;
 
   // Physics stats tracking
   private isDragging: boolean = false;
@@ -355,7 +355,7 @@ class MainController {
         this.setDayNightAutomatic(!isAuto);
         if (!isAuto) {
           // Set speed for 10 second full cycle: 1 / 10 = 0.1 per second
-          this.setDayNightSpeed(0.1); // This will complete a full cycle in 10 seconds
+          this.setDayNightSpeed(0.0001); // This will complete a full cycle in 10 seconds
           console.log("Started automatic day/night cycle (10 second cycle)");
         } else {
           console.log("Stopped automatic day/night cycle");
@@ -427,15 +427,15 @@ class MainController {
     this.sunLight.position.set(5, 5, 15); // Position light at an angle for better shadows
 
 
-    this.webglscene.add(this.sunLight);
+   // this.webglscene.add(this.sunLight);
 
     this.clock = new THREE.Clock();
 
     this.UIManager = new UIManager(this);
 
   //  Initialize StreamingWorld with physics world reference
-   this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
-   this.webglscene.add(this.streamingWorld);
+  //  this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
+  //  this.webglscene.add(this.streamingWorld);
 
     // Initialize DaylightSystem conditionally
     if (this.enableDaylightSystem) {

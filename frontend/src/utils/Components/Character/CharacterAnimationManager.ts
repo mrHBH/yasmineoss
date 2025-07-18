@@ -262,6 +262,10 @@ export class CharacterAnimationManager {
               STOP: {
                 target: "StoppingRunning",
               },
+              WALK: {
+                cond: "canWalk",
+                target: "Walking",
+              },
               JUMP: {
                 target: "JumpingFromRun",
               },

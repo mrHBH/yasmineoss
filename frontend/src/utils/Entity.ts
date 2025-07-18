@@ -136,12 +136,12 @@ class Entity {
 
     async Broadcast(msg: { topic: string, data: unknown }) {
 
-        //  console.log(this.Name + msg);
+        //   console.log(this.name + msg.topic + msg.data);
         if (!(msg.topic in this._handlers)) {
             return;
         }
         for (const curHandler of this._handlers[msg.topic]) {
-              curHandler(msg.data);
+          await    curHandler(msg.data);
         }
     }
 

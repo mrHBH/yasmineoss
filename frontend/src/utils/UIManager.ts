@@ -55,12 +55,12 @@ class UIManager {
   constructor(parent: MainController) {
     this.mc = parent;
     this.controlpointsmeshes = [];
-    //this.createAttentionCursor();
-    //this.createSplinePath();
-    this.createUIButtons();
-    //this.addScrollbar();
-    this.moveCubeAlongPath(0);
-    //this.createInitialUI();
+    // this.createAttentionCursor();
+    // this.createSplinePath();
+    // this.createUIButtons();
+    // this.addScrollbar();
+    // this.moveCubeAlongPath(0);
+ //   this.createInitialUI();
   }
 
   private async createInitialUI(): Promise<void> {
