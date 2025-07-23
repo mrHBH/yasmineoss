@@ -37,6 +37,7 @@ import { CharacterComponent } from "./Components/CharacterComponent.js";
 import { LoadingManager } from "./LoadingManager.js";
 import { StreamingWorld } from './StreamingWorld.js';
 import { DaylightSystem } from './DaylightSystem.js';
+import { CSSHybridRenderer } from "./CSSHybrid.js";
 
 
 
@@ -54,17 +55,15 @@ class MainController {
   camera: THREE.PerspectiveCamera;
   //  CameraControls: OrbitControls;
   webglrenderer: THREE.WebGLRenderer;
+  entitymanager: EntityManager;
   annotationRenderer: CSS2DRenderer;
   annoationsScene: THREE.Scene = new THREE.Scene();
-  entitymanager: EntityManager;
-  html2dRenderer: CSS2DRenderer;
-  html2dScene: THREE.Scene = new THREE.Scene();
-  html3dScene: THREE.Scene = new THREE.Scene();
+  htmlRenderer: CSS3DRenderer; // Unified HTML renderer (using CSS3DRenderer as primary)
+  htmlScene: THREE.Scene = new THREE.Scene();
   physicsmanager: PhysicsManager;
   webglscene: THREE.Scene = new THREE.Scene();
   clock: THREE.Clock;
   grid: any;
-  html3dRenderer: CSS3DRenderer;
   performanceMonitor: PerformanceMonitor;
   UIManager: UIManager;
   mainEntity: Entity;
@@ -85,7 +84,7 @@ class MainController {
   daylightSystem: DaylightSystem;
 
   // Daylight system control
-  private enableDaylightSystem: boolean = false;
+  private enableDaylightSystem: boolean = true;
 
   // Physics stats tracking
   private isDragging: boolean = false;
@@ -200,13 +199,13 @@ class MainController {
     this.annotationRenderer.domElement.style.zIndex = "4";
     this.annotationRenderer.domElement.id = "annotation";
 
-    this.html2dRenderer = new CSS2DRenderer();
-    this.html2dRenderer.setSize(window.innerWidth, window.innerHeight);
-    this.html2dRenderer.domElement.style.position = "absolute";
-    this.html2dRenderer.domElement.style.top = "0px";
-    this.html2dRenderer.domElement.id = "html2d";
-    this.html2dRenderer.domElement.style.pointerEvents = "auto";
-    this.html2dRenderer.domElement.style.zIndex = "2";
+    this.htmlRenderer = new CSSHybridRenderer();
+    this.htmlRenderer.setSize(window.innerWidth, window.innerHeight);
+    this.htmlRenderer.domElement.style.position = "absolute";
+    this.htmlRenderer.domElement.style.top = "0px";
+    this.htmlRenderer.domElement.id = "htmlRenderer";
+    this.htmlRenderer.domElement.style.pointerEvents = "auto";
+    this.htmlRenderer.domElement.style.zIndex = "2";
 
     this.webglrenderer.domElement.style.position = "absolute";
     this.webglrenderer.setSize(window.innerWidth, window.innerHeight);
@@ -216,17 +215,9 @@ class MainController {
     this.webglrenderer.domElement.style.zIndex = "3";
     this.webglrenderer.domElement.id = "webgpu";
 
-    this.html3dRenderer = new CSS3DRenderer();
-    this.html3dRenderer.domElement.style.position = "absolute";
-    this.html3dRenderer.domElement.style.top = "0";
-    this.html3dRenderer.domElement.style.zIndex = "0";
-    this.html3dRenderer?.setSize(window.innerWidth, window.innerHeight);
-    this.html3dRenderer.domElement.style.pointerEvents = "none";
-
     document.body.appendChild(this.annotationRenderer.domElement);
-    document.body.appendChild(this.html2dRenderer.domElement);
+    document.body.appendChild(this.htmlRenderer.domElement);
     document.body.appendChild(this.webglrenderer.domElement);
-    document.body.appendChild(this.html3dRenderer.domElement);
 
     //disable visbile scrollbars
     document.body.style.overflow = "hidden";
@@ -266,7 +257,7 @@ class MainController {
 
     this.CameraControls = new CameraControls(
       this.camera,
-      this.html2dRenderer.domElement
+      this.htmlRenderer.domElement
     );
 
     //add event listener that prevents context menu from propagating after right button drag
@@ -427,15 +418,15 @@ class MainController {
     this.sunLight.position.set(5, 5, 15); // Position light at an angle for better shadows
 
 
-   // this.webglscene.add(this.sunLight);
+   this.webglscene.add(this.sunLight);
 
     this.clock = new THREE.Clock();
 
     this.UIManager = new UIManager(this);
 
   //  Initialize StreamingWorld with physics world reference
-  //  this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
-  //  this.webglscene.add(this.streamingWorld);
+    this.streamingWorld = new StreamingWorld(this.physicsmanager.World, this.entitymanager);
+     this.webglscene.add(this.streamingWorld);
 
     // Initialize DaylightSystem conditionally
     if (this.enableDaylightSystem) {
@@ -733,8 +724,7 @@ class MainController {
 
     this.performanceMonitor?.beginFrame();
     this.annotationRenderer.render(this.annoationsScene, this.camera);
-    this.html2dRenderer.render(this.html2dScene, this.camera);
-    //this.html3dRenderer.render(this.html3dScene, this.camera);
+    this.htmlRenderer.render(this.htmlScene, this.camera);
     this.physicsmanager?.Update(delta);
     this.UIManager?.Update();
     this.CameraControls?.update(delta / 2);
@@ -802,10 +792,31 @@ class MainController {
     this.camera.updateProjectionMatrix();
     this.webglrenderer.setSize(window.innerWidth, window.innerHeight);
     this.annotationRenderer?.setSize(window.innerWidth, window.innerHeight);
-    this.html2dRenderer?.setSize(window.innerWidth, window.innerHeight);
-    this.html3dRenderer?.setSize(window.innerWidth, window.innerHeight);
+    this.htmlRenderer?.setSize(window.innerWidth, window.innerHeight);
 
     // this.css3drenderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  // Z-index management for ModernUIComponent and other adaptive UI components
+  setRendererZIndex(mode: '2d-priority' | '3d-priority' | 'default'): void {
+    switch (mode) {
+      case '2d-priority':
+        this.htmlRenderer.domElement.style.zIndex = "5";
+        this.webglrenderer.domElement.style.zIndex = "3";
+        this.annotationRenderer.domElement.style.zIndex = "4";
+        break;
+      case '3d-priority':
+        this.htmlRenderer.domElement.style.zIndex = "5";
+        this.webglrenderer.domElement.style.zIndex = "3";
+        this.annotationRenderer.domElement.style.zIndex = "4";
+        break;
+      case 'default':
+      default:
+        this.htmlRenderer.domElement.style.zIndex = "2";
+        this.webglrenderer.domElement.style.zIndex = "3";
+        this.annotationRenderer.domElement.style.zIndex = "4";
+        break;
+    }
   }
 
   async spawnCar() {

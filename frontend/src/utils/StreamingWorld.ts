@@ -122,7 +122,7 @@ class StreamingTile extends THREE.Group {
       metalness: 0.0,
       roughness: 0.8,
     });
-   // groundMaterial.color.setHSL(noise2D(tilePos.x, tilePos.z), 1.0, 0.5);
+    groundMaterial.color.setHSL(noise2D(tilePos.x, tilePos.z), 1.0, 0.5);
 
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.castShadow = false;

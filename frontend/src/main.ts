@@ -16,6 +16,9 @@ import { AudioComponent } from "./utils/Components/AudioComponent";
 import { LoadingManager } from "./utils/LoadingManager";
 import {  CarComponent } from "./utils/Components/CarComponent";
 import { DynamicuiWorkerComponent } from "./utils/Components/DynamicuiWorkerComponent";
+import { threeDUIComponent } from "./utils/Components/3dUIComponent";
+import { twoDUIComponent } from "./utils/Components/2dUIComponent";
+import { HybridUIComponent } from "./utils/Components/HybridUIComponent";
 
 class Main {
   private entityManager: EntityManager;
@@ -188,7 +191,7 @@ class Main {
   
   
     private async createInitialUI(): Promise<void> {
-      const dynamicuicomponent = new DynamicuiWorkerComponent("../pages/homepage--.js");
+      const dynamicuicomponent = new DynamicuiWorkerComponent("../pages/homepage.js");
       dynamicuicomponent.sticky = true;
       const h = async () => {
         let introui = new Entity();
@@ -212,7 +215,7 @@ class Main {
     
     this.entityManager = new EntityManager();
     this.maincController = new MainController(this.entityManager);
-    //   await this.createInitialUI()
+     // await this.createInitialUI()
 
     // Initialize LoadingManager with renderer and scene 
     // This needs to happen before any assets are loaded
@@ -304,10 +307,104 @@ class Main {
   
       
 
+            // Add 'h' key to test hybrid UI modes manually
+      if (event.key === 'h' || event.key === 'H') {
+        const hybridEntity = this.entityManager.Entities.find(e => e.name === "Hybrid CSS Renderer UI");
+        if (hybridEntity) {
+          const hybridComp = hybridEntity.getComponent("HybridUIComponent") as any;
+          if (hybridComp) {
+            console.log('=== HYBRID UI DEBUG INFO ===');
+            console.log(`Current Mode: ${hybridComp.getCurrentMode()}`);
+            console.log(`Auto-Switch Enabled: ${hybridComp.getAutoSwitchEnabled()}`);
+            console.log(`Zoom Threshold: ${hybridComp.zoomThreshold}`);
+            console.log(`Entity Position: ${hybridEntity.Position.x.toFixed(2)}, ${hybridEntity.Position.y.toFixed(2)}, ${hybridEntity.Position.z.toFixed(2)}`);
+            
+            if (this.maincController.camera) {
+              const distance = hybridEntity.Position.distanceTo(this.maincController.camera.position);
+              console.log(`Distance to Camera: ${distance.toFixed(2)}`);
+              console.log(`Should be 2D: ${distance < hybridComp.zoomThreshold}`);
+            }
+            console.log('============================');
+          }
+        }
+      }
+      
+      // Add 'j' key to manually toggle hybrid mode
+      if (event.key === 'j' || event.key === 'J') {
+        const hybridEntity = this.entityManager.Entities.find(e => e.name === "Hybrid CSS Renderer UI");
+        if (hybridEntity) {
+          const hybridComp = hybridEntity.getComponent("HybridUIComponent") as any;
+          if (hybridComp) {
+            console.log('🔄 Manually toggling hybrid mode...');
+            hybridComp.toggleMode();
+          }
+        }
+      }
+      
+      // Add 'k' key to force 3D mode
+      if (event.key === 'k' || event.key === 'K') {
+        const hybridEntity = this.entityManager.Entities.find(e => e.name === "Hybrid CSS Renderer UI");
+        if (hybridEntity) {
+          const hybridComp = hybridEntity.getComponent("HybridUIComponent") as any;
+          if (hybridComp) {
+            console.log('🎯 Forcing 3D mode...');
+            hybridComp.forceMode('3d');
+          }
+        }
+      }
+      
+      // Add 'l' key to force 2D mode
+      if (event.key === 'l' || event.key === 'L') {
+        const hybridEntity = this.entityManager.Entities.find(e => e.name === "Hybrid CSS Renderer UI");
+        if (hybridEntity) {
+          const hybridComp = hybridEntity.getComponent("HybridUIComponent") as any;
+          if (hybridComp) {
+            console.log('🎯 Forcing 2D mode...');
+            hybridComp.forceMode('2d');
+          }
+        }
+      }
+
         if (event.key === 'o') {
           this.maincController.physicsmanager.debug = !this.maincController.physicsmanager.debug;
           console.log(`Physics debug mode: ${this.maincController.physicsmanager.debug}`);
         }
+      
+      // Add 'j' key to manually toggle hybrid mode
+      if (event.key === 'j' || event.key === 'J') {
+        const hybridEntity = this.entityManager.Entities.find(e => e.name === "Hybrid CSS Renderer UI");
+        if (hybridEntity) {
+          const hybridComp = hybridEntity.getComponent("HybridUIComponent") as any;
+          if (hybridComp) {
+            console.log('🔄 Manually toggling hybrid mode...');
+            hybridComp.toggleMode();
+          }
+        }
+      }
+      
+      // Add 'k' key to force 3D mode
+      if (event.key === 'k' || event.key === 'K') {
+        const hybridEntity = this.entityManager.Entities.find(e => e.name === "Hybrid CSS Renderer UI");
+        if (hybridEntity) {
+          const hybridComp = hybridEntity.getComponent("HybridUIComponent") as any;
+          if (hybridComp) {
+            console.log('🎯 Forcing 3D mode...');
+            hybridComp.forceMode('3d');
+          }
+        }
+      }
+      
+      // Add 'l' key to force 2D mode
+      if (event.key === 'l' || event.key === 'L') {
+        const hybridEntity = this.entityManager.Entities.find(e => e.name === "Hybrid CSS Renderer UI");
+        if (hybridEntity) {
+          const hybridComp = hybridEntity.getComponent("HybridUIComponent") as any;
+          if (hybridComp) {
+            console.log('🎯 Forcing 2D mode...');
+            hybridComp.forceMode('2d');
+          }
+        }
+      }
         
  
         
@@ -385,7 +482,173 @@ class Main {
    // this.maincController.UIManager.toggleScrollmode();
 
     this.animate();
-  //  await this.sceneSetup();
+    await this.sceneSetup();
+
+    const threedelement = new Entity(); 
+    threedelement.Position = new THREE.Vector3(0, 1, 0);
+    const html = `<div style="background-color: rgba(255, 255, 255, 0.8); width: 100%; height: 100%; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+                 <h1 style="text-align: center; color: #333;">Welcome to the 3D UI!</h1>
+                 <p style="text-align: center; color: #666;">This is a 3D UI element that can be positioned anywhere in the scene.</p>
+                 <div style="text-align: center; margin-top: 20px;">
+                   <button class="uk-button uk-button-primary" style="margin-right: 10px;">Click Me!</button>
+                   <button class="uk-button uk-button-secondary">Another Button</button>
+                 </div>
+                   <h2>3D UI Example</h2>
+                   <p>This is a 3D UI element.</p>
+                 </div>`;
+    const size = new THREE.Vector2(2000, 1000);
+    const trdcomp = new threeDUIComponent( html, size);
+    trdcomp.sticky = false; // Set to false for non-sticky behavior
+    trdcomp.Size = size; // Set the size of the 3D UI element
+    await threedelement.AddComponent(trdcomp);
+   // await this.entityManager.AddEntity(threedelement, "3D UI Element"); 
+
+
+    const twodelement = new Entity();
+    twodelement.Position = new THREE.Vector3(5, 1, 5);
+        const size2 = new THREE.Vector2(2000, 1000);
+
+    const twocomp = new twoDUIComponent( html, size2);
+     twocomp.sticky = true; // Set to true for sticky behavior
+     await twodelement.AddComponent(twocomp);
+   // await this.entityManager.AddEntity(twodelement,  "Sticky 2D UI Element");
+
+    // Modern UI Component Example - automatically switches between 3D and 2D
+    const modernelement = new Entity();
+    modernelement.Position = new THREE.Vector3(-5, 1, 0);
+    
+    const modernHtml = `<div style="background-color: rgba(32, 164, 243, 0.9); width: 100%; height: 100%; padding: 20px; border-radius: 15px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);">
+                 <h1 style="text-align: center; color: white; margin-bottom: 20px;">🚀 Modern UI</h1>
+                 <p style="text-align: center; color: rgba(255, 255, 255, 0.9); margin-bottom: 20px;">This component automatically switches between 3D and 2D modes based on camera distance!</p>
+                 <div style="text-align: center; margin-bottom: 20px;">
+                   <button class="uk-button uk-button-primary" style="margin-right: 10px; background: white; color: #20a4f3;">Zoom In/Out to Test</button>
+                   <button class="uk-button uk-button-secondary" style="background: rgba(255,255,255,0.2); color: white;">Double-Click to Toggle</button>
+                 </div>
+                 <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                   <h3 style="color: white; margin-bottom: 10px;">Features:</h3>
+                   <ul style="color: rgba(255, 255, 255, 0.9); margin: 0;">
+                     <li>🎯 Auto 3D ↔ 2D switching</li>
+                     <li>✨ Smooth transitions</li>
+                     <li>🎛️ Dynamic z-index management</li>
+                     <li>👆 Manual toggle support</li>
+                   </ul>
+                 </div>
+               </div>`;
+    
+    //const modernSize = new THREE.Vector2(1800, 1200);
+  //  const moderncomp = new ModernUIComponent(modernHtml, modernSize, 2); // Switch at 8 units distance
+    //moderncomp.sticky = true; // Allow distance-based hiding
+    //await modernelement.AddComponent(moderncomp);
+   // await this.entityManager.AddEntity(modernelement, "Modern Adaptive UI Element");
+
+    // Hybrid UI Component Example - uses new CSS hybrid renderer
+    const hybridelement = new Entity();
+    hybridelement.Position = new THREE.Vector3(5, 1, -5);
+    
+    const hybridHtml = `<div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); width: 100%; height: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); color: white;">
+                 <h1 style="text-align: center; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">🔄 Hybrid CSS Renderer</h1>
+                 <p id="mode-display" style="text-align: center; margin-bottom: 20px; opacity: 0.9; font-weight: bold; font-size: 18px;">Current Mode: 3D (Auto-Switch: ON)</p>
+                 <div style="text-align: center; margin-bottom: 20px;">
+                   <button id="force-3d-btn" class="uk-button uk-button-primary" style="margin-right: 10px; background: rgba(255,255,255,0.2); border: 2px solid white; color: white;">Force 3D Mode</button>
+                   <button id="force-2d-btn" class="uk-button uk-button-secondary" style="margin-right: 10px; background: rgba(0,0,0,0.2); border: 2px solid rgba(255,255,255,0.5); color: white;">Force 2D Mode</button>
+                   <button id="toggle-auto-btn" class="uk-button uk-button-danger" style="background: rgba(255,0,0,0.3); border: 2px solid rgba(255,255,255,0.5); color: white;">Toggle Auto-Switch</button>
+                 </div>
+                 <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; backdrop-filter: blur(10px);">
+                   <h3 style="margin-bottom: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Hybrid Renderer Features:</h3>
+                   <ul style="margin: 0; opacity: 0.95; line-height: 1.6;">
+                     <li>🎨 Single unified renderer for both modes</li>
+                     <li>⚡ Zero component duplication</li>
+                     <li>🔧 Built-in z-index management</li>
+                     <li>🎯 Automatic mode detection</li>
+                     <li>✨ Smooth element cloning & sync</li>
+                   </ul>
+                 </div>
+               </div>`;
+    
+    const hybridSize = new THREE.Vector2(2000, 1400);
+    const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize, 8); // Switch at 8 unit distance
+    hybridcomp.sticky = true; // Allow distance-based hiding
+    await hybridelement.AddComponent(hybridcomp);
+    await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
+
+    // Add event listeners after a timeout to ensure DOM is ready
+    setTimeout(() => {
+      const modeDisplay = hybridcomp.htmlElement.querySelector('#mode-display');
+      const force3DBtn = hybridcomp.htmlElement.querySelector('#force-3d-btn');
+      const force2DBtn = hybridcomp.htmlElement.querySelector('#force-2d-btn');
+      const toggleAutoBtn = hybridcomp.htmlElement.querySelector('#toggle-auto-btn');
+
+      // Update mode display
+      const updateModeDisplay = () => {
+        if (modeDisplay) {
+          const autoSwitchStatus = hybridcomp.getAutoSwitchEnabled() ? 'ON' : 'OFF';
+          modeDisplay.textContent = `Current Mode: ${hybridcomp.getCurrentMode().toUpperCase()} (Auto-Switch: ${autoSwitchStatus})`;
+        }
+      };
+
+      if (force3DBtn) {
+        force3DBtn.addEventListener('click', () => {
+          console.log('🎯 Forcing 3D mode');
+          hybridcomp.forceMode('3d');
+          setTimeout(updateModeDisplay, 100);
+        });
+      }
+
+      if (force2DBtn) {
+        force2DBtn.addEventListener('click', () => {
+          console.log('🎯 Forcing 2D mode');
+          hybridcomp.forceMode('2d');
+          setTimeout(updateModeDisplay, 100);
+        });
+      }
+
+      if (toggleAutoBtn) {
+        toggleAutoBtn.addEventListener('click', () => {
+          const newState = !hybridcomp.getAutoSwitchEnabled();
+          hybridcomp.setAutoSwitch(newState);
+          console.log(`🔄 Auto-switch ${newState ? 'enabled' : 'disabled'}`);
+          setTimeout(updateModeDisplay, 100);
+        });
+      }
+
+      // Initial display update
+      updateModeDisplay();
+
+      // Also add similar event listeners to the clone element after another timeout
+      setTimeout(() => {
+        const cloneForce3DBtn = hybridcomp.getCloneElement()?.querySelector('#force-3d-btn');
+        const cloneForce2DBtn = hybridcomp.getCloneElement()?.querySelector('#force-2d-btn');
+        const cloneToggleAutoBtn = hybridcomp.getCloneElement()?.querySelector('#toggle-auto-btn');
+
+        if (cloneForce3DBtn) {
+          cloneForce3DBtn.addEventListener('click', () => {
+            console.log('🎯 Forcing 3D mode (from clone)');
+            hybridcomp.forceMode('3d');
+            setTimeout(updateModeDisplay, 100);
+          });
+        }
+
+        if (cloneForce2DBtn) {
+          cloneForce2DBtn.addEventListener('click', () => {
+            console.log('🎯 Forcing 2D mode (from clone)');
+            hybridcomp.forceMode('2d');
+            setTimeout(updateModeDisplay, 100);
+          });
+        }
+
+        if (cloneToggleAutoBtn) {
+          cloneToggleAutoBtn.addEventListener('click', () => {
+            const newState = !hybridcomp.getAutoSwitchEnabled();
+            hybridcomp.setAutoSwitch(newState);
+            console.log(`🔄 Auto-switch ${newState ? 'enabled' : 'disabled'} (from clone)`);
+            setTimeout(updateModeDisplay, 100);
+          });
+        }
+      }, 500);
+    }, 1000);
+
+
+
   }
 
   private async sceneSetup(): Promise<void> {
@@ -431,7 +694,7 @@ class Main {
 
     // Components are already loaded, can send commands immediately
     await hbhc.face();
-              this.maincController.MainEntity = hamza;
+    this.maincController.MainEntity = hamza;
 
     await hamza.Broadcast({
         topic: "walk",

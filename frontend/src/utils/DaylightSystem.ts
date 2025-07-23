@@ -86,7 +86,7 @@ export class DaylightSystem {
   // this.createSphericalSky();
     
     // Create clouds
-    this.createClouds();
+    //this.createClouds();
 
     // Initialize with day settings
     this.updateSkyUniforms();

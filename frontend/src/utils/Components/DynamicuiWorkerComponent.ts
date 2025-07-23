@@ -175,8 +175,8 @@ class DynamicuiWorkerComponent extends Component {
     planeMaterial.side = THREE.DoubleSide;
     this._webgpuplane = new THREE.Mesh(
       new THREE.PlaneGeometry(
-        (1  * this._size.x) / 10,
-        (1 * this._size.y) / 10
+        (1  * this._size.x) / 100,
+        (1 * this._size.y) / 100
       ),
       planeMaterial
     );

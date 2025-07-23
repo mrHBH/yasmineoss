@@ -2,13 +2,13 @@
 
 export const STREAMING_CONSTANTS = {
   // Tile configuration
-  TILE_SIZE: 100,
+  TILE_SIZE: 50,
   TILE_RESOLUTION: 10,
   TILE_RANDOM_OBJECTS: 1,
   
   // Loading and visibility
-  LOAD_DISTANCE: 150,
-  NUM_TILES: 10,
+  LOAD_DISTANCE: 250,
+  NUM_TILES: 20,
   
   // Entity streaming configuration
   ENTITY_STREAMING_TILE_SIZE: 150, // Smaller than visual tiles for performance
