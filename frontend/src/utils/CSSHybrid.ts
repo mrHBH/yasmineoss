@@ -86,7 +86,7 @@ class CSSHybridObject extends Object3D {
 
 	// Switch between 2D and 3D modes
 	async switchMode(newMode, force = false) {
-       
+	   
 		if (this.mode === newMode && !force) return;
 		if (this.isTransitioning && !force) return;
 
@@ -125,6 +125,8 @@ class CSSHybridObject extends Object3D {
 		this.enableAutoSwitch = enabled;
 	}
 }
+// how is tgis class used? ?
+
 
 interface CSSHybridRendererParameters {
 	element?: HTMLElement;
@@ -132,6 +134,8 @@ interface CSSHybridRendererParameters {
 }
 
 class CSSHybridRenderer {
+			   // Track if a mode switch just happened
+			   public _forceHybridTransformUpdate = false;
 	public domElement: HTMLElement;
 	public zIndexMode: string;
 	public onZIndexChange: ((mode: string) => void) | null;
@@ -160,92 +164,107 @@ class CSSHybridRenderer {
 		domElement.style.overflow = 'hidden';
 		this.domElement = domElement;
 
-		// Create container for 3D elements
-		const viewElement3D = document.createElement('div');
-		viewElement3D.style.transformOrigin = '0 0';
-		viewElement3D.style.pointerEvents = 'none';
-		viewElement3D.style.position = 'absolute';
-		viewElement3D.style.top = '0';
-		viewElement3D.style.left = '0';
-		viewElement3D.className = 'css-hybrid-3d-container';
-		domElement.appendChild(viewElement3D);
 
-		const cameraElement3D = document.createElement('div');
-		cameraElement3D.style.transformStyle = 'preserve-3d';
-		viewElement3D.appendChild(cameraElement3D);
+			   // Use a single container for all hybrid objects
+			   const hybridContainer = document.createElement('div');
+			   hybridContainer.style.position = 'absolute';
+			   hybridContainer.style.top = '0';
+			   hybridContainer.style.left = '0';
+			   hybridContainer.style.width = '100%';
+			   hybridContainer.style.height = '100%';
+			   hybridContainer.style.pointerEvents = 'none';
+			   hybridContainer.className = 'css-hybrid-container';
+			   domElement.appendChild(hybridContainer);
 
-		// Create container for 2D elements
-		const viewElement2D = document.createElement('div');
-		viewElement2D.style.position = 'absolute';
-		viewElement2D.style.top = '0';
-		viewElement2D.style.left = '0';
-		viewElement2D.style.pointerEvents = 'none';
-		viewElement2D.className = 'css-hybrid-2d-container';
-		domElement.appendChild(viewElement2D);
 
-		this.getSize = function () {
-			return { width: _width, height: _height };
-		};
+			   this.getSize = function () {
+					   return { width: _width, height: _height };
+			   };
 
-		this.render = function (scene, camera) {
-			if (scene.matrixWorldAutoUpdate === true) scene.updateMatrixWorld();
-			if (camera.parent === null && camera.matrixWorldAutoUpdate === true) camera.updateMatrixWorld();
+			   this.render = function (scene, camera) {
+					   if (scene.matrixWorldAutoUpdate === true) scene.updateMatrixWorld();
+					   if (camera.parent === null && camera.matrixWorldAutoUpdate === true) camera.updateMatrixWorld();
 
-			// Update view matrices for 2D calculations
-			_viewMatrix.copy(camera.matrixWorldInverse);
-			_viewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, _viewMatrix);
+					   // Update view matrices for 2D calculations
+					   _viewMatrix.copy(camera.matrixWorldInverse);
+					   _viewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, _viewMatrix);
 
-			// 3D rendering setup
-			const fov = camera.projectionMatrix.elements[5] * _heightHalf;
+					   // Compute camera CSS transform for 3D mode
+					   let tx, ty;
+					   if (camera.isOrthographicCamera) {
+							   tx = - (camera.right + camera.left) / 2;
+							   ty = (camera.top + camera.bottom) / 2;
+					   }
+					   const _widthHalf = _width / 2;
+					   const _heightHalf = _height / 2;
+					   const fov = camera.projectionMatrix.elements[5] * _heightHalf;
+					   const scaleByViewOffset = camera.view && camera.view.enabled ? camera.view.height / camera.view.fullHeight : 1;
+					   const cameraCSSMatrix = camera.isOrthographicCamera ?
+							   `scale( ${ scaleByViewOffset } )` + 'scale(' + fov + ')' + 'translate(' + epsilon(tx) + 'px,' + epsilon(ty) + 'px)' + getCameraCSSMatrix(camera.matrixWorldInverse) :
+							   `scale( ${ scaleByViewOffset } )` + 'translateZ(' + fov + 'px)' + getCameraCSSMatrix(camera.matrixWorldInverse);
+					   const perspective = camera.isPerspectiveCamera ? 'perspective(' + fov + 'px) ' : '';
+					   const cameraTransform = perspective + cameraCSSMatrix + 'translate(' + _widthHalf + 'px,' + _heightHalf + 'px)';
 
-			if (camera.view && camera.view.enabled) {
-				viewElement3D.style.transform = `translate( ${ - camera.view.offsetX * ( _width / camera.view.width ) }px, ${ - camera.view.offsetY * ( _height / camera.view.height ) }px )`;
-				viewElement3D.style.transform += `scale( ${ camera.view.fullWidth / camera.view.width }, ${ camera.view.fullHeight / camera.view.height } )`;
-			} else {
-				viewElement3D.style.transform = '';
-			}
+					   // Set camera transform on container for 3D mode, clear for 2D mode
+					   let has3D = false;
+					   scene.traverse(function (object) {
+							   if ((object as any).isCSSHybridObject && (object as any).mode === '3d') has3D = true;
+					   });
+					   const is3DMode = has3D;
+					   if (is3DMode) {
+							   hybridContainer.style.transform = cameraTransform;
+							   hybridContainer.style.transformStyle = 'preserve-3d';
+							   hybridContainer.style.perspective = '';
+					   } else {
+							   hybridContainer.style.transform = '';
+							   hybridContainer.style.transformStyle = '';
+							   hybridContainer.style.perspective = '';
+					   }
 
-			let tx, ty;
-			if (camera.isOrthographicCamera) {
-				tx = - (camera.right + camera.left) / 2;
-				ty = (camera.top + camera.bottom) / 2;
-			}
+					   // If a mode switch just happened, force transform update for all CSSHybridObjects in 3D mode
+					   if (this._forceHybridTransformUpdate && is3DMode) {
+						   scene.traverse(function (o) {
+							   const obj = o as any;
+							   if (obj.isCSSHybridObject && obj.mode === '3d') {
+								   let style;
+								   if (obj.rotation2D !== 0) {
+									   _matrix.copy(camera.matrixWorldInverse);
+									   _matrix.transpose();
+									   _matrix.multiply(_matrix2.makeRotationZ(obj.rotation2D));
+									   obj.matrixWorld.decompose(_position, _quaternion, _scale);
+									   _matrix.setPosition(_position);
+									   _matrix.scale(_scale);
+									   _matrix.elements[3] = 0;
+									   _matrix.elements[7] = 0;
+									   _matrix.elements[11] = 0;
+									   _matrix.elements[15] = 1;
+									   style = getObjectCSSMatrix(_matrix);
+								   } else {
+									   style = getObjectCSSMatrix(obj.matrixWorld);
+								   }
+								   obj.element.style.transform = style;
+							   }
+						   });
+						   this._forceHybridTransformUpdate = false;
+					   }
 
-			const scaleByViewOffset = camera.view && camera.view.enabled ? camera.view.height / camera.view.fullHeight : 1;
-			const cameraCSSMatrix = camera.isOrthographicCamera ?
-				`scale( ${ scaleByViewOffset } )` + 'scale(' + fov + ')' + 'translate(' + epsilon(tx) + 'px,' + epsilon(ty) + 'px)' + getCameraCSSMatrix(camera.matrixWorldInverse) :
-				`scale( ${ scaleByViewOffset } )` + 'translateZ(' + fov + 'px)' + getCameraCSSMatrix(camera.matrixWorldInverse);
-			const perspective = camera.isPerspectiveCamera ? 'perspective(' + fov + 'px) ' : '';
+					   // Render all objects using a single container, passing mode info
+					   renderHybridObject(scene, scene, camera, hybridContainer, is3DMode);
+					   zOrder2D(scene, hybridContainer);
+			   };
 
-			const style3D = perspective + cameraCSSMatrix + 'translate(' + _widthHalf + 'px,' + _heightHalf + 'px)';
 
-			if (cache.camera.style !== style3D) {
-				cameraElement3D.style.transform = style3D;
-				cache.camera.style = style3D;
-			}
+			   this.setSize = function (width, height) {
+					   _width = width;
+					   _height = height;
+					   _widthHalf = _width / 2;
+					   _heightHalf = _height / 2;
 
-			// Render all objects
-			renderHybridObject(scene, scene, camera, cameraElement3D, viewElement2D);
-			zOrder2D(scene, viewElement2D);
-		};
-
-		this.setSize = function (width, height) {
-			_width = width;
-			_height = height;
-			_widthHalf = _width / 2;
-			_heightHalf = _height / 2;
-
-			domElement.style.width = width + 'px';
-			domElement.style.height = height + 'px';
-
-			viewElement3D.style.width = width + 'px';
-			viewElement3D.style.height = height + 'px';
-			cameraElement3D.style.width = width + 'px';
-			cameraElement3D.style.height = height + 'px';
-
-			viewElement2D.style.width = width + 'px';
-			viewElement2D.style.height = height + 'px';
-		};
+					   domElement.style.width = width + 'px';
+					   domElement.style.height = height + 'px';
+					   hybridContainer.style.width = width + 'px';
+					   hybridContainer.style.height = height + 'px';
+			   };
 
 		// Set z-index priority mode
 		this.setZIndexMode = function(mode) {
@@ -303,107 +322,93 @@ class CSSHybridRenderer {
 			return 'translate(-50%,-50%)' + matrix3d;
 		}
 
-		function renderHybridObject(object, scene, camera, container3D, container2D) {
-			if (object.isCSSHybridObject) {
-				const distance = getDistanceTo(camera, object);
-				
-				// Debug logging for distance
-				if (object.enableAutoSwitch && Math.random() < 0.01) { // Log 1% of the time to avoid spam
-					console.log(`🔄 Hybrid Object Distance: ${distance.toFixed(2)}, Threshold: ${object.zoomThreshold}, Current Mode: ${object.mode}`);
-				}
-				
-				// Auto-switch mode based on distance
-				if (object.enableAutoSwitch && !object.isTransitioning) {
-					const shouldBe2D = distance < object.zoomThreshold;
-					const newMode = shouldBe2D ? '2d' : '3d';
-					if (object.mode !== newMode) {
-						console.log(`🔄 Auto-switching from ${object.mode} to ${newMode} (distance: ${distance.toFixed(2)})`);
-						object.switchMode(newMode);
-						
-						// Update z-index based on mode
-						const currentZIndexMode = object.mode === '2d' ? '2d-priority' : '3d-priority';
-						if (_this.zIndexMode !== currentZIndexMode) {
-							_this.setZIndexMode(currentZIndexMode);
-						}
-					}
-				}
+			   function renderHybridObject(object, scene, camera, container, is3DMode) {
+					   if ((object).isCSSHybridObject) {
+							   const distance = getDistanceTo(camera, object);
+							   // Debug logging for distance
+							   if (object.enableAutoSwitch && Math.random() < 0.01) {
+									   console.log(`🔄 Hybrid Object Distance: ${distance.toFixed(2)}, Threshold: ${object.zoomThreshold}, Current Mode: ${object.mode}`);
+							   }
+							   // Auto-switch mode based on distance
+							   if (object.enableAutoSwitch && !object.isTransitioning) {
+									   const shouldBe2D = distance < object.zoomThreshold;
+									   const newMode = shouldBe2D ? '2d' : '3d';
+									   if (object.mode !== newMode) {
+											   console.log(`🔄 Auto-switching from ${object.mode} to ${newMode} (distance: ${distance.toFixed(2)})`);
+											   object.switchMode(newMode);
+											   // Update z-index based on mode
+											   const currentZIndexMode = newMode === '2d' ? '2d-priority' : '3d-priority';
+											   if (_this.zIndexMode !== currentZIndexMode) {
+													   _this.setZIndexMode(currentZIndexMode);
+											   }
+											   // Set flag to force transform update in next render
+											   _this._forceHybridTransformUpdate = true;
+									   }
+							   }
 
-				const visible = (object.visible === true) && (object.layers.test(camera.layers) === true);
-				const element = object.element;
-				let style;
+							   const visible = (object.visible === true) && (object.layers.test(camera.layers) === true);
+							   const element = object.element;
+							   let style;
 
-				if (object.mode === '3d') {
-					if (element.parentNode !== container3D) {
-						container3D.appendChild(element);
-					}
-					element.style.display = visible ? '' : 'none';
+							   // Always use the same container for both modes
+							   if (element.parentNode !== container) {
+									   container.appendChild(element);
+							   }
 
-					if (visible) {
-						object.onBeforeRender(_this, scene, camera);
-
-						if (object.rotation2D !== 0) {
-							// Sprite-like behavior
-							_matrix.copy(camera.matrixWorldInverse);
-							_matrix.transpose();
-							_matrix.multiply(_matrix2.makeRotationZ(object.rotation2D));
-							object.matrixWorld.decompose(_position, _quaternion, _scale);
-							_matrix.setPosition(_position);
-							_matrix.scale(_scale);
-							_matrix.elements[3] = 0;
-							_matrix.elements[7] = 0;
-							_matrix.elements[11] = 0;
-							_matrix.elements[15] = 1;
-							style = getObjectCSSMatrix(_matrix);
-						} else {
-							style = getObjectCSSMatrix(object.matrixWorld);
-						}
-
-						const cachedObject = cache.objects.get(object);
-
-						if (cachedObject === undefined || cachedObject.style !== style) {
-							element.style.transform = style;
-							cache.objects.set(object, { style: style });
-						}
-
-						object.onAfterRender(_this, scene, camera);
-					}
-				}
-				// Handle 2D mode rendering
-				else if (object.mode === '2d') {
-					if (element.parentNode !== container2D) {
-						container2D.appendChild(element);
-					}
-					
-					_vector.setFromMatrixPosition(object.matrixWorld);
-					_vector.applyMatrix4(_viewProjectionMatrix);
-
-					const visible2D = visible && (_vector.z >= -1 && _vector.z <= 1);
-					element.style.display = visible2D ? '' : 'none';
-
-					if (visible2D) {
-						object.onBeforeRender(_this, scene, camera);
-
-						style = 'translate(' + (-100 * object.center.x) + '%,' + (-100 * object.center.y) + '%)' + 
-							'translate(' + (_vector.x * _widthHalf + _widthHalf) + 'px,' + (-_vector.y * _heightHalf + _heightHalf) + 'px)';
-						
-						element.style.transform = style;
-
-						object.onAfterRender(_this, scene, camera);
-					}
-				}
-
-				// Cache distance for z-ordering
-				const objectData = {
-					distanceToCameraSquared: getDistanceToSquared(camera, object),
-					distance: distance
-				};
-				cache.hybridObjects.set(object, objectData);
-			}
-
-			for (let i = 0, l = object.children.length; i < l; i++) {
-				renderHybridObject(object.children[i], scene, camera, container3D, container2D);
-			}
-		}
+							   if (object.mode === '3d' && is3DMode) {
+									   element.style.display = visible ? '' : 'none';
+									   if (visible) {
+											   object.onBeforeRender(_this, scene, camera);
+											   if (object.rotation2D !== 0) {
+													   // Sprite-like behavior
+													   _matrix.copy(camera.matrixWorldInverse);
+													   _matrix.transpose();
+													   _matrix.multiply(_matrix2.makeRotationZ(object.rotation2D));
+													   object.matrixWorld.decompose(_position, _quaternion, _scale);
+													   _matrix.setPosition(_position);
+													   _matrix.scale(_scale);
+													   _matrix.elements[3] = 0;
+													   _matrix.elements[7] = 0;
+													   _matrix.elements[11] = 0;
+													   _matrix.elements[15] = 1;
+													   style = getObjectCSSMatrix(_matrix);
+											   } else {
+													   style = getObjectCSSMatrix(object.matrixWorld);
+											   }
+											   const cachedObject = cache.objects.get(object);
+											   if (cachedObject === undefined || cachedObject.style !== style) {
+													   element.style.transform = style;
+													   cache.objects.set(object, { style: style });
+											   }
+											   object.onAfterRender(_this, scene, camera);
+									   }
+							   } else if (object.mode === '2d' && !is3DMode) {
+									   _vector.setFromMatrixPosition(object.matrixWorld);
+									   _vector.applyMatrix4(_viewProjectionMatrix);
+									   const visible2D = visible && (_vector.z >= -1 && _vector.z <= 1);
+									   element.style.display = visible2D ? '' : 'none';
+									   if (visible2D) {
+											   object.onBeforeRender(_this, scene, camera);
+											   style = 'translate(' + (-100 * object.center.x) + '%,' + (-100 * object.center.y) + '%)'
+													   + 'translate(' + (_vector.x * _widthHalf + _widthHalf) + 'px,' + (-_vector.y * _heightHalf + _heightHalf) + 'px)';
+											   element.style.transform = style;
+											   object.onAfterRender(_this, scene, camera);
+									   }
+							   } else {
+									   // Hide element if not in the current mode
+									   element.style.display = 'none';
+							   }
+							   // Cache distance for z-ordering
+							   const objectData = {
+									   distanceToCameraSquared: getDistanceToSquared(camera, object),
+									   distance: distance
+							   };
+							   cache.hybridObjects.set(object, objectData);
+					   }
+					   for (let i = 0, l = object.children.length; i < l; i++) {
+							   renderHybridObject(object.children[i], scene, camera, container, is3DMode);
+					   }
+			   }
 
 		function getDistanceTo(object1, object2) {
 			_a.setFromMatrixPosition(object1.matrixWorld);
@@ -417,33 +422,33 @@ class CSSHybridRenderer {
 			return _a.distanceToSquared(_b);
 		}
 
-		function filterAndFlatten2D(scene) {
-			const result = [];
-			scene.traverse(function (object) {
-				if (object.isCSSHybridObject && object.mode === '2d') {
-					result.push(object);
-				}
-			});
-			return result;
-		}
+			   function filterAndFlatten2D(scene) {
+					   const result = [];
+					   scene.traverse(function (object) {
+							   if (object.isCSSHybridObject && object.mode === '2d') {
+									   result.push(object);
+							   }
+					   });
+					   return result;
+			   }
 
-		function zOrder2D(scene, container) {
-			const sorted = filterAndFlatten2D(scene).sort(function (a, b) {
-				if (a.renderOrder !== b.renderOrder) {
-					return b.renderOrder - a.renderOrder;
-				}
-				const distanceA = cache.hybridObjects.get(a).distanceToCameraSquared;
-				const distanceB = cache.hybridObjects.get(b).distanceToCameraSquared;
-				return distanceA - distanceB;
-			});
+			   function zOrder2D(scene, container) {
+					   const sorted = filterAndFlatten2D(scene).sort(function (a, b) {
+							   if (a.renderOrder !== b.renderOrder) {
+									   return b.renderOrder - a.renderOrder;
+							   }
+							   const distanceA = cache.hybridObjects.get(a).distanceToCameraSquared;
+							   const distanceB = cache.hybridObjects.get(b).distanceToCameraSquared;
+							   return distanceA - distanceB;
+					   });
 
-			const zMax = sorted.length;
-			for (let i = 0, l = sorted.length; i < l; i++) {
-				if (sorted[i].element.parentNode === container) {
-					sorted[i].element.style.zIndex = zMax - i;
-				}
-			}
-		}
+					   const zMax = sorted.length;
+					   for (let i = 0, l = sorted.length; i < l; i++) {
+							   if (sorted[i].element.parentNode === container) {
+									   sorted[i].element.style.zIndex = zMax - i;
+							   }
+					   }
+			   }
 	}
 }
 

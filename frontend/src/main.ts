@@ -543,8 +543,9 @@ class Main {
 
     // Hybrid UI Component Example - uses new CSS hybrid renderer
     const hybridelement = new Entity();
-    hybridelement.Position = new THREE.Vector3(5, 1, -5);
-    
+    hybridelement.Position = new THREE.Vector3(5, 0.1, -5);
+    const youtube = `<iframe width="1250" height="1000" src="https://www.youtube-nocookie.com/embed/aFlC5u8ESMk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+			  		`;
     const hybridHtml = `<div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); width: 100%; height: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); color: white;">
                  <h1 style="text-align: center; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">🔄 Hybrid CSS Renderer</h1>
                  <p id="mode-display" style="text-align: center; margin-bottom: 20px; opacity: 0.9; font-weight: bold; font-size: 18px;">Current Mode: 3D (Auto-Switch: ON)</p>
@@ -563,14 +564,21 @@ class Main {
                      <li>✨ Smooth element cloning & sync</li>
                    </ul>
                  </div>
+                  <div style="margin-top: 20px; text-align: center;">
+                    <h2>Embedded YouTube Video</h2>
+                    ${youtube}
                </div>`;
     
-    const hybridSize = new THREE.Vector2(2000, 1400);
-    const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize, 8); // Switch at 8 unit distance
+    const hybridSize = new THREE.Vector2(2000, 2400);
+    const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize, 15); // Switch at 8 unit distance
     hybridcomp.sticky = true; // Allow distance-based hiding
     await hybridelement.AddComponent(hybridcomp);
     await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
 
+    hybridelement.Quaternion =      new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+       - Math.PI / 2
+      )
     // Add event listeners after a timeout to ensure DOM is ready
     setTimeout(() => {
       const modeDisplay = hybridcomp.htmlElement.querySelector('#mode-display');
