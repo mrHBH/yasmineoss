@@ -485,6 +485,67 @@ class Main {
     this.animate();
     await this.sceneSetup();
 
+
+  }
+
+  private async sceneSetup(): Promise<void> {
+    
+    // Initialize the scene without Bob initially
+
+   // this.maincController.physicsmanager.debug = false;
+
+
+    //add script entity environmentbot to the scene
+    const hamza = new Entity();
+    hamza.Position = new THREE.Vector3(0, 1, 6);
+    const hbhc = new CharacterComponent({
+      modelpath: "models/gltf/ybot2.glb",
+      animationspathslist: this.maincController.animations,
+      behaviourscriptname: "Hamza.js",
+    });
+    
+    // Store component creation info for streaming
+    hamza._componentCreationInfo = [
+      { 
+        type: 'CharacterComponent', 
+        config: {
+          modelpath: "models/gltf/ybot2.glb",
+          animationspathslist: this.maincController.animations,
+          behaviourscriptname: "Hamza02.js",
+        }
+      },
+      { 
+        type: 'AudioComponent', 
+        config: {
+          audioConfig: {},
+          visualizerConfig: { enabled: true }
+        }
+      }
+    ];
+    
+    await hamza.AddComponent(hbhc);
+    await hamza.AddComponent(new KeyboardInput())
+    await hamza.AddComponent(new AudioComponent());
+   // await hamza.AddComponent(new KeyboardInput());
+    await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
+
+    // Components are already loaded, can send commands immediately
+    await hbhc.face();
+    this.maincController.MainEntity = hamza;
+
+    await hamza.Broadcast({
+        topic: "walk",
+        data: { position: new THREE.Vector3(5, 0, -10) },
+    })
+
+        console.log("Hamza finished initialization");
+    await hamza.Broadcast({
+        topic: "walk",
+        data: { position: new THREE.Vector3(-15, 0, 10) },
+    })
+
+
+    
     const threedelement = new Entity(); 
     threedelement.Position = new THREE.Vector3(0, 1, 0);
     const html = `<div style="background-color: rgba(255, 255, 255, 0.8); width: 100%; height: 100%; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
@@ -507,7 +568,7 @@ class Main {
 
     const twodelement = new Entity();
     twodelement.Position = new THREE.Vector3(5, 1, 5);
-        const size2 = new THREE.Vector2(2000, 1000);
+        const size2 = new THREE.Vector2(500, 500);
 
     const twocomp = new twoDUIComponent( html, size2);
      twocomp.sticky = true; // Set to true for sticky behavior
@@ -546,7 +607,7 @@ class Main {
     const hybridelement = new Entity();
     hybridelement.Position = new THREE.Vector3(5, 0.1, -5);
     // Ok we found a way to not have to use the x track option. Just enable YouTube notification and pop ups.
-    const youtube = `<iframe width="1250" height="1000"  src="https://www.youtube.com/embed/Y2snZMA7d7o?si=TwHoDmUL1_ViXZni&amp;start=423"  title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    const youtube = `<iframe width="100%" height="100%"  src="https://www.youtube.com/embed/Y2snZMA7d7o?si=TwHoDmUL1_ViXZni&amp;start=423"  title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
     const hybridHtml = `<div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); width: 100%; height: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); color: white;">
                  <h1 style="text-align: center; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">🔄 Hybrid CSS Renderer</h1>
                  <p id="mode-display" style="text-align: center; margin-bottom: 20px; opacity: 0.9; font-weight: bold; font-size: 18px;">Current Mode: 3D (Auto-Switch: ON)</p>
@@ -570,7 +631,7 @@ class Main {
                     ${youtube}
                </div>`;
     
-    const hybridSize = new THREE.Vector2(2000, 2400);
+    const hybridSize = new THREE.Vector2(400, 400);
     const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize, 15); // Switch at 8 unit distance
     hybridcomp.sticky = true; // Allow distance-based hiding
     await hybridelement.AddComponent(hybridcomp);
@@ -674,8 +735,8 @@ class Main {
       -Math.PI / 2
     );
     
-    const codeEditorSize = new THREE.Vector2(3000, 1800); // Wider for horizontal layout
-    const hybridCodeEditor = new HybridCodeEditor(codeEditorSize, 25); // Switch at 12 unit distance
+    const codeEditorSize = new THREE.Vector2(500, 500); // Wider for horizontal layout
+    const hybridCodeEditor = new HybridCodeEditor(codeEditorSize, 11); // Switch at 12 unit distance
     
     await codeeditorentity.AddComponent(hybridCodeEditor);
     await this.entityManager.AddEntity(codeeditorentity, "Hybrid Code Editor");
@@ -703,64 +764,6 @@ class Main {
         }
       });
     }, 1000);
-
-  }
-
-  private async sceneSetup(): Promise<void> {
-    
-    // Initialize the scene without Bob initially
-
-   // this.maincController.physicsmanager.debug = false;
-
-
-    //add script entity environmentbot to the scene
-    const hamza = new Entity();
-    hamza.Position = new THREE.Vector3(0, 1, 6);
-    const hbhc = new CharacterComponent({
-      modelpath: "models/gltf/ybot2.glb",
-      animationspathslist: this.maincController.animations,
-      behaviourscriptname: "Hamza.js",
-    });
-    
-    // Store component creation info for streaming
-    hamza._componentCreationInfo = [
-      { 
-        type: 'CharacterComponent', 
-        config: {
-          modelpath: "models/gltf/ybot2.glb",
-          animationspathslist: this.maincController.animations,
-          behaviourscriptname: "Hamza02.js",
-        }
-      },
-      { 
-        type: 'AudioComponent', 
-        config: {
-          audioConfig: {},
-          visualizerConfig: { enabled: true }
-        }
-      }
-    ];
-    
-    await hamza.AddComponent(hbhc);
-    await hamza.AddComponent(new KeyboardInput())
-    await hamza.AddComponent(new AudioComponent());
-   // await hamza.AddComponent(new KeyboardInput());
-    await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
-
-    // Components are already loaded, can send commands immediately
-    await hbhc.face();
-    this.maincController.MainEntity = hamza;
-
-    await hamza.Broadcast({
-        topic: "walk",
-        data: { position: new THREE.Vector3(5, 0, -10) },
-    })
-
-        console.log("Hamza finished initialization");
-    await hamza.Broadcast({
-        topic: "walk",
-        data: { position: new THREE.Vector3(-15, 0, 10) },
-    })
   
  
 
