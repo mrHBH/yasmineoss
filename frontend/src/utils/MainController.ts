@@ -38,6 +38,7 @@ import { LoadingManager } from "./LoadingManager.js";
 import { StreamingWorld } from './StreamingWorld.js';
 import { DaylightSystem } from './DaylightSystem.js';
 import { CSSHybridRenderer } from "./CSSHybrid.js";
+import { HybridUIComponent } from "./Components/HybridUIComponent.js";
 
 
 
@@ -884,7 +885,7 @@ class MainController {
       let quaternion = new THREE.Quaternion();
       if (component) {
         quaternion = component._entity.Quaternion;
-        if (component instanceof twoDUIComponent) {
+        if (component instanceof HybridUIComponent) {
           component.zoom();
           return;
         }

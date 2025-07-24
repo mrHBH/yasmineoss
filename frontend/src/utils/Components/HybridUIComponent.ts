@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { Entity } from "../Entity";
 import { CSSHybridObject } from "../CSSHybrid";
 import { tween } from "shifty";
+import * as CANNON from "cannon-es";
 
 class HybridUIComponent extends Component {
   private _html: string;
@@ -13,6 +14,7 @@ class HybridUIComponent extends Component {
   private _webgpugroup: THREE.Group = new THREE.Group();
   private _size: THREE.Vector2;
   private _zoomThreshold: number;
+  private _physicsBody: CANNON.Body | null = null;
   
   sticky: boolean = false;
 
@@ -40,6 +42,10 @@ class HybridUIComponent extends Component {
     return this._cssHybridObject?.mode === '2d';
   }
 
+  get physicsBody() {
+    return this._physicsBody;
+  }
+
   set zoomThreshold(value: number) {
     this._zoomThreshold = value;
     if (this._cssHybridObject) {
@@ -58,6 +64,29 @@ class HybridUIComponent extends Component {
         this._size.x / 100,
         this._size.y / 100
       );
+    }
+    
+    // Update physics body size to match new plane size
+    if (this._physicsBody) {
+      const physicsWidth = this._size.x / 100;
+      const physicsHeight = this._size.y / 100;
+      const physicsThickness = 0.1;
+      
+      const mc = this._entity?._entityManager?._mc;
+      if (mc?.physicsmanager) {
+        mc.physicsmanager.World.removeBody(this._physicsBody);
+        
+        // Create new shape with correct dimensions
+        const shape = new CANNON.Box(new CANNON.Vec3(
+          physicsWidth / 2,   // X-axis (width)
+          physicsHeight / 2,  // Y-axis (height)
+          physicsThickness / 2 // Z-axis (thickness)
+        ));
+        
+        this._physicsBody.shapes = [shape];
+        this.updatePhysicsBodyTransform();
+        mc.physicsmanager.World.addBody(this._physicsBody);
+      }
     }
   }
 
@@ -99,12 +128,19 @@ class HybridUIComponent extends Component {
 
     this._webgpuplane.userData.component = this;
     this._webgpugroup.add(this._webgpuplane);
+
+    // Create physics body aligned with the plane
+    this.createPhysicsBody();
   }
 
   async InitEntity(): Promise<void> {
     // Get or create hybrid renderer
     const mc = this._entity._entityManager._mc;
     
+    // Add physics body to world
+    if (this._physicsBody && mc.physicsmanager) {
+      mc.physicsmanager.World.addBody(this._physicsBody);
+    }
   
     // Add to scenes
     mc.webglscene.add(this._webgpugroup);
@@ -165,15 +201,69 @@ class HybridUIComponent extends Component {
   }
 
   async zoom(radius = 5) {
-    let p = this._entity.Position.clone();
-    let quat = this._entity.Quaternion.clone();
-    this._entity._entityManager._mc.zoomTo(p, radius, quat);
+    await this.zoomTo(this._entity.Position.clone(), radius, this._entity.Quaternion.clone());
+  }
+
+  async zoomTo(
+    p: THREE.Vector3,
+    newRadius?: number,
+    quat?: THREE.Quaternion
+  ): Promise<void> {
+    const _centerPosition = new THREE.Vector3();
+    const _normal = new THREE.Vector3();
+    const _cameraPosition = new THREE.Vector3();
+
+    if (newRadius && quat) {
+      const rectCenterPosition = _centerPosition.copy(p);
+      const rectNormal = _normal.set(0, 0, 1).applyQuaternion(quat);
+      const distance = newRadius;
+      const cameraPosition = _cameraPosition
+        .copy(rectNormal)
+        .multiplyScalar(-distance)
+        .add(rectCenterPosition);
+
+      this._entity._entityManager._mc.CameraControls.setLookAt(
+        cameraPosition.x,
+        cameraPosition.y,
+        cameraPosition.z,
+        rectCenterPosition.x,
+        rectCenterPosition.y,
+        rectCenterPosition.z,
+        true
+      );
+    } else {
+      this._entity._entityManager._mc.CameraControls.moveTo(p.x, p.y, p.z, true);
+    }
   }
 
   async setSizeSmoothly(size: THREE.Vector2) {
     console.log("setSizeSmoothly");
     console.log(size);
     this._size = size;
+
+    // Update physics body size
+    if (this._physicsBody) {
+      const physicsWidth = this._size.x / 100;
+      const physicsHeight = this._size.y / 100;
+      const physicsThickness = 0.1;
+      
+      // Remove old body and create new one with new size
+      const mc = this._entity._entityManager._mc;
+      if (mc.physicsmanager) {
+        mc.physicsmanager.World.removeBody(this._physicsBody);
+        
+        // Create new shape with correct axis mapping (X=width, Y=height, Z=thickness)
+        const shape = new CANNON.Box(new CANNON.Vec3(
+          physicsWidth / 2,   // X-axis (width)
+          physicsHeight / 2,  // Y-axis (height)
+          physicsThickness / 2 // Z-axis (thickness)
+        ));
+        
+        this._physicsBody.shapes = [shape];
+        this.updatePhysicsBodyTransform();
+        mc.physicsmanager.World.addBody(this._physicsBody);
+      }
+    }
 
     // Animate both elements
     const animate3D = tween({
@@ -204,6 +294,43 @@ class HybridUIComponent extends Component {
     await animate3D;
   }
 
+  private createPhysicsBody(): void {
+    // Create a physics box that matches the plane dimensions
+    const physicsWidth = this._size.x / 100; // Same as plane width
+    const physicsHeight = this._size.y / 100; // Same as plane height
+    const physicsThickness = 0.1; // Small thickness for the ground
+    
+    // Create box shape (half extents) - match Three.js plane orientation
+    // Three.js plane is in XY plane, so physics box should be: width(X), height(Y), thickness(Z)
+    const shape = new CANNON.Box(new CANNON.Vec3(
+      physicsWidth / 2,   // X-axis (width)
+      physicsHeight / 2,  // Y-axis (height) 
+      physicsThickness / 2 // Z-axis (thickness)
+    ));
+    
+    // Create static body
+    this._physicsBody = new CANNON.Body({
+      mass: 0, // Static body
+      shape: shape,
+      type: CANNON.Body.STATIC,
+      material: new CANNON.Material('hybridUIMaterial')
+    });
+    
+    // Set initial position and rotation to match entity
+    this.updatePhysicsBodyTransform();
+  }
+
+  private updatePhysicsBodyTransform(): void {
+    if (!this._physicsBody) return;
+    
+    const position = this._entity.Position;
+    const quaternion = this._entity.Quaternion;
+    
+    // Set physics body position and rotation to match entity
+    this._physicsBody.position.set(position.x, position.y, position.z);
+    this._physicsBody.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+  }
+
   async Update(_deltaTime: number): Promise<void> {
     // Update positions for all groups
     const position = this._entity.Position;
@@ -214,6 +341,9 @@ class HybridUIComponent extends Component {
     
     this._hybridGroup?.position.set(position.x, position.y, position.z);
     this._hybridGroup?.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+
+    // Update physics body transform to match entity
+    this.updatePhysicsBodyTransform();
 
     // Debug: Log distance occasionally for auto-switching debugging
     if (this._cssHybridObject && Math.random() < 0.005) { // Log 0.5% of the time
@@ -267,6 +397,12 @@ class HybridUIComponent extends Component {
   }
 
   async Destroy(): Promise<void> {
+    // Remove physics body from world
+    if (this._physicsBody && this._entity._entityManager._mc.physicsmanager) {
+      this._entity._entityManager._mc.physicsmanager.World.removeBody(this._physicsBody);
+      this._physicsBody = null;
+    }
+
     // Clean up all elements and groups
     if (this._hybridGroup.parent) {
       this._hybridGroup.parent.remove(this._hybridGroup);

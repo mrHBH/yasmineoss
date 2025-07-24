@@ -19,6 +19,7 @@ import { DynamicuiWorkerComponent } from "./utils/Components/DynamicuiWorkerComp
 import { threeDUIComponent } from "./utils/Components/3dUIComponent";
 import { twoDUIComponent } from "./utils/Components/2dUIComponent";
 import { HybridUIComponent } from "./utils/Components/HybridUIComponent";
+import { HybridCodeEditor } from "./utils/Components/HybridCodeEditor";
 
 class Main {
   private entityManager: EntityManager;
@@ -544,8 +545,8 @@ class Main {
     // Hybrid UI Component Example - uses new CSS hybrid renderer
     const hybridelement = new Entity();
     hybridelement.Position = new THREE.Vector3(5, 0.1, -5);
-    const youtube = `<iframe width="1250" height="1000" src="https://www.youtube-nocookie.com/embed/aFlC5u8ESMk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-			  		`;
+    // Ok we found a way to not have to use the x track option. Just enable YouTube notification and pop ups.
+    const youtube = `<iframe width="1250" height="1000"  src="https://www.youtube.com/embed/Y2snZMA7d7o?si=TwHoDmUL1_ViXZni&amp;start=423"  title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
     const hybridHtml = `<div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); width: 100%; height: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); color: white;">
                  <h1 style="text-align: center; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">🔄 Hybrid CSS Renderer</h1>
                  <p id="mode-display" style="text-align: center; margin-bottom: 20px; opacity: 0.9; font-weight: bold; font-size: 18px;">Current Mode: 3D (Auto-Switch: ON)</p>
@@ -573,7 +574,7 @@ class Main {
     const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize, 15); // Switch at 8 unit distance
     hybridcomp.sticky = true; // Allow distance-based hiding
     await hybridelement.AddComponent(hybridcomp);
-    await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
+     await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
 
     hybridelement.Quaternion =      new THREE.Quaternion().setFromAxisAngle(
         new THREE.Vector3(1, 0, 0),
@@ -656,6 +657,52 @@ class Main {
     }, 1000);
 
 
+    //qdd exact same element with different name; and this tiime it is vertical at a different position
+    // const hybridelement2 = new Entity();
+    // hybridelement2.Position = new THREE.Vector3(5, 4, -15);
+    // hybridelement2.Quaternion =      new THREE.Quaternion();
+    // const hybridcomp2 = new HybridUIComponent(hybridHtml, hybridSize, 15); // Switch at 8 unit distance
+    // hybridcomp2.sticky = true; // Allow distance-based hiding
+    // await hybridelement2.AddComponent(hybridcomp2);
+    // await this.entityManager.AddEntity(hybridelement2, "Hybrid CSS Renderer UI 2");
+
+    // Hybrid Code Editor - horizontal layout
+    const codeeditorentity = new Entity();
+    codeeditorentity.Position = new THREE.Vector3(-5, 0.1, -5);
+    codeeditorentity.Quaternion = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(1, 0, 0),
+      -Math.PI / 2
+    );
+    
+    const codeEditorSize = new THREE.Vector2(3000, 1800); // Wider for horizontal layout
+    const hybridCodeEditor = new HybridCodeEditor(codeEditorSize, 25); // Switch at 12 unit distance
+    
+    await codeeditorentity.AddComponent(hybridCodeEditor);
+    await this.entityManager.AddEntity(codeeditorentity, "Hybrid Code Editor");
+
+    // Add event listeners for the code editor after a timeout to ensure DOM is ready
+    setTimeout(() => {
+      // Add keyboard shortcuts for quick mode switching
+      document.addEventListener('keydown', (event) => {
+        // Ctrl+Shift+E to toggle editor mode
+        if (event.ctrlKey && event.shiftKey && event.key === 'E') {
+          hybridCodeEditor.toggleMode();
+          event.preventDefault();
+        }
+        
+        // Ctrl+Shift+1 to force 3D mode
+        if (event.ctrlKey && event.shiftKey && event.key === '1') {
+          hybridCodeEditor.forceMode('3d');
+          event.preventDefault();
+        }
+        
+        // Ctrl+Shift+2 to force 2D mode
+        if (event.ctrlKey && event.shiftKey && event.key === '2') {
+          hybridCodeEditor.forceMode('2d');
+          event.preventDefault();
+        }
+      });
+    }, 1000);
 
   }
 
