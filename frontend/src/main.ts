@@ -18,6 +18,7 @@ import { LoadingManager } from "./utils/LoadingManager";
 import { HybridUIComponent } from "./utils/Components/HybridUIComponent";
 import { HybridCodeEditor } from "./utils/Components/HybridCodeEditor";
 import { CodeEditor } from "./utils/Components/CodeEditor";
+import { CarComponent } from "./utils/Components/CarComponent";
 
 class Main {
   private entityManager: EntityManager;
@@ -548,32 +549,13 @@ class Main {
     const hybridelement = new Entity();
     hybridelement.Position = new THREE.Vector3(5, 4.1, -5);
     // Ok we found a way to not have to use the x track option. Just enable YouTube notification and pop ups.
-    const youtube = `<iframe width="100%" height="100%"  src="https://www.youtube.com/embed/Y2snZMA7d7o?si=TwHoDmUL1_ViXZni&amp;start=423"  title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-    const hybridHtml = `<div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); width: 100%; height: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); color: white;">
-                 <h1 style="text-align: center; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">🔄 Hybrid CSS Renderer</h1>
-                 <p id="mode-display" style="text-align: center; margin-bottom: 20px; opacity: 0.9; font-weight: bold; font-size: 18px;">Current Mode: 3D (Auto-Switch: ON)</p>
-                 <div style="text-align: center; margin-bottom: 20px;">
-                   <button id="force-3d-btn" class="uk-button uk-button-primary" style="margin-right: 10px; background: rgba(255,255,255,0.2); border: 2px solid white; color: white;">Force 3D Mode</button>
-                   <button id="force-2d-btn" class="uk-button uk-button-secondary" style="margin-right: 10px; background: rgba(0,0,0,0.2); border: 2px solid rgba(255,255,255,0.5); color: white;">Force 2D Mode</button>
-                   <button id="toggle-auto-btn" class="uk-button uk-button-danger" style="background: rgba(255,0,0,0.3); border: 2px solid rgba(255,255,255,0.5); color: white;">Toggle Auto-Switch</button>
-                 </div>
-                 <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; backdrop-filter: blur(10px);">
-                   <h3 style="margin-bottom: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Hybrid Renderer Features:</h3>
-                   <ul style="margin: 0; opacity: 0.95; line-height: 1.6;">
-                     <li>🎨 Single unified renderer for both modes</li>
-                     <li>⚡ Zero component duplication</li>
-                     <li>🔧 Built-in z-index management</li>
-                     <li>🎯 Automatic mode detection</li>
-                     <li>✨ Smooth element cloning & sync</li>
-                   </ul>
-                 </div>
-                  <div style="margin-top: 20px; text-align: center;">
-                    <h2>Embedded YouTube Video</h2>
+    const youtube = `<iframe width="1000" height="800"  src="https://www.youtube.com/embed/Y2snZMA7d7o?si=TwHoDmUL1_ViXZni&amp;start=423"  title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    const hybridHtml = ` 
                     ${youtube}
-               </div>`;
+               `;
     
-    const hybridSize = new THREE.Vector2(400, 400);
-    const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize,10); // Switch at 8 unit distance
+    const hybridSize = new THREE.Vector2(1400, 1000);
+    const hybridcomp = new HybridUIComponent(youtube, hybridSize,10); // Switch at 8 unit distance
     hybridcomp.sticky = true; // Allow distance-based hiding
     await hybridelement.AddComponent(hybridcomp);
    await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
@@ -722,7 +704,7 @@ class Main {
     //   -Math.PI / 2
     // );
     
-    const codeEditorSize = new THREE.Vector2(500, 500); // Wider for horizontal layout
+    const codeEditorSize = new THREE.Vector2(2500, 1600); // Wider for horizontal layout
     const hybridCodeEditor = new HybridCodeEditor(codeEditorSize, 11); // Switch at 12 unit distance
     
     await codeeditorentity.AddComponent(hybridCodeEditor);
