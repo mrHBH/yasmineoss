@@ -26,7 +26,7 @@ class HybridUIComponent extends Component {
     this._zoomThreshold = zoomThreshold || 8;
   }
 
-  get htmlElement() {
+  get HtmlElement() {
     return this._htmlElement;
   }
   
@@ -168,13 +168,36 @@ class HybridUIComponent extends Component {
 
   public async toggleMode(): Promise<void> {
     if (this._cssHybridObject) {
+      const oldMode = this._cssHybridObject.mode;
       await this._cssHybridObject.toggleMode();
+      const newMode = this._cssHybridObject.mode;
+      
+      console.log(`🔄 HybridUIComponent mode switched: ${oldMode} → ${newMode}`);
+      if (newMode === '2d') {
+        console.log('📺 2D mode is now DOMINANT - all 3D elements will be frozen');
+      } else {
+        console.log('🎮 3D mode active - normal 3D rendering when no 2D elements exist');
+      }
+      
+      // Update HTML element size after mode change
+      setTimeout(() => this.updateHtmlElementSize(), 100);
     }
   }
 
   public async forceMode(mode: '2d' | '3d'): Promise<void> {
     if (this._cssHybridObject) {
+      const oldMode = this._cssHybridObject.mode;
       await this._cssHybridObject.switchMode(mode, true);
+      
+      console.log(`🎯 HybridUIComponent mode forced: ${oldMode} → ${mode}`);
+      if (mode === '2d') {
+        console.log('📺 2D mode is now DOMINANT - all 3D elements will be frozen');
+      } else if (mode === '3d') {
+        console.log('🎮 3D mode forced - normal 3D rendering when no 2D elements exist');
+      }
+      
+      // Update HTML element size after mode change
+      setTimeout(() => this.updateHtmlElementSize(), 100);
     }
   }
 
@@ -331,6 +354,104 @@ class HybridUIComponent extends Component {
     this._physicsBody.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
   }
 
+  private calculateVisiblePlaneSize(): { width: number, height: number } {
+    if (!this._entity || !this._entity._entityManager) {
+      return { width: this._size.x, height: this._size.y };
+    }
+
+    const camera = this._entity._entityManager._mc.camera;
+    const renderer = this._entity._entityManager._mc.webglrenderer;
+    
+    if (!camera || !renderer) {
+      return { width: this._size.x, height: this._size.y };
+    }
+
+    // Get screen dimensions
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+
+    // Get the plane's actual 3D size
+    const planeWidth3D = this._size.x / 100; // Convert from pixels to 3D units
+    const planeHeight3D = this._size.y / 100;
+
+    // Project 3D plane size to screen space
+    const tempVector = new THREE.Vector3();
+    const tempVector2 = new THREE.Vector3();
+    
+    // Calculate the screen-space size of the plane
+    // Use the plane's corner points to determine screen coverage
+    const planeCorner1 = new THREE.Vector3(-planeWidth3D/2, -planeHeight3D/2, 0)
+      .applyQuaternion(this._entity.Quaternion)
+      .add(this._entity.Position);
+    const planeCorner2 = new THREE.Vector3(planeWidth3D/2, planeHeight3D/2, 0)
+      .applyQuaternion(this._entity.Quaternion)
+      .add(this._entity.Position);
+
+    // Project to screen coordinates
+    tempVector.copy(planeCorner1).project(camera);
+    tempVector2.copy(planeCorner2).project(camera);
+
+    // Convert normalized device coordinates to screen pixels
+    const screenX1 = (tempVector.x + 1) * screenWidth / 2;
+    const screenY1 = (-tempVector.y + 1) * screenHeight / 2;
+    const screenX2 = (tempVector2.x + 1) * screenWidth / 2;
+    const screenY2 = (-tempVector2.y + 1) * screenHeight / 2;
+
+    // Calculate screen-space dimensions
+    const screenSpaceWidth = Math.abs(screenX2 - screenX1);
+    const screenSpaceHeight = Math.abs(screenY2 - screenY1);
+
+    // Clamp to screen dimensions to prevent overflow
+    const maxWidth = screenWidth * 0.95; // Leave 5% margin
+    const maxHeight = screenHeight * 0.95;
+
+    return {
+      width: Math.min(screenSpaceWidth, maxWidth),
+      height: Math.min(screenSpaceHeight, maxHeight)
+    };
+  }
+
+  private updateHtmlElementSize(): void {
+    if (!this._cssHybridObject || !this._htmlElement) return;
+
+    // Only dynamically resize in 2D mode
+    if (this._cssHybridObject.mode === '2d') {
+      const visibleSize = this.calculateVisiblePlaneSize();
+      
+      // Only update if there's a significant change to avoid constant resizing
+      const currentWidth = parseInt(this._htmlElement.style.width) || this._size.x;
+      const currentHeight = parseInt(this._htmlElement.style.height) || this._size.y;
+      
+      const widthDiff = Math.abs(visibleSize.width - currentWidth);
+      const heightDiff = Math.abs(visibleSize.height - currentHeight);
+      
+      // Update only if change is significant (more than 10 pixels)
+      if (widthDiff > 10 || heightDiff > 10) {
+        // Ensure minimum size to maintain usability
+        const minWidth = Math.min(this._size.x * 0.5, 300);
+        const minHeight = Math.min(this._size.y * 0.5, 200);
+        
+        const finalWidth = Math.max(visibleSize.width, minWidth);
+        const finalHeight = Math.max(visibleSize.height, minHeight);
+        
+        // Update HTML element size to match visible plane size
+        this._htmlElement.style.width = `${finalWidth}px`;
+        this._htmlElement.style.height = `${finalHeight}px`;
+        
+        // Ensure the element maintains its visual quality
+        this._htmlElement.style.transformOrigin = 'center center';
+        
+        // Add a subtle transition for smoother resizing
+        this._htmlElement.style.transition = 'width 0.2s ease-out, height 0.2s ease-out';
+      }
+    } else {
+      // In 3D mode, use the original size and remove transitions
+      this._htmlElement.style.width = `${this._size.x}px`;
+      this._htmlElement.style.height = `${this._size.y}px`;
+      this._htmlElement.style.transition = '';
+    }
+  }
+
   async Update(_deltaTime: number): Promise<void> {
     // Update positions for all groups
     const position = this._entity.Position;
@@ -347,14 +468,14 @@ class HybridUIComponent extends Component {
     if (this._cssHybridObject) {
       this._cssHybridObject.position.set(position.x, position.y, position.z);
       this._cssHybridObject.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
-      this._cssHybridObject.updateMatrixWorld(true); // Force matrix update
+      this._cssHybridObject.updateMatrixWorld(false); // Force matrix update
     }
 
     // Update physics body transform to match entity
     this.updatePhysicsBodyTransform();
 
- 
- 
+    // Update HTML element size based on camera distance and mode
+    this.updateHtmlElementSize();
 
     // Handle opacity based on distance (if not sticky)
     if (!this.sticky && this._cssHybridObject) {

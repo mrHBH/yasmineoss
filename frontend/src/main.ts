@@ -14,12 +14,10 @@ import { KeyboardInput } from "./utils/Components/KeyboardInput";
 import { AudioComponent } from "./utils/Components/AudioComponent";
 // Add this import statement
 import { LoadingManager } from "./utils/LoadingManager";
-import {  CarComponent } from "./utils/Components/CarComponent";
-import { DynamicuiWorkerComponent } from "./utils/Components/DynamicuiWorkerComponent";
-import { threeDUIComponent } from "./utils/Components/3dUIComponent";
-import { twoDUIComponent } from "./utils/Components/2dUIComponent";
+ 
 import { HybridUIComponent } from "./utils/Components/HybridUIComponent";
 import { HybridCodeEditor } from "./utils/Components/HybridCodeEditor";
+import { CodeEditor } from "./utils/Components/CodeEditor";
 
 class Main {
   private entityManager: EntityManager;
@@ -578,87 +576,87 @@ class Main {
     const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize,10); // Switch at 8 unit distance
     hybridcomp.sticky = true; // Allow distance-based hiding
     await hybridelement.AddComponent(hybridcomp);
-    await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
+   await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
 
     // hybridelement.Quaternion =      new THREE.Quaternion().setFromAxisAngle(
     //     new THREE.Vector3(1, 0, 0),
     //    - Math.PI / 2
     //   )
     // Add event listeners after a timeout to ensure DOM is ready
-    setTimeout(() => {
-      const modeDisplay = hybridcomp.htmlElement.querySelector('#mode-display');
-      const force3DBtn = hybridcomp.htmlElement.querySelector('#force-3d-btn');
-      const force2DBtn = hybridcomp.htmlElement.querySelector('#force-2d-btn');
-      const toggleAutoBtn = hybridcomp.htmlElement.querySelector('#toggle-auto-btn');
+    // setTimeout(() => {
+    //   const modeDisplay = hybridcomp.htmlElement.querySelector('#mode-display');
+    //   const force3DBtn = hybridcomp.htmlElement.querySelector('#force-3d-btn');
+    //   const force2DBtn = hybridcomp.htmlElement.querySelector('#force-2d-btn');
+    //   const toggleAutoBtn = hybridcomp.htmlElement.querySelector('#toggle-auto-btn');
 
-      // Update mode display
-      const updateModeDisplay = () => {
-        if (modeDisplay) {
-          const autoSwitchStatus = hybridcomp.getAutoSwitchEnabled() ? 'ON' : 'OFF';
-          modeDisplay.textContent = `Current Mode: ${hybridcomp.getCurrentMode().toUpperCase()} (Auto-Switch: ${autoSwitchStatus})`;
-        }
-      };
+    //   // Update mode display
+    //   const updateModeDisplay = () => {
+    //     if (modeDisplay) {
+    //       const autoSwitchStatus = hybridcomp.getAutoSwitchEnabled() ? 'ON' : 'OFF';
+    //       modeDisplay.textContent = `Current Mode: ${hybridcomp.getCurrentMode().toUpperCase()} (Auto-Switch: ${autoSwitchStatus})`;
+    //     }
+    //   };
 
-      if (force3DBtn) {
-        force3DBtn.addEventListener('click', () => {
-          console.log('🎯 Forcing 3D mode');
-          hybridcomp.forceMode('3d');
-          setTimeout(updateModeDisplay, 100);
-        });
-      }
+    //   if (force3DBtn) {
+    //     force3DBtn.addEventListener('click', () => {
+    //       console.log('🎯 Forcing 3D mode');
+    //       hybridcomp.forceMode('3d');
+    //       setTimeout(updateModeDisplay, 100);
+    //     });
+    //   }
 
-      if (force2DBtn) {
-        force2DBtn.addEventListener('click', () => {
-          console.log('🎯 Forcing 2D mode');
-          hybridcomp.forceMode('2d');
-          setTimeout(updateModeDisplay, 100);
-        });
-      }
+    //   if (force2DBtn) {
+    //     force2DBtn.addEventListener('click', () => {
+    //       console.log('🎯 Forcing 2D mode');
+    //       hybridcomp.forceMode('2d');
+    //       setTimeout(updateModeDisplay, 100);
+    //     });
+    //   }
 
-      if (toggleAutoBtn) {
-        toggleAutoBtn.addEventListener('click', () => {
-          const newState = !hybridcomp.getAutoSwitchEnabled();
-          hybridcomp.setAutoSwitch(newState);
-          console.log(`🔄 Auto-switch ${newState ? 'enabled' : 'disabled'}`);
-          setTimeout(updateModeDisplay, 100);
-        });
-      }
+    //   if (toggleAutoBtn) {
+    //     toggleAutoBtn.addEventListener('click', () => {
+    //       const newState = !hybridcomp.getAutoSwitchEnabled();
+    //       hybridcomp.setAutoSwitch(newState);
+    //       console.log(`🔄 Auto-switch ${newState ? 'enabled' : 'disabled'}`);
+    //       setTimeout(updateModeDisplay, 100);
+    //     });
+    //   }
 
-      // Initial display update
-      updateModeDisplay();
+    //   // Initial display update
+    //   updateModeDisplay();
 
-      // Also add similar event listeners to the clone element after another timeout
-      setTimeout(() => {
-        const cloneForce3DBtn = hybridcomp.getCloneElement()?.querySelector('#force-3d-btn');
-        const cloneForce2DBtn = hybridcomp.getCloneElement()?.querySelector('#force-2d-btn');
-        const cloneToggleAutoBtn = hybridcomp.getCloneElement()?.querySelector('#toggle-auto-btn');
+    //   // Also add similar event listeners to the clone element after another timeout
+    //   setTimeout(() => {
+    //     const cloneForce3DBtn = hybridcomp.getCloneElement()?.querySelector('#force-3d-btn');
+    //     const cloneForce2DBtn = hybridcomp.getCloneElement()?.querySelector('#force-2d-btn');
+    //     const cloneToggleAutoBtn = hybridcomp.getCloneElement()?.querySelector('#toggle-auto-btn');
 
-        if (cloneForce3DBtn) {
-          cloneForce3DBtn.addEventListener('click', () => {
-            console.log('🎯 Forcing 3D mode (from clone)');
-            hybridcomp.forceMode('3d');
-            setTimeout(updateModeDisplay, 100);
-          });
-        }
+    //     if (cloneForce3DBtn) {
+    //       cloneForce3DBtn.addEventListener('click', () => {
+    //         console.log('🎯 Forcing 3D mode (from clone)');
+    //         hybridcomp.forceMode('3d');
+    //         setTimeout(updateModeDisplay, 100);
+    //       });
+    //     }
 
-        if (cloneForce2DBtn) {
-          cloneForce2DBtn.addEventListener('click', () => {
-            console.log('🎯 Forcing 2D mode (from clone)');
-            hybridcomp.forceMode('2d');
-            setTimeout(updateModeDisplay, 100);
-          });
-        }
+    //     if (cloneForce2DBtn) {
+    //       cloneForce2DBtn.addEventListener('click', () => {
+    //         console.log('🎯 Forcing 2D mode (from clone)');
+    //         hybridcomp.forceMode('2d');
+    //         setTimeout(updateModeDisplay, 100);
+    //       });
+    //     }
 
-        if (cloneToggleAutoBtn) {
-          cloneToggleAutoBtn.addEventListener('click', () => {
-            const newState = !hybridcomp.getAutoSwitchEnabled();
-            hybridcomp.setAutoSwitch(newState);
-            console.log(`🔄 Auto-switch ${newState ? 'enabled' : 'disabled'} (from clone)`);
-            setTimeout(updateModeDisplay, 100);
-          });
-        }
-      }, 500);
-    }, 1000);
+    //     if (cloneToggleAutoBtn) {
+    //       cloneToggleAutoBtn.addEventListener('click', () => {
+    //         const newState = !hybridcomp.getAutoSwitchEnabled();
+    //         hybridcomp.setAutoSwitch(newState);
+    //         console.log(`🔄 Auto-switch ${newState ? 'enabled' : 'disabled'} (from clone)`);
+    //         setTimeout(updateModeDisplay, 100);
+    //       });
+    //     }
+    //   }, 500);
+    // }, 1000);
     //add several more elements to test hybrid renderer  ( position and rotate them differently )
     //50 
     
@@ -718,7 +716,7 @@ class Main {
  
     // Hybrid Code Editor - horizontal layout
     const codeeditorentity = new Entity();
-    codeeditorentity.Position = new THREE.Vector3(-5, 2.1, -5);
+    codeeditorentity.Position = new THREE.Vector3(-5, 3.1, -5);
     // codeeditorentity.Quaternion = new THREE.Quaternion().setFromAxisAngle(
     //   new THREE.Vector3(1, 0, 0),
     //   -Math.PI / 2
@@ -728,7 +726,20 @@ class Main {
     const hybridCodeEditor = new HybridCodeEditor(codeEditorSize, 11); // Switch at 12 unit distance
     
     await codeeditorentity.AddComponent(hybridCodeEditor);
-    await this.entityManager.AddEntity(codeeditorentity, "Hybrid Code Editor");
+     await this.entityManager.AddEntity(codeeditorentity, "Hybrid Code Editor");
+
+
+
+    //add another coder editor bbut apply rotation to it
+    const codeeditorentity2 = new Entity();
+    codeeditorentity2.Position = new THREE.Vector3(-15, 0.01, -15);
+    codeeditorentity2.Quaternion = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(1, 0, 0),
+      -Math.PI / 2
+    );
+    const hybridCodeEditor2 = new HybridCodeEditor(codeEditorSize, 11); // Switch at 12 unit distance
+    await codeeditorentity2.AddComponent(hybridCodeEditor2);
+    await this.entityManager.AddEntity(codeeditorentity2, "Hybrid Code Editor 2");
 //
     // Add event listeners for the code editor after a timeout to ensure DOM is ready
     setTimeout(() => {
@@ -753,6 +764,11 @@ class Main {
         }
       });
     }, 1000);
+
+
+ 
+
+    // oldcodeeditor.Quaternion = new THREE.Quaternion().setFromAxisAngle
   
  
 

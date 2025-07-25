@@ -248,56 +248,74 @@ class CSSHybridRenderer {
 						   }
 				   });
 
-				   // If we have both modes, use a compromise that works for both
-				   // If only one mode, optimize for that mode
-				   if (has3D && has2D) {
-						   // Mixed mode: Apply 3D transform but mark container for special 2D handling
-						   hybridContainer.style.transform = cameraTransform;
-						   hybridContainer.style.transformStyle = 'preserve-3d';
+				   // 2D mode is DOMINANT - if any element is in 2D mode, optimize container for 2D
+				   // This ensures 2D elements work perfectly while 3D elements are frozen when 2D is active
+				   const previous2DDominant = hybridContainer.getAttribute('data-2d-dominant') === 'true';
+				   
+				   if (has2D) {
+						   // Pure 2D mode - optimize for 2D elements (2D is dominant)
+						   hybridContainer.style.transform = '';
+						   hybridContainer.style.transformStyle = '';
 						   hybridContainer.style.perspective = '';
-						   hybridContainer.setAttribute('data-mixed-mode', 'true');
+						   hybridContainer.setAttribute('data-2d-dominant', 'true');
+						   hybridContainer.removeAttribute('data-mixed-mode');
+						   
+						   if (!previous2DDominant) {
+							   console.log('📺 2D DOMINANCE ACTIVATED - 3D elements frozen, container optimized for 2D');
+						   }
 				   } else if (has3D) {
-						   // Pure 3D mode
+						   // Pure 3D mode - only when no 2D elements exist
 						   hybridContainer.style.transform = cameraTransform;
 						   hybridContainer.style.transformStyle = 'preserve-3d';
 						   hybridContainer.style.perspective = '';
 						   hybridContainer.removeAttribute('data-mixed-mode');
+						   hybridContainer.removeAttribute('data-2d-dominant');
+						   
+						   if (previous2DDominant) {
+							   console.log('🎮 3D MODE RESTORED - 2D dominance ended, 3D elements unfrozen');
+						   }
 				   } else {
-						   // Pure 2D mode
+						   // No hybrid objects
 						   hybridContainer.style.transform = '';
 						   hybridContainer.style.transformStyle = '';
 						   hybridContainer.style.perspective = '';
 						   hybridContainer.removeAttribute('data-mixed-mode');
+						   hybridContainer.removeAttribute('data-2d-dominant');
 				   }
 
-				   // If a mode switch just happened, force transform update for all CSSHybridObjects in 3D mode
+				   // If a mode switch just happened, force transform update for 3D elements only when 2D is not dominant
 				   if (this._forceHybridTransformUpdate) {
-					   scene.traverse(function (o) {
-						   const obj = o as any;
-						   if (obj.isCSSHybridObject && obj.mode === '3d') {
-							   let style;
-							   if (obj.rotation2D !== 0) {
-								   _matrix.copy(camera.matrixWorldInverse);
-								   _matrix.transpose();
-								   _matrix.multiply(_matrix2.makeRotationZ(obj.rotation2D));
-								   obj.matrixWorld.decompose(_position, _quaternion, _scale);
-								   _matrix.setPosition(_position);
-								   _matrix.scale(_scale);
-								   _matrix.elements[3] = 0;
-								   _matrix.elements[7] = 0;
-								   _matrix.elements[11] = 0;
-								   _matrix.elements[15] = 1;
-								   style = getObjectCSSMatrix(_matrix);
-							   } else {
-								   style = getObjectCSSMatrix(obj.matrixWorld);
+					   const is2DDominant = hybridContainer.getAttribute('data-2d-dominant') === 'true';
+					   
+					   // Only update 3D elements if 2D mode is not dominant
+					   if (!is2DDominant) {
+						   scene.traverse(function (o) {
+							   const obj = o as any;
+							   if (obj.isCSSHybridObject && obj.mode === '3d') {
+								   let style;
+								   if (obj.rotation2D !== 0) {
+									   _matrix.copy(camera.matrixWorldInverse);
+									   _matrix.transpose();
+									   _matrix.multiply(_matrix2.makeRotationZ(obj.rotation2D));
+									   obj.matrixWorld.decompose(_position, _quaternion, _scale);
+									   _matrix.setPosition(_position);
+									   _matrix.scale(_scale);
+									   _matrix.elements[3] = 0;
+									   _matrix.elements[7] = 0;
+									   _matrix.elements[11] = 0;
+									   _matrix.elements[15] = 1;
+									   style = getObjectCSSMatrix(_matrix);
+								   } else {
+									   style = getObjectCSSMatrix(obj.matrixWorld);
+								   }
+								   obj.element.style.transform = style;
 							   }
-							   obj.element.style.transform = style;
-						   }
-					   });
+						   });
+					   }
 					   this._forceHybridTransformUpdate = false;
 				   }
 
-				   // Render all objects using a single container, supporting mixed modes
+				   // Render all objects using a single container, with 2D dominance
 				   renderHybridObject(scene, scene, camera, hybridContainer, has3D, has2D);
  			   };
 
@@ -367,9 +385,12 @@ class CSSHybridRenderer {
 			return 'translate(-50%,-50%)' + matrix3d;
 		}
 
-		// Original working render function
+		// Original working render function with 2D dominance and 3D freezing
 		function renderHybridObject(object, scene, camera, container, has3D?, has2D?) {
 			if ((object).isCSSHybridObject) {
+				// Check if 2D mode is dominant (any element is in 2D mode)
+				const is2DDominant = container.getAttribute('data-2d-dominant') === 'true';
+				
 				// Use optimized distance calculation with reduced allocations
 				const distance = getDistanceToOptimized(camera, object);
 			 
@@ -402,30 +423,40 @@ class CSSHybridRenderer {
 				}
 
 				if (object.mode === '3d') {
-					element.style.display = visible ? '' : 'none';
-					if (visible) {
-						if (object.onBeforeRender) object.onBeforeRender(_this as any, scene as any, camera, null, null, null);
-						if (object.rotation2D !== 0) {
-							// Sprite-like behavior
-							_matrix.copy(camera.matrixWorldInverse);
-							_matrix.transpose();
-							_matrix.multiply(_matrix2.makeRotationZ(object.rotation2D));
-							object.matrixWorld.decompose(_position, _quaternion, _scale);
-							_matrix.setPosition(_position);
-							_matrix.scale(_scale);
-							_matrix.elements[3] = 0;
-							_matrix.elements[7] = 0;
-							_matrix.elements[11] = 0;
-							_matrix.elements[15] = 1;
-							style = getObjectCSSMatrix(_matrix);
-						} else {
-							style = getObjectCSSMatrix(object.matrixWorld);
+					// If 2D mode is dominant, freeze 3D elements (don't update them but keep HTML visible)
+					if (is2DDominant) {
+						// Freeze: Keep element visible but don't update transforms
+						element.style.display = visible ? '' : 'none';
+						// Don't update transforms - element stays frozen in last position
+						// This prevents interference with 2D elements while keeping HTML intact
+					} else {
+						// Normal 3D rendering when no 2D elements are active
+						element.style.display = visible ? '' : 'none';
+						if (visible) {
+							if (object.onBeforeRender) object.onBeforeRender(_this as any, scene as any, camera, null, null, null);
+							if (object.rotation2D !== 0) {
+								// Sprite-like behavior
+								_matrix.copy(camera.matrixWorldInverse);
+								_matrix.transpose();
+								_matrix.multiply(_matrix2.makeRotationZ(object.rotation2D));
+								object.matrixWorld.decompose(_position, _quaternion, _scale);
+								_matrix.setPosition(_position);
+								_matrix.scale(_scale);
+								_matrix.elements[3] = 0;
+								_matrix.elements[7] = 0;
+								_matrix.elements[11] = 0;
+								_matrix.elements[15] = 1;
+								style = getObjectCSSMatrix(_matrix);
+							} else {
+								style = getObjectCSSMatrix(object.matrixWorld);
+							}
+							// Apply transform
+							element.style.transform = style;
+							if (object.onAfterRender) object.onAfterRender(_this as any, scene as any, camera, null, null, null);
 						}
-						// Apply transform without caching for now
-						element.style.transform = style;
-						if (object.onAfterRender) object.onAfterRender(_this as any, scene as any, camera, null, null, null);
 					}
 				} else if (object.mode === '2d') {
+					// 2D mode always gets updated (it's dominant)
 					_vector.setFromMatrixPosition(object.matrixWorld);
 					_vector.applyMatrix4(_viewProjectionMatrix);
 					const visible2D = visible && (_vector.z >= -1 && _vector.z <= 1);
@@ -433,31 +464,16 @@ class CSSHybridRenderer {
 					if (visible2D) {
 						if (object.onBeforeRender) object.onBeforeRender(_this as any, scene as any, camera, null, null, null);
 						
-						// Check if we're in mixed mode (both 2D and 3D elements exist)
-						const isMixedMode = container.getAttribute('data-mixed-mode') === 'true';
-						
-						if (isMixedMode && has3D && has2D) {
-							// In mixed mode, we need to counteract the 3D transform
-							const _widthHalf = _width / 2;
-							const _heightHalf = _height / 2;
-							const x = (_vector.x * _widthHalf + _widthHalf);
-							const y = (-_vector.y * _heightHalf + _heightHalf);
-							
-							style = 'translate(' + (-100 * object.center.x) + '%,' + (-100 * object.center.y) + '%)'
-								+ 'translate3d(' + x + 'px,' + y + 'px, 0px)'
-								+ 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)';
-							element.style.transformStyle = 'flat';
-						} else {
-							// Pure 2D mode
-							const _widthHalf = _width / 2;
-							const _heightHalf = _height / 2;
-							const x = (_vector.x * _widthHalf + _widthHalf);
-							const y = (-_vector.y * _heightHalf + _heightHalf);
-							style = 'translate(' + (-100 * object.center.x) + '%,' + (-100 * object.center.y) + '%)'
-								+ 'translate(' + x + 'px,' + y + 'px)';
-						}
+						// Since 2D is dominant, we can always use pure 2D rendering
+						const _widthHalf = _width / 2;
+						const _heightHalf = _height / 2;
+						const x = (_vector.x * _widthHalf + _widthHalf);
+						const y = (-_vector.y * _heightHalf + _heightHalf);
+						style = 'translate(' + (-100 * object.center.x) + '%,' + (-100 * object.center.y) + '%)'
+							+ 'translate(' + x + 'px,' + y + 'px)';
 						
 						element.style.transform = style;
+						element.style.transformStyle = 'flat';
 						if (object.onAfterRender) object.onAfterRender(_this as any, scene as any, camera, null, null, null);
 					}
 				}

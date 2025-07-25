@@ -265,7 +265,7 @@ class MainController {
 
     this.CameraControls.saveState();
     this.CameraControls.mouseButtons = {
-      left: CameraControls.ACTION.OFFSET,
+      left: CameraControls.ACTION.TRUCK,
       middle: CameraControls.ACTION.ZOOM,
       right: CameraControls.ACTION.ROTATE,
       wheel: CameraControls.ACTION.DOLLY,
