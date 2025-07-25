@@ -20,6 +20,8 @@ import { threeDUIComponent } from "./utils/Components/3dUIComponent";
 import { twoDUIComponent } from "./utils/Components/2dUIComponent";
 import { HybridUIComponent } from "./utils/Components/HybridUIComponent";
 import { HybridCodeEditor } from "./utils/Components/HybridCodeEditor";
+import { profiler } from "./utils/HybridRendererProfiler";
+import { hybridWorkerManager } from "./utils/workers/HybridWorkerManager";
 
 class Main {
   private entityManager: EntityManager;
@@ -27,6 +29,9 @@ class Main {
   private clock = new THREE.Clock();
   private bobCounter = 0; // Counter for unique Bob names
   private loadingSpinner: HTMLElement | null = null;
+  private testHybridEntities: Entity[] = []; // Track test entities
+  private profilingUI: HTMLElement | null = null; // UI element for showing stats
+  private workerEnabled = false; // Track worker state
  
   constructor() {
     this.init().catch((error) => {
@@ -254,16 +259,6 @@ class Main {
       
      
       
-      // Add 'c' key to force cleanup
-      if (event.key === 'c' || event.key === 'C') {
-        console.log('Forcing cleanup...');
-        LoadingManager.forceCleanup();
-        const stats = LoadingManager.getMemoryStats();
-        //resetphysics debug if active
-    
-        console.log('Memory Stats after cleanup:', stats);
-      }
-      
       // Add 'r' key to complete reset
       if (event.key === 'r' || event.key === 'R') {
         console.log('Performing complete LoadingManager reset...');
@@ -308,37 +303,27 @@ class Main {
   
       
 
-            // Add 'h' key to test hybrid UI modes manually
+            // Add 'h' key to spawn UI elements WITHOUT worker optimization
       if (event.key === 'h' || event.key === 'H') {
-        const hybridEntity = this.entityManager.Entities.find(e => e.name === "Hybrid CSS Renderer UI");
-        if (hybridEntity) {
-          const hybridComp = hybridEntity.getComponent("HybridUIComponent") as any;
-          if (hybridComp) {
-            console.log('=== HYBRID UI DEBUG INFO ===');
-            console.log(`Current Mode: ${hybridComp.getCurrentMode()}`);
-            console.log(`Auto-Switch Enabled: ${hybridComp.getAutoSwitchEnabled()}`);
-            console.log(`Zoom Threshold: ${hybridComp.zoomThreshold}`);
-            console.log(`Entity Position: ${hybridEntity.Position.x.toFixed(2)}, ${hybridEntity.Position.y.toFixed(2)}, ${hybridEntity.Position.z.toFixed(2)}`);
-            
-            if (this.maincController.camera) {
-              const distance = hybridEntity.Position.distanceTo(this.maincController.camera.position);
-              console.log(`Distance to Camera: ${distance.toFixed(2)}`);
-              console.log(`Should be 2D: ${distance < hybridComp.zoomThreshold}`);
-            }
-            console.log('============================');
-          }
-        }
+        this.testHybridPerformanceWithoutWorker();
       }
       
-      // Add 'j' key to manually toggle hybrid mode
+      // Add 'j' key to spawn UI elements WITH worker optimization
       if (event.key === 'j' || event.key === 'J') {
-        const hybridEntity = this.entityManager.Entities.find(e => e.name === "Hybrid CSS Renderer UI");
-        if (hybridEntity) {
-          const hybridComp = hybridEntity.getComponent("HybridUIComponent") as any;
-          if (hybridComp) {
-            console.log('🔄 Manually toggling hybrid mode...');
-            hybridComp.toggleMode();
-          }
+        this.testHybridPerformanceWithWorker();
+      }
+
+      // Add 'c' key to clear hybrid test entities (in addition to the existing cleanup)
+      if (event.key === 'c' || event.key === 'C') {
+        // Clear test entities first
+        if (this.testHybridEntities.length > 0) {
+          this.clearTestEntities();
+        } else {
+          // If no test entities, run the original cleanup
+          console.log('Forcing cleanup...');
+          LoadingManager.forceCleanup();
+          const stats = LoadingManager.getMemoryStats();
+          console.log('Memory Stats after cleanup:', stats);
         }
       }
       
@@ -411,15 +396,22 @@ class Main {
         
  
    
-      // Add 'd' key to delete the most recent Bob or Alice entity
+      // Add 'd' key to delete all hybrid test entities
       if (event.key === 'd' || event.key === 'D') {
-        const bobEntities = this.entityManager.Entities.filter(e => e.name.includes('Bob') || e.name.includes('alice'));
-        if (bobEntities.length > 0) {
-          const lastEntity = bobEntities[bobEntities.length - 1];
-          console.log(`Deleting entity: ${lastEntity.name}`);
-          this.entityManager.RemoveEntity(lastEntity);
+        // Clear test entities first
+        if (this.testHybridEntities.length > 0) {
+          this.clearTestEntities();
+          console.log('🗑️ Deleted all hybrid test entities');
         } else {
-          console.log('No Bob or Alice entities to delete');
+          // If no test entities, delete Bob/Alice entities (original behavior)
+          const bobEntities = this.entityManager.Entities.filter(e => e.name.includes('Bob') || e.name.includes('alice'));
+          if (bobEntities.length > 0) {
+            const lastEntity = bobEntities[bobEntities.length - 1];
+            console.log(`Deleting entity: ${lastEntity.name}`);
+            this.entityManager.RemoveEntity(lastEntity);
+          } else {
+            console.log('No entities to delete');
+          }
         }
       }
       
@@ -483,9 +475,63 @@ class Main {
    // this.maincController.UIManager.toggleScrollmode();
 
     this.animate();
-    await this.sceneSetup();
+    await this.minimalSceneSetup();
 
 
+  }
+
+  private async minimalSceneSetup(): Promise<void> {
+    console.log('🏗️ Setting up minimal scene - only essential character...');
+    
+    // Add only the main character (Hamza)
+    const hamza = new Entity();
+    hamza.Position = new THREE.Vector3(0, 1, 6);
+    const hbhc = new CharacterComponent({
+      modelpath: "models/gltf/ybot2.glb",
+      animationspathslist: this.maincController.animations,
+      behaviourscriptname: "Hamza.js",
+    });
+    
+    // Store component creation info for streaming
+    hamza._componentCreationInfo = [
+      { 
+        type: 'CharacterComponent', 
+        config: {
+          modelpath: "models/gltf/ybot2.glb",
+          animationspathslist: this.maincController.animations,
+          behaviourscriptname: "Hamza02.js",
+        }
+      },
+      { 
+        type: 'AudioComponent', 
+        config: {
+          audioConfig: {},
+          visualizerConfig: { enabled: true }
+        }
+      }
+    ];
+    
+    await hamza.AddComponent(hbhc);
+    await hamza.AddComponent(new KeyboardInput())
+    await hamza.AddComponent(new AudioComponent());
+    await this.entityManager.AddEntity(hamza, "Hamza Ben Hassen");
+
+    // Components are already loaded, can send commands immediately
+    await hbhc.face();
+    this.maincController.MainEntity = hamza;
+
+    await hamza.Broadcast({
+        topic: "walk",
+        data: { position: new THREE.Vector3(5, 0, -10) },
+    })
+
+    console.log("Hamza finished initialization");
+    await hamza.Broadcast({
+        topic: "walk",
+        data: { position: new THREE.Vector3(-15, 0, 10) },
+    })
+    
+    console.log('✅ Minimal scene setup complete - press H for UI elements, J for worker UI elements, D to delete all');
   }
 
   private async sceneSetup(): Promise<void> {
@@ -578,7 +624,7 @@ class Main {
     const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize,10); // Switch at 8 unit distance
     hybridcomp.sticky = true; // Allow distance-based hiding
     await hybridelement.AddComponent(hybridcomp);
-    await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
+   // await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
 
     // hybridelement.Quaternion =      new THREE.Quaternion().setFromAxisAngle(
     //     new THREE.Vector3(1, 0, 0),
@@ -903,6 +949,281 @@ class Main {
 
 //     await uitesterbot.AddComponent(new KeyboardInput());
 //     await this.entityManager.AddEntity(uitesterbot, "uitester66"); // Commented out test entity
+  }
+
+  private async testHybridPerformanceWithoutWorker(): Promise<void> {
+    console.log('🧪 Creating 20 UI elements WITHOUT Worker optimization...');
+    
+    // Clear previous test entities
+    this.clearTestEntities();
+    
+    // Disable worker in manager
+    this.workerEnabled = false;
+    
+    // Start profiling
+    profiler.enable();
+    profiler.reset();
+    
+    // Create 20 hybrid UI entities without worker
+    await this.spawnUIElements(false);
+    
+    // Show profiling UI
+    this.showProfilingUI();
+    
+    console.log(`✅ Created 20 hybrid entities WITHOUT worker optimization`);
+  }
+
+  private async testHybridPerformanceWithWorker(): Promise<void> {
+    console.log('🚀 Creating 20 UI elements WITH Worker optimization...');
+    
+    // Clear previous test entities
+    this.clearTestEntities();
+    
+    // Enable worker in manager
+    this.workerEnabled = true;
+    
+    // Start profiling
+    profiler.enable();
+    profiler.reset();
+    
+    // Create 20 hybrid UI entities with worker
+    await this.spawnUIElements(true);
+    
+    // Show profiling UI
+    this.showProfilingUI();
+    
+    console.log(`✅ Created 20 hybrid entities WITH worker optimization`);
+  }
+
+  private async spawnUIElements(useWorker: boolean): Promise<void> {
+    // Create the main hybrid UI element (similar to the one in sceneSetup)
+    await this.createMainHybridUIElement();
+    
+    // Create the hybrid code editor
+    await this.createHybridCodeEditor();
+    
+    // Create 20 test hybrid UI entities for performance testing
+    for (let i = 0; i < 20; i++) {
+      await this.createTestHybridEntity(i, useWorker);
+    }
+  }
+
+  private async createMainHybridUIElement(): Promise<void> {
+    const hybridelement = new Entity();
+    hybridelement.Position = new THREE.Vector3(5, 4.1, -5);
+    
+    const youtube = `<iframe width="100%" height="100%"  src="https://www.youtube.com/embed/Y2snZMA7d7o?si=TwHoDmUL1_ViXZni&amp;start=423"  title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    const hybridHtml = `<div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); width: 100%; height: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); color: white;">
+                 <h1 style="text-align: center; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">🔄 Hybrid CSS Renderer</h1>
+                 <p id="mode-display" style="text-align: center; margin-bottom: 20px; opacity: 0.9; font-weight: bold; font-size: 18px;">Current Mode: 3D (Auto-Switch: ON)</p>
+                 <div style="text-align: center; margin-bottom: 20px;">
+                   <button id="force-3d-btn" class="uk-button uk-button-primary" style="margin-right: 10px; background: rgba(255,255,255,0.2); border: 2px solid white; color: white;">Force 3D Mode</button>
+                   <button id="force-2d-btn" class="uk-button uk-button-secondary" style="margin-right: 10px; background: rgba(0,0,0,0.2); border: 2px solid rgba(255,255,255,0.5); color: white;">Force 2D Mode</button>
+                   <button id="toggle-auto-btn" class="uk-button uk-button-danger" style="background: rgba(255,0,0,0.3); border: 2px solid rgba(255,255,255,0.5); color: white;">Toggle Auto-Switch</button>
+                 </div>
+                 <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; backdrop-filter: blur(10px);">
+                   <h3 style="margin-bottom: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Hybrid Renderer Features:</h3>
+                   <ul style="margin: 0; opacity: 0.95; line-height: 1.6;">
+                     <li>🎨 Single unified renderer for both modes</li>
+                     <li>⚡ Zero component duplication</li>
+                     <li>🔧 Built-in z-index management</li>
+                     <li>🎯 Automatic mode detection</li>
+                     <li>✨ Smooth element cloning & sync</li>
+                   </ul>
+                 </div>
+                  <div style="margin-top: 20px; text-align: center;">
+                    <h2>Embedded YouTube Video</h2>
+                    ${youtube}
+               </div>`;
+    
+    const hybridSize = new THREE.Vector2(400, 400);
+    const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize, 10);
+    hybridcomp.sticky = true;
+    await hybridelement.AddComponent(hybridcomp);
+    await this.entityManager.AddEntity(hybridelement, "Main Hybrid CSS Renderer UI");
+    
+    // Track this entity
+    this.testHybridEntities.push(hybridelement);
+    
+    // Add event listeners after a timeout
+    setTimeout(() => {
+      const modeDisplay = hybridcomp.htmlElement.querySelector('#mode-display');
+      const force3DBtn = hybridcomp.htmlElement.querySelector('#force-3d-btn');
+      const force2DBtn = hybridcomp.htmlElement.querySelector('#force-2d-btn');
+      const toggleAutoBtn = hybridcomp.htmlElement.querySelector('#toggle-auto-btn');
+
+      const updateModeDisplay = () => {
+        if (modeDisplay) {
+          const autoSwitchStatus = hybridcomp.getAutoSwitchEnabled() ? 'ON' : 'OFF';
+          modeDisplay.textContent = `Current Mode: ${hybridcomp.getCurrentMode().toUpperCase()} (Auto-Switch: ${autoSwitchStatus})`;
+        }
+      };
+
+      if (force3DBtn) {
+        force3DBtn.addEventListener('click', () => {
+          console.log('🎯 Forcing 3D mode');
+          hybridcomp.forceMode('3d');
+          setTimeout(updateModeDisplay, 100);
+        });
+      }
+
+      if (force2DBtn) {
+        force2DBtn.addEventListener('click', () => {
+          console.log('🎯 Forcing 2D mode');
+          hybridcomp.forceMode('2d');
+          setTimeout(updateModeDisplay, 100);
+        });
+      }
+
+      if (toggleAutoBtn) {
+        toggleAutoBtn.addEventListener('click', () => {
+          const newState = !hybridcomp.getAutoSwitchEnabled();
+          hybridcomp.setAutoSwitch(newState);
+          console.log(`🔄 Auto-switch ${newState ? 'enabled' : 'disabled'}`);
+          setTimeout(updateModeDisplay, 100);
+        });
+      }
+
+      updateModeDisplay();
+    }, 1000);
+  }
+
+  private async createHybridCodeEditor(): Promise<void> {
+    const codeeditorentity = new Entity();
+    codeeditorentity.Position = new THREE.Vector3(-5, 2.1, -5);
+    
+    const codeEditorSize = new THREE.Vector2(500, 500);
+    const hybridCodeEditor = new HybridCodeEditor(codeEditorSize, 11);
+    
+    await codeeditorentity.AddComponent(hybridCodeEditor);
+    await this.entityManager.AddEntity(codeeditorentity, "Hybrid Code Editor");
+    
+    // Track this entity
+    this.testHybridEntities.push(codeeditorentity);
+  }
+
+  private async createTestHybridEntity(index: number, useWorker: boolean): Promise<void> {
+    const entity = new Entity();
+    
+    // Position entities in a grid pattern
+    const gridSize = Math.ceil(Math.sqrt(20)); // 5x5 grid for 20 entities
+    const spacing = 3;
+    const x = (index % gridSize) * spacing - (gridSize * spacing) / 2;
+    const z = Math.floor(index / gridSize) * spacing - (gridSize * spacing) / 2;
+    entity.Position = new THREE.Vector3(x, 2, z);
+    
+    // Create simple HTML content for the test entity
+    const testHtml = `<div style="background: linear-gradient(45deg, ${useWorker ? '#00ff00' : '#ff6600'}, #ffffff); width: 100%; height: 100%; padding: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); color: #333;">
+               <h2 style="text-align: center; margin-bottom: 10px;">Test #${index + 1}</h2>
+               <p style="text-align: center; margin-bottom: 15px; font-size: 14px;">Worker: ${useWorker ? 'Enabled' : 'Disabled'}</p>
+               <div style="text-align: center;">
+                 <button class="uk-button uk-button-primary" style="margin: 5px; font-size: 12px;">Performance Test</button>
+               </div>
+               <div style="background: rgba(255,255,255,0.3); padding: 10px; border-radius: 5px; margin-top: 10px;">
+                 <p style="margin: 0; font-size: 12px; text-align: center;">Grid Position: (${x.toFixed(1)}, ${z.toFixed(1)})</p>
+               </div>
+               </div>`;
+    
+    const testSize = new THREE.Vector2(200, 150);
+    const testHybridComp = new HybridUIComponent(testHtml, testSize, 8);
+    testHybridComp.sticky = true;
+    
+    try {
+      await entity.AddComponent(testHybridComp);
+      await this.entityManager.AddEntity(entity, `TestHybrid-${index + 1}`);
+      
+      // Track the entity
+      this.testHybridEntities.push(entity);
+      
+    } catch (error) {
+      console.error(`Failed to create test hybrid entity ${index + 1}:`, error);
+    }
+  }
+
+  private clearTestEntities(): void {
+    // Remove all test entities
+    this.testHybridEntities.forEach(entity => {
+      this.entityManager.RemoveEntity(entity);
+    });
+    this.testHybridEntities = [];
+    
+    // Hide profiling UI
+    this.hideProfilingUI();
+    
+    console.log('🧹 Cleared all test entities');
+  }
+
+  private showProfilingUI(): void {
+    if (this.profilingUI) {
+      this.hideProfilingUI();
+    }
+    
+    // Create profiling UI
+    this.profilingUI = document.createElement('div');
+    this.profilingUI.id = 'profiling-ui';
+    this.profilingUI.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 10000;
+      min-width: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+    `;
+    
+    document.body.appendChild(this.profilingUI);
+    
+    // Update profiling UI every frame
+    this.updateProfilingUI();
+  }
+
+  private updateProfilingUI(): void {
+    if (!this.profilingUI) return;
+    
+    const stats = profiler.getStats();
+    
+    this.profilingUI.innerHTML = `
+      <h3>🔍 Hybrid Renderer Performance</h3>
+      <div><strong>Mode:</strong> ${this.workerEnabled ? 'WITH Worker' : 'WITHOUT Worker'}</div>
+      <div><strong>Test Entities:</strong> ${this.testHybridEntities.length}</div>
+      <hr>
+      <div><strong>Current FPS:</strong> ${stats.fps ? stats.fps.toFixed(1) : 'N/A'}</div>
+      ${stats.operations.render ? `<div><strong>Render Avg:</strong> ${stats.operations.render.avg.toFixed(2)}ms</div>` : ''}
+      ${stats.operations.update ? `<div><strong>Update Avg:</strong> ${stats.operations.update.avg.toFixed(2)}ms</div>` : ''}
+      <hr>
+      <div><strong>Operation Samples:</strong></div>
+      ${Object.entries(stats.operations).map(([op, data]: [string, any]) => 
+        `<div style="font-size: 10px;">  ${op}: ${data.samples} samples</div>`
+      ).join('')}
+      <hr>
+      <div><strong>Counters:</strong></div>
+      ${Object.entries(stats.counters).map(([name, count]) => 
+        `<div style="font-size: 10px;">  ${name}: ${count}</div>`
+      ).join('')}
+      <hr>
+      <div style="font-size: 10px; opacity: 0.7;">
+        Press H: Spawn UI elements (no worker)<br>
+        Press J: Spawn UI elements (with worker)<br>
+        Press D: Delete all UI elements<br>
+        Press C: Clear test entities / cleanup
+      </div>
+    `;
+    
+    // Schedule next update
+    requestAnimationFrame(() => this.updateProfilingUI());
+  }
+
+  private hideProfilingUI(): void {
+    if (this.profilingUI) {
+      document.body.removeChild(this.profilingUI);
+      this.profilingUI = null;
+    }
   }
 
   private async animate(): Promise<void> {
