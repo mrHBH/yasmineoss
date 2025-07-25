@@ -303,12 +303,12 @@ class Main {
   
       
 
-            // Add 'h' key to spawn UI elements WITHOUT worker optimization
+            // Add 'h' key to test hybrid performance WITHOUT worker (20 elements)
       if (event.key === 'h' || event.key === 'H') {
         this.testHybridPerformanceWithoutWorker();
       }
       
-      // Add 'j' key to spawn UI elements WITH worker optimization
+      // Add 'j' key to test hybrid performance WITH worker (20 elements)
       if (event.key === 'j' || event.key === 'J') {
         this.testHybridPerformanceWithWorker();
       }
@@ -1107,29 +1107,59 @@ class Main {
     
     // Position entities in a grid pattern
     const gridSize = Math.ceil(Math.sqrt(20)); // 5x5 grid for 20 entities
-    const spacing = 3;
+    const spacing = 5;
     const x = (index % gridSize) * spacing - (gridSize * spacing) / 2;
     const z = Math.floor(index / gridSize) * spacing - (gridSize * spacing) / 2;
     entity.Position = new THREE.Vector3(x, 2, z);
     
-    // Create simple HTML content for the test entity
-    const testHtml = `<div style="background: linear-gradient(45deg, ${useWorker ? '#00ff00' : '#ff6600'}, #ffffff); width: 100%; height: 100%; padding: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); color: #333;">
-               <h2 style="text-align: center; margin-bottom: 10px;">Test #${index + 1}</h2>
-               <p style="text-align: center; margin-bottom: 15px; font-size: 14px;">Worker: ${useWorker ? 'Enabled' : 'Disabled'}</p>
-               <div style="text-align: center;">
-                 <button class="uk-button uk-button-primary" style="margin: 5px; font-size: 12px;">Performance Test</button>
-               </div>
-               <div style="background: rgba(255,255,255,0.3); padding: 10px; border-radius: 5px; margin-top: 10px;">
-                 <p style="margin: 0; font-size: 12px; text-align: center;">Grid Position: (${x.toFixed(1)}, ${z.toFixed(1)})</p>
-               </div>
-               </div>`;
+    // Create hybrid component config
+    const hybridConfig = {
+      useWorker: useWorker,
+      enabled: true,
+      zoomThreshold: 15,
+      autoSwitch: true,
+      ui3DContainer: document.createElement('div'),
+      ui2DContainer: document.createElement('div')
+    };
     
-    const testSize = new THREE.Vector2(200, 150);
-    const testHybridComp = new HybridUIComponent(testHtml, testSize, 8);
-    testHybridComp.sticky = true;
+    // Set up the UI content
+    hybridConfig.ui3DContainer.innerHTML = `
+      <div style="background: rgba(0,100,255,0.8); padding: 10px; border-radius: 5px; color: white;">
+        <h3>Test Entity ${index + 1}</h3>
+        <p>Mode: 3D</p>
+        <p>Worker: ${useWorker ? 'Enabled' : 'Disabled'}</p>
+      </div>
+    `;
     
+    hybridConfig.ui2DContainer.innerHTML = `
+      <div style="background: rgba(255,100,0,0.8); padding: 10px; border-radius: 5px; color: white;">
+        <h3>Test Entity ${index + 1}</h3>
+        <p>Mode: 2D</p>
+        <p>Worker: ${useWorker ? 'Enabled' : 'Disabled'}</p>
+      </div>
+    `;
+    
+    // Store component creation info for streaming
+    entity._componentCreationInfo = [
+      { type: 'HybridUIComponent', config: hybridConfig }
+    ];
+    
+    // Add component
     try {
-      await entity.AddComponent(testHybridComp);
+      const { CSSHybridRenderer } = await import('./utils/CSSHybrid');
+      
+      // Create a CSSHybridRenderer component (this would need to be adapted as a Component)
+      // For now, create a simple component that manages hybrid objects
+      const hybridComponent = {
+        type: 'HybridUIComponent',
+        useWorker: useWorker,
+        ui3DContainer: hybridConfig.ui3DContainer,
+        ui2DContainer: hybridConfig.ui2DContainer,
+        zoomThreshold: 15,
+        render: () => {} // Placeholder
+      };
+      
+      // Add to entity manager
       await this.entityManager.AddEntity(entity, `TestHybrid-${index + 1}`);
       
       // Track the entity
@@ -1208,10 +1238,9 @@ class Main {
       ).join('')}
       <hr>
       <div style="font-size: 10px; opacity: 0.7;">
-        Press H: Spawn UI elements (no worker)<br>
-        Press J: Spawn UI elements (with worker)<br>
-        Press D: Delete all UI elements<br>
-        Press C: Clear test entities / cleanup
+        Press H: Test without worker<br>
+        Press J: Test with worker<br>
+        Press C: Clear test entities
       </div>
     `;
     

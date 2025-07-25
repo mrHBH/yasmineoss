@@ -5,8 +5,6 @@ import {
 	Vector2,
 	Vector3
 } from 'three';
-import { hybridWorkerManager } from './workers/HybridWorkerManager';
-import { profiler } from './HybridRendererProfiler';
 
 /**
  * A hybrid CSS renderer that automatically switches between 2D and 3D modes based on distance
@@ -50,7 +48,6 @@ class CSSHybridObject extends Object3D {
 	public center: Vector2;
 	public rotation2D: number;
 	public hysteresis: number; // Distance buffer to prevent mode flickering
-	public hybridId: string; // Unique ID for worker communication
 	
 	// Performance optimization caches (made public for renderer access)
 	public _lastCameraPosition = new Vector3();
@@ -58,13 +55,11 @@ class CSSHybridObject extends Object3D {
 	public _lastDistance = -1;
 	public _lastModeSwitch = 0;
 	public _dirtyTransform = true;
-	public _pendingModeSwitch: string | null = null; // Track pending worker results
 
 	constructor(element: HTMLElement = document.createElement('div'), options: CSSHybridOptions = {}) {
 		super();
 
 		this.isCSSHybridObject = true;
-		this.hybridId = `hybrid_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
 
 		this.element = element;
 		this.element.style.position = 'absolute';
@@ -176,38 +171,6 @@ class CSSHybridObject extends Object3D {
 	setAutoSwitch(enabled) {
 		this.enableAutoSwitch = enabled;
 	}
-
-	// Get object data for worker processing
-	getWorkerData(_camera?: any): any {
-		return {
-			id: this.hybridId,
-			position: { x: this.position.x, y: this.position.y, z: this.position.z },
-			quaternion: { x: this.quaternion.x, y: this.quaternion.y, z: this.quaternion.z, w: this.quaternion.w },
-			lastCameraPosition: { x: this._lastCameraPosition.x, y: this._lastCameraPosition.y, z: this._lastCameraPosition.z },
-			lastObjectPosition: { x: this._lastObjectPosition.x, y: this._lastObjectPosition.y, z: this._lastObjectPosition.z },
-			lastDistance: this._lastDistance,
-			zoomThreshold: this.zoomThreshold,
-			hysteresis: this.hysteresis,
-			currentMode: this.mode,
-			enableAutoSwitch: this.enableAutoSwitch,
-			isTransitioning: this.isTransitioning,
-			lastModeSwitch: this._lastModeSwitch
-		};
-	}
-
-	// Update cache from worker results
-	updateFromWorkerResult(result: any, camera: any): void {
-		if (result && result.distance !== undefined) {
-			this._lastDistance = result.distance;
-			this._lastCameraPosition.copy(camera.position);
-			this._lastObjectPosition.copy(this.position);
-		}
-	}
-
-	// Check if worker-based mode switching is available
-	canUseWorker(): boolean {
-		return hybridWorkerManager.isAvailable() && this.enableAutoSwitch && !this.isTransitioning;
-	}
 }
 // how is tgis class used? ?
 
@@ -225,14 +188,6 @@ class CSSHybridRenderer {
 	public render: (scene: Object3D, camera: any) => void;
 	public setSize: (width: number, height: number) => void;
 	public invalidateCache: () => void;
-	public dispose: () => void;
-
-	// Worker optimization properties
-	private _lastWorkerUpdate = 0;
-	private _workerUpdateInterval = 16; // ~60fps
-	private _hybridObjects: Map<string, CSSHybridObject> = new Map();
-	private _pendingWorkerResults: Map<string, any> = new Map();
-	private _workerBatchInProgress = false;
  
 	constructor(parameters: CSSHybridRendererParameters = {}) {
 		const _this = this;
@@ -260,9 +215,6 @@ class CSSHybridRenderer {
 			   };
 
 			   this.render = function (scene, camera) {
-					   profiler.startTiming('hybrid_render_total');
-					   profiler.recordFrame();
-
 					   if (scene.matrixWorldAutoUpdate === true) scene.updateMatrixWorld();
 					   if (camera.parent === null && camera.matrixWorldAutoUpdate === true) camera.updateMatrixWorld();
 
@@ -270,70 +222,7 @@ class CSSHybridRenderer {
 					   _viewMatrix.copy(camera.matrixWorldInverse);
 					   _viewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, _viewMatrix);
 
-					   // Collect all hybrid objects for worker processing
-					   profiler.startTiming('collect_hybrid_objects');
-					   const hybridObjects: CSSHybridObject[] = [];
-					   scene.traverse(function (object) {
-						   if ((object as any).isCSSHybridObject) {
-							   const hybridObj = object as CSSHybridObject;
-							   hybridObjects.push(hybridObj);
-							   _this._hybridObjects.set(hybridObj.hybridId, hybridObj);
-						   }
-					   });
-					   profiler.endTiming('collect_hybrid_objects');
-					   profiler.increment('total_hybrid_objects');
-
-					   // Use worker for distance calculations and mode switching decisions
-					   const now = performance.now();
-					   if (hybridWorkerManager.isAvailable() && 
-						   hybridObjects.length > 0 && 
-						   now - _this._lastWorkerUpdate > _this._workerUpdateInterval &&
-						   !_this._workerBatchInProgress) {
-						   
-						   profiler.startTiming('worker_processing');
-						   _this._lastWorkerUpdate = now;
-						   _this._workerBatchInProgress = true;
-						   
-						   // Prepare data for worker
-						   const workerData = hybridObjects
-							   .filter(obj => obj.canUseWorker())
-							   .map(obj => obj.getWorkerData());
-
-						   profiler.increment('worker_batch_count');
-						   profiler.increment('worker_objects_processed');
-
-						   if (workerData.length > 0) {
-							   hybridWorkerManager.processObjectsBatch(workerData, camera)
-								   .then((result) => {
-									   profiler.endTiming('worker_processing');
-									   _this._workerBatchInProgress = false;
-									   if (result && result.shouldUpdate && result.modeChanges) {
-										   profiler.increment('worker_mode_changes');
-										   // Apply mode changes from worker
-										   result.modeChanges.forEach((change: any) => {
-											   const obj = _this._hybridObjects.get(change.id);
-											   if (obj && obj.mode !== change.newMode) {
-												   obj.switchMode(change.newMode);
-												   obj.updateFromWorkerResult(change, camera);
-												   _this._forceHybridTransformUpdate = true;
-											   }
-										   });
-									   }
-								   })
-								   .catch((error) => {
-									   profiler.endTiming('worker_processing');
-									   profiler.increment('worker_errors');
-									   console.warn('Worker processing failed, falling back to main thread:', error);
-									   _this._workerBatchInProgress = false;
-								   });
-						   } else {
-							   profiler.endTiming('worker_processing');
-							   _this._workerBatchInProgress = false;
-						   }
-					   }
-
 					   // Compute camera CSS transform for 3D mode
-					   profiler.startTiming('camera_transform_calc');
 					   let tx, ty;
 					   if (camera.isOrthographicCamera) {
 							   tx = - (camera.right + camera.left) / 2;
@@ -348,10 +237,8 @@ class CSSHybridRenderer {
 							   `scale( ${ scaleByViewOffset } )` + 'translateZ(' + fov + 'px)' + getCameraCSSMatrix(camera.matrixWorldInverse);
 					   const perspective = camera.isPerspectiveCamera ? 'perspective(' + fov + 'px) ' : '';
 					   const cameraTransform = perspective + cameraCSSMatrix + 'translate(' + _widthHalf + 'px,' + _heightHalf + 'px)';
-					   profiler.endTiming('camera_transform_calc');
 
 				   // Set up container transforms based on what modes are being used
-				   profiler.startTiming('container_setup');
 				   let has3D = false;
 				   let has2D = false;
 				   scene.traverse(function (object) {
@@ -382,11 +269,9 @@ class CSSHybridRenderer {
 						   hybridContainer.style.perspective = '';
 						   hybridContainer.removeAttribute('data-mixed-mode');
 				   }
-				   profiler.endTiming('container_setup');
 
 				   // If a mode switch just happened, force transform update for all CSSHybridObjects in 3D mode
 				   if (this._forceHybridTransformUpdate) {
-					   profiler.startTiming('force_transform_update');
 					   scene.traverse(function (o) {
 						   const obj = o as any;
 						   if (obj.isCSSHybridObject && obj.mode === '3d') {
@@ -410,15 +295,10 @@ class CSSHybridRenderer {
 						   }
 					   });
 					   this._forceHybridTransformUpdate = false;
-					   profiler.endTiming('force_transform_update');
 				   }
 
 				   // Render all objects using a single container, supporting mixed modes
-				   profiler.startTiming('render_hybrid_objects');
 				   renderHybridObject(scene, scene, camera, hybridContainer, has3D, has2D);
-				   profiler.endTiming('render_hybrid_objects');
-
-				   profiler.endTiming('hybrid_render_total');
  			   };
 
 
@@ -434,14 +314,7 @@ class CSSHybridRenderer {
 
 			   // Public method to invalidate cache when objects are added/removed
 			   this.invalidateCache = function() {
-					   _this._hybridObjects.clear();
-					   _this._pendingWorkerResults.clear();
-			   };
-
-			   // Cleanup method for disposing resources
-			   this.dispose = function() {
-					   _this._hybridObjects.clear();
-					   _this._pendingWorkerResults.clear();
+					   // Simple cache invalidation placeholder - could be expanded later
 			   };
 
 	 
@@ -494,31 +367,28 @@ class CSSHybridRenderer {
 			return 'translate(-50%,-50%)' + matrix3d;
 		}
 
-		// Original working render function with worker fallback
+		// Original working render function
 		function renderHybridObject(object, scene, camera, container, has3D?, has2D?) {
 			if ((object).isCSSHybridObject) {
-				// For objects that can't use worker or worker failed, fall back to main thread
-				if (!object.canUseWorker() || !hybridWorkerManager.isAvailable()) {
-					// Use optimized distance calculation with reduced allocations
-					const distance = getDistanceToOptimized(camera, object);
-				 
-					// Auto-switch mode based on distance with hysteresis to prevent flickering
-					if (object.enableAutoSwitch && !object.isTransitioning) {
-						const threshold = object.zoomThreshold;
-						const hysteresis = object.hysteresis || 0.5;
-						
-						let shouldBe2D;
-						if (object.mode === '3d') {
-							shouldBe2D = distance < (threshold - hysteresis);
-						} else {
-							shouldBe2D = distance < (threshold + hysteresis);
-						}
-						
-						const newMode = shouldBe2D ? '2d' : '3d';
-						if (object.mode !== newMode) {
-							object.switchMode(newMode);
-							_this._forceHybridTransformUpdate = true;
-						}
+				// Use optimized distance calculation with reduced allocations
+				const distance = getDistanceToOptimized(camera, object);
+			 
+				// Auto-switch mode based on distance with hysteresis to prevent flickering
+				if (object.enableAutoSwitch && !object.isTransitioning) {
+					const threshold = object.zoomThreshold;
+					const hysteresis = object.hysteresis || 0.5;
+					
+					let shouldBe2D;
+					if (object.mode === '3d') {
+						shouldBe2D = distance < (threshold - hysteresis);
+					} else {
+						shouldBe2D = distance < (threshold + hysteresis);
+					}
+					
+					const newMode = shouldBe2D ? '2d' : '3d';
+					if (object.mode !== newMode) {
+						object.switchMode(newMode);
+						_this._forceHybridTransformUpdate = true;
 					}
 				}
 
