@@ -543,69 +543,12 @@ class Main {
         topic: "walk",
         data: { position: new THREE.Vector3(-15, 0, 10) },
     })
+ 
 
-
-    
-    const threedelement = new Entity(); 
-    threedelement.Position = new THREE.Vector3(0, 1, 0);
-    const html = `<div style="background-color: rgba(255, 255, 255, 0.8); width: 100%; height: 100%; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-                 <h1 style="text-align: center; color: #333;">Welcome to the 3D UI!</h1>
-                 <p style="text-align: center; color: #666;">This is a 3D UI element that can be positioned anywhere in the scene.</p>
-                 <div style="text-align: center; margin-top: 20px;">
-                   <button class="uk-button uk-button-primary" style="margin-right: 10px;">Click Me!</button>
-                   <button class="uk-button uk-button-secondary">Another Button</button>
-                 </div>
-                   <h2>3D UI Example</h2>
-                   <p>This is a 3D UI element.</p>
-                 </div>`;
-    const size = new THREE.Vector2(2000, 1000);
-    const trdcomp = new threeDUIComponent( html, size);
-    trdcomp.sticky = false; // Set to false for non-sticky behavior
-    trdcomp.Size = size; // Set the size of the 3D UI element
-    await threedelement.AddComponent(trdcomp);
-   // await this.entityManager.AddEntity(threedelement, "3D UI Element"); 
-
-
-    const twodelement = new Entity();
-    twodelement.Position = new THREE.Vector3(5, 1, 5);
-        const size2 = new THREE.Vector2(500, 500);
-
-    const twocomp = new twoDUIComponent( html, size2);
-     twocomp.sticky = true; // Set to true for sticky behavior
-     await twodelement.AddComponent(twocomp);
-   // await this.entityManager.AddEntity(twodelement,  "Sticky 2D UI Element");
-
-    // Modern UI Component Example - automatically switches between 3D and 2D
-    const modernelement = new Entity();
-    modernelement.Position = new THREE.Vector3(-5, 1, 0);
-    
-    const modernHtml = `<div style="background-color: rgba(32, 164, 243, 0.9); width: 100%; height: 100%; padding: 20px; border-radius: 15px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);">
-                 <h1 style="text-align: center; color: white; margin-bottom: 20px;">🚀 Modern UI</h1>
-                 <p style="text-align: center; color: rgba(255, 255, 255, 0.9); margin-bottom: 20px;">This component automatically switches between 3D and 2D modes based on camera distance!</p>
-                 <div style="text-align: center; margin-bottom: 20px;">
-                   <button class="uk-button uk-button-primary" style="margin-right: 10px; background: white; color: #20a4f3;">Zoom In/Out to Test</button>
-                   <button class="uk-button uk-button-secondary" style="background: rgba(255,255,255,0.2); color: white;">Double-Click to Toggle</button>
-                 </div>
-                 <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
-                   <h3 style="color: white; margin-bottom: 10px;">Features:</h3>
-                   <ul style="color: rgba(255, 255, 255, 0.9); margin: 0;">
-                     <li>🎯 Auto 3D ↔ 2D switching</li>
-                     <li>✨ Smooth transitions</li>
-                     <li>🎛️ Dynamic z-index management</li>
-                     <li>👆 Manual toggle support</li>
-                   </ul>
-                 </div>
-               </div>`;
-    
-    //const modernSize = new THREE.Vector2(1800, 1200);
-  //  const moderncomp = new ModernUIComponent(modernHtml, modernSize, 2); // Switch at 8 units distance
-    //moderncomp.sticky = true; // Allow distance-based hiding
-    //await modernelement.AddComponent(moderncomp);
-   // await this.entityManager.AddEntity(modernelement, "Modern Adaptive UI Element");
-
+ 
     // Hybrid UI Component Example - uses new CSS hybrid renderer
     const hybridelement = new Entity();
-    hybridelement.Position = new THREE.Vector3(5, 0.1, -5);
+    hybridelement.Position = new THREE.Vector3(5, 4.1, -5);
     // Ok we found a way to not have to use the x track option. Just enable YouTube notification and pop ups.
     const youtube = `<iframe width="100%" height="100%"  src="https://www.youtube.com/embed/Y2snZMA7d7o?si=TwHoDmUL1_ViXZni&amp;start=423"  title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
     const hybridHtml = `<div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); width: 100%; height: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); color: white;">
@@ -632,15 +575,15 @@ class Main {
                </div>`;
     
     const hybridSize = new THREE.Vector2(400, 400);
-    const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize, 15); // Switch at 8 unit distance
+    const hybridcomp = new HybridUIComponent(hybridHtml, hybridSize,10); // Switch at 8 unit distance
     hybridcomp.sticky = true; // Allow distance-based hiding
     await hybridelement.AddComponent(hybridcomp);
-     await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
+    await this.entityManager.AddEntity(hybridelement, "Hybrid CSS Renderer UI");
 
-    hybridelement.Quaternion =      new THREE.Quaternion().setFromAxisAngle(
-        new THREE.Vector3(1, 0, 0),
-       - Math.PI / 2
-      )
+    // hybridelement.Quaternion =      new THREE.Quaternion().setFromAxisAngle(
+    //     new THREE.Vector3(1, 0, 0),
+    //    - Math.PI / 2
+    //   )
     // Add event listeners after a timeout to ensure DOM is ready
     setTimeout(() => {
       const modeDisplay = hybridcomp.htmlElement.querySelector('#mode-display');
@@ -716,31 +659,77 @@ class Main {
         }
       }, 500);
     }, 1000);
+    //add several more elements to test hybrid renderer  ( position and rotate them differently )
+    //50 
+    
+    // // // Create 50 hybrid renderer elements with different positions and rotations
+    for (let i = 0; i < 0; i++) {
+      const hybridTestElement = new Entity();
+      
+      // Random position in a larger area
+      const x = (Math.random() - 0.5) * 5; // -50 to 50
+      const y = Math.random() * 10 + 0.1; // 0.1 to 10.1
+      const z = (Math.random() - 0.5) * 5; // -50 to 50
+      hybridTestElement.Position = new THREE.Vector3(x, y, z);
+      
+      // Random rotation
+      const rotX = Math.random() * Math.PI * 2;
+      const rotY = Math.random() * Math.PI * 2;
+      const rotZ = Math.random() * Math.PI * 2;
+      // hybridTestElement.Quaternion = new THREE.Quaternion()
+      // .setFromEuler(new THREE.Euler(rotX, rotY, rotZ));
+      
+      // Varied content for each element
+      const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff', '#5f27cd'];
+      const color = colors[i % colors.length];
+      
+      const testHtml = `<div style="background: linear-gradient(45deg, ${color}, #ffffff); width: 100%; height: 100%; padding: 15px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); color: #333;">
+               <h2 style="text-align: center; margin-bottom: 10px;">Element #${i + 1}</h2>
+               <p style="text-align: center; margin-bottom: 15px; font-size: 14px;">Position: (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)})</p>
+               <div style="text-align: center;">
+                 <button class="uk-button uk-button-primary" style="margin: 5px; font-size: 12px;">Test ${i + 1}</button>
+               </div>
+               <div style="background: rgba(255,255,255,0.3); padding: 10px; border-radius: 5px; margin-top: 10px;">
+                 <p style="margin: 0; font-size: 12px; text-align: center;">Hybrid Renderer Test</p>
+               </div>
+               </div>`;
+      
+      // Varied sizes
+      const width = 200 + (i % 5) * 50; // 200-400
+      const height = 150 + (i % 4) * 50; // 150-300
+      const testSize = new THREE.Vector2(width, height);
+      
+      // Varied switch distances
+      const switchDistance =  8
+      
+      const testHybridComp = new HybridUIComponent(testHtml, testSize, switchDistance);
+      testHybridComp.sticky = true
+      //testHybridComp.sticky = Math.random() > 0.5; // Random sticky behavior
+      
+      await hybridTestElement.AddComponent(testHybridComp);
+      await this.entityManager.AddEntity(hybridTestElement, `HybridTest-${i + 1}`);
+      
+ 
+    }
+    
+    console.log("🎯 Created 50 hybrid renderer test elements with varied positions, rotations, and properties!");
 
-
-    //qdd exact same element with different name; and this tiime it is vertical at a different position
-    // const hybridelement2 = new Entity();
-    // hybridelement2.Position = new THREE.Vector3(5, 4, -15);
-    // hybridelement2.Quaternion =      new THREE.Quaternion();
-    // const hybridcomp2 = new HybridUIComponent(hybridHtml, hybridSize, 15); // Switch at 8 unit distance
-    // hybridcomp2.sticky = true; // Allow distance-based hiding
-    // await hybridelement2.AddComponent(hybridcomp2);
-    // await this.entityManager.AddEntity(hybridelement2, "Hybrid CSS Renderer UI 2");
-
+   
+ 
     // Hybrid Code Editor - horizontal layout
     const codeeditorentity = new Entity();
-    codeeditorentity.Position = new THREE.Vector3(-5, 0.1, -5);
-    codeeditorentity.Quaternion = new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(1, 0, 0),
-      -Math.PI / 2
-    );
+    codeeditorentity.Position = new THREE.Vector3(-5, 2.1, -5);
+    // codeeditorentity.Quaternion = new THREE.Quaternion().setFromAxisAngle(
+    //   new THREE.Vector3(1, 0, 0),
+    //   -Math.PI / 2
+    // );
     
     const codeEditorSize = new THREE.Vector2(500, 500); // Wider for horizontal layout
     const hybridCodeEditor = new HybridCodeEditor(codeEditorSize, 11); // Switch at 12 unit distance
     
     await codeeditorentity.AddComponent(hybridCodeEditor);
     await this.entityManager.AddEntity(codeeditorentity, "Hybrid Code Editor");
-
+//
     // Add event listeners for the code editor after a timeout to ensure DOM is ready
     setTimeout(() => {
       // Add keyboard shortcuts for quick mode switching

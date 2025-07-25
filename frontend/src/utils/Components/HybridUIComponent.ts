@@ -219,7 +219,7 @@ class HybridUIComponent extends Component {
       const distance = newRadius;
       const cameraPosition = _cameraPosition
         .copy(rectNormal)
-        .multiplyScalar(-distance)
+        .multiplyScalar(distance)
         .add(rectCenterPosition);
 
       this._entity._entityManager._mc.CameraControls.setLookAt(
@@ -339,31 +339,37 @@ class HybridUIComponent extends Component {
     this._webgpugroup?.position.set(position.x, position.y, position.z);
     this._webgpugroup?.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
     
-    this._hybridGroup?.position.set(position.x, position.y, position.z);
-    this._hybridGroup?.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+    // Don't set transform on the hybrid group since CSSHybridObject handles its own transform
+    this._hybridGroup?.position.set(0, 0, 0);
+    this._hybridGroup?.quaternion.set(0, 0, 0, 1);
+
+    // IMPORTANT: Update the CSSHybridObject's position and quaternion to match the entity
+    if (this._cssHybridObject) {
+      this._cssHybridObject.position.set(position.x, position.y, position.z);
+      this._cssHybridObject.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+      this._cssHybridObject.updateMatrixWorld(true); // Force matrix update
+    }
 
     // Update physics body transform to match entity
     this.updatePhysicsBodyTransform();
 
-    // Debug: Log distance occasionally for auto-switching debugging
-    if (this._cssHybridObject && Math.random() < 0.005) { // Log 0.5% of the time
-      const camera = this._entity._entityManager._mc.camera;
-      const distance = position.distanceTo(camera.position);
-      console.log(`🎯 HybridUI Debug - Distance: ${distance.toFixed(2)}, Threshold: ${this._zoomThreshold}, Mode: ${this._cssHybridObject.mode}, AutoSwitch: ${this._cssHybridObject.enableAutoSwitch}`);
-    }
-
-    // Update mode display periodically
-    if (this._cssHybridObject && Math.random() < 0.02) { // Update 2% of the time
-      this.updateModeDisplay();
-    }
+ 
+ 
 
     // Handle opacity based on distance (if not sticky)
     if (!this.sticky && this._cssHybridObject) {
       const camera = this._entity._entityManager._mc.camera;
-      const distance = position.distanceTo(camera.position);
+      
+      // Calculate orthogonal distance for consistency with mode switching
+      const cameraPos = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);
+      const objectPos = position.clone();
+      const objectNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(quaternion).normalize();
+      const objectToCamera = cameraPos.clone().sub(objectPos);
+      const orthogonalDistance = Math.abs(objectToCamera.dot(objectNormal));
+      
       const fadeDistance = this._zoomThreshold * 2.5;
       
-      if (distance > fadeDistance) {
+      if (orthogonalDistance > fadeDistance) {
         const activeElement = this._cssHybridObject.element;
         activeElement.style.opacity = "0";
         activeElement.style.pointerEvents = "none";
@@ -383,18 +389,7 @@ class HybridUIComponent extends Component {
     }
   }
 
-  private updateModeDisplay(): void {
-    if (!this._cssHybridObject) return;
-
-    const autoSwitchStatus = this._cssHybridObject.enableAutoSwitch ? 'ON' : 'OFF';
-    const modeText = `Current Mode: ${this._cssHybridObject.mode.toUpperCase()} (Auto-Switch: ${autoSwitchStatus})`;
-
-    // Update main element
-    const modeDisplay = this._htmlElement.querySelector('#mode-display');
-    if (modeDisplay) {
-      modeDisplay.textContent = modeText;
-    }
-  }
+ 
 
   async Destroy(): Promise<void> {
     // Remove physics body from world

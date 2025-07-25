@@ -5,6 +5,8 @@ import {
 	Vector2,
 	Vector3
 } from 'three';
+import { hybridWorkerManager } from './workers/HybridWorkerManager';
+import { profiler } from './HybridRendererProfiler';
 
 /**
  * A hybrid CSS renderer that automatically switches between 2D and 3D modes based on distance
@@ -22,10 +24,19 @@ const _matrix2 = new Matrix4();
 const _a = new Vector3();
 const _b = new Vector3();
 
+// Additional temp vectors for optimization
+const _objectNormal = new Vector3();
+const _cameraForward = new Vector3();
+const _objectToCamera = new Vector3();
+// Temporary vector for calculations - moved to function scope to avoid global state
+
+// Transform cache for string building - moved to instance level for better performance
+
 interface CSSHybridOptions {
 	zoomThreshold?: number;
 	transitionDuration?: number;
 	enableAutoSwitch?: boolean;
+	hysteresis?: number; // Prevents flickering when switching modes
 }
 
 class CSSHybridObject extends Object3D {
@@ -38,11 +49,22 @@ class CSSHybridObject extends Object3D {
 	public isTransitioning: boolean;
 	public center: Vector2;
 	public rotation2D: number;
+	public hysteresis: number; // Distance buffer to prevent mode flickering
+	public hybridId: string; // Unique ID for worker communication
+	
+	// Performance optimization caches (made public for renderer access)
+	public _lastCameraPosition = new Vector3();
+	public _lastObjectPosition = new Vector3();
+	public _lastDistance = -1;
+	public _lastModeSwitch = 0;
+	public _dirtyTransform = true;
+	public _pendingModeSwitch: string | null = null; // Track pending worker results
 
 	constructor(element: HTMLElement = document.createElement('div'), options: CSSHybridOptions = {}) {
 		super();
 
 		this.isCSSHybridObject = true;
+		this.hybridId = `hybrid_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
 
 		this.element = element;
 		this.element.style.position = 'absolute';
@@ -54,11 +76,14 @@ class CSSHybridObject extends Object3D {
 		this.zoomThreshold = options.zoomThreshold || 8;
 		this.transitionDuration = options.transitionDuration || 800;
 		this.enableAutoSwitch = options.enableAutoSwitch !== false;
+		this.hysteresis = options.hysteresis || 0.5; // 0.5 unit buffer to prevent flickering
 		this.mode = '3d'; // '2d' or '3d'
 		this.isTransitioning = false;
 		this.center = new Vector2(0.5, 0.5); // For 2D mode
 		this.rotation2D = 0; // For 3D sprite mode
 
+		// Use will-change for better performance
+		this.element.style.willChange = 'transform, opacity';
 		this.element.style.transition = `opacity ${this.transitionDuration}ms ease-in-out, transform ${this.transitionDuration}ms ease-in-out`;
 
 		this.addEventListener('removed', function () {
@@ -77,6 +102,7 @@ class CSSHybridObject extends Object3D {
 		this.zoomThreshold = source.zoomThreshold;
 		this.transitionDuration = source.transitionDuration;
 		this.enableAutoSwitch = source.enableAutoSwitch;
+		this.hysteresis = source.hysteresis;
 		this.mode = source.mode;
 		this.center = source.center.clone();
 		this.rotation2D = source.rotation2D;
@@ -84,29 +110,55 @@ class CSSHybridObject extends Object3D {
 		return this;
 	}
 
-	// Switch between 2D and 3D modes
+	// Mark transform as dirty when object moves
+	updateMatrixWorld(force?: boolean) {
+		super.updateMatrixWorld(force);
+		this._dirtyTransform = true;
+	}
+
+	// Optimized distance check with caching
+	shouldUpdateDistance(cameraPosition: Vector3): boolean {
+		if (this._lastDistance === -1) return true;
+		
+		// Only recalculate if camera or object moved significantly
+		const cameraMoved = this._lastCameraPosition.distanceToSquared(cameraPosition) > 0.01;
+		const objectMoved = this._lastObjectPosition.distanceToSquared(this.position) > 0.01;
+		
+		return cameraMoved || objectMoved;
+	}
+
+	// Switch between 2D and 3D modes with performance improvements
 	async switchMode(newMode, force = false) {
-	   
 		if (this.mode === newMode && !force) return;
 		if (this.isTransitioning && !force) return;
+
+		// Throttle mode switches to prevent rapid flickering
+		const now = performance.now();
+		if (now - this._lastModeSwitch < 100 && !force) return; // 100ms throttle
+		this._lastModeSwitch = now;
 
 		this.isTransitioning = true;
 		const oldMode = this.mode;
 		this.mode = newMode;
 
-		this.element.style.opacity = '0';
-		this.element.style.transform += oldMode === '3d' ? ' scale(0.8)' : ' scale(1.2)';
-		this.element.style.pointerEvents = 'none';
+		// Use requestAnimationFrame for smoother transitions
+		requestAnimationFrame(() => {
+			this.element.style.opacity = '0';
+			this.element.style.transform += oldMode === '3d' ? ' scale(0.8)' : ' scale(1.2)';
+			this.element.style.pointerEvents = 'none';
 
-		// Wait for transition, then fade in new element
-		setTimeout(() => {
-			this.element.style.opacity = '1';
-			this.element.style.pointerEvents = 'auto';
-			
+			// Wait for transition, then fade in new element
 			setTimeout(() => {
-				this.isTransitioning = false;
+				requestAnimationFrame(() => {
+					this.element.style.opacity = '1';
+					this.element.style.pointerEvents = 'auto';
+					
+					setTimeout(() => {
+						this.isTransitioning = false;
+					}, this.transitionDuration / 2);
+				});
 			}, this.transitionDuration / 2);
-		}, this.transitionDuration / 2);
+		});
 	}
 
 	// Manually toggle between modes
@@ -124,46 +176,72 @@ class CSSHybridObject extends Object3D {
 	setAutoSwitch(enabled) {
 		this.enableAutoSwitch = enabled;
 	}
+
+	// Get object data for worker processing
+	getWorkerData(_camera?: any): any {
+		return {
+			id: this.hybridId,
+			position: { x: this.position.x, y: this.position.y, z: this.position.z },
+			quaternion: { x: this.quaternion.x, y: this.quaternion.y, z: this.quaternion.z, w: this.quaternion.w },
+			lastCameraPosition: { x: this._lastCameraPosition.x, y: this._lastCameraPosition.y, z: this._lastCameraPosition.z },
+			lastObjectPosition: { x: this._lastObjectPosition.x, y: this._lastObjectPosition.y, z: this._lastObjectPosition.z },
+			lastDistance: this._lastDistance,
+			zoomThreshold: this.zoomThreshold,
+			hysteresis: this.hysteresis,
+			currentMode: this.mode,
+			enableAutoSwitch: this.enableAutoSwitch,
+			isTransitioning: this.isTransitioning,
+			lastModeSwitch: this._lastModeSwitch
+		};
+	}
+
+	// Update cache from worker results
+	updateFromWorkerResult(result: any, camera: any): void {
+		if (result && result.distance !== undefined) {
+			this._lastDistance = result.distance;
+			this._lastCameraPosition.copy(camera.position);
+			this._lastObjectPosition.copy(this.position);
+		}
+	}
+
+	// Check if worker-based mode switching is available
+	canUseWorker(): boolean {
+		return hybridWorkerManager.isAvailable() && this.enableAutoSwitch && !this.isTransitioning;
+	}
 }
 // how is tgis class used? ?
 
 
 interface CSSHybridRendererParameters {
 	element?: HTMLElement;
-	onZIndexChange?: (mode: string) => void;
-}
+ }
 
 class CSSHybridRenderer {
-			   // Track if a mode switch just happened
-			   public _forceHybridTransformUpdate = false;
+	// Track if a mode switch just happened
+	public _forceHybridTransformUpdate = false;
 	public domElement: HTMLElement;
-	public zIndexMode: string;
-	public onZIndexChange: ((mode: string) => void) | null;
+
 	public getSize: () => { width: number; height: number };
 	public render: (scene: Object3D, camera: any) => void;
 	public setSize: (width: number, height: number) => void;
-	public setZIndexMode: (mode: string) => void;
+	public invalidateCache: () => void;
+	public dispose: () => void;
 
+	// Worker optimization properties
+	private _lastWorkerUpdate = 0;
+	private _workerUpdateInterval = 16; // ~60fps
+	private _hybridObjects: Map<string, CSSHybridObject> = new Map();
+	private _pendingWorkerResults: Map<string, any> = new Map();
+	private _workerBatchInProgress = false;
+ 
 	constructor(parameters: CSSHybridRendererParameters = {}) {
 		const _this = this;
 
-		let _width, _height;
-		let _widthHalf, _heightHalf;
-
-		const cache = {
-			camera: { style: '' },
-			objects: new WeakMap(),
-			hybridObjects: new WeakMap()
-		};
-
-		// Z-index management
-		this.zIndexMode = 'default'; // 'default', '2d-priority', '3d-priority'
-		this.onZIndexChange = parameters.onZIndexChange || null;
+			   let _width, _height;
 
 		const domElement = parameters.element !== undefined ? parameters.element : document.createElement('div');
 		domElement.style.overflow = 'hidden';
 		this.domElement = domElement;
-
 
 			   // Use a single container for all hybrid objects
 			   const hybridContainer = document.createElement('div');
@@ -182,6 +260,9 @@ class CSSHybridRenderer {
 			   };
 
 			   this.render = function (scene, camera) {
+					   profiler.startTiming('hybrid_render_total');
+					   profiler.recordFrame();
+
 					   if (scene.matrixWorldAutoUpdate === true) scene.updateMatrixWorld();
 					   if (camera.parent === null && camera.matrixWorldAutoUpdate === true) camera.updateMatrixWorld();
 
@@ -189,7 +270,70 @@ class CSSHybridRenderer {
 					   _viewMatrix.copy(camera.matrixWorldInverse);
 					   _viewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, _viewMatrix);
 
+					   // Collect all hybrid objects for worker processing
+					   profiler.startTiming('collect_hybrid_objects');
+					   const hybridObjects: CSSHybridObject[] = [];
+					   scene.traverse(function (object) {
+						   if ((object as any).isCSSHybridObject) {
+							   const hybridObj = object as CSSHybridObject;
+							   hybridObjects.push(hybridObj);
+							   _this._hybridObjects.set(hybridObj.hybridId, hybridObj);
+						   }
+					   });
+					   profiler.endTiming('collect_hybrid_objects');
+					   profiler.increment('total_hybrid_objects');
+
+					   // Use worker for distance calculations and mode switching decisions
+					   const now = performance.now();
+					   if (hybridWorkerManager.isAvailable() && 
+						   hybridObjects.length > 0 && 
+						   now - _this._lastWorkerUpdate > _this._workerUpdateInterval &&
+						   !_this._workerBatchInProgress) {
+						   
+						   profiler.startTiming('worker_processing');
+						   _this._lastWorkerUpdate = now;
+						   _this._workerBatchInProgress = true;
+						   
+						   // Prepare data for worker
+						   const workerData = hybridObjects
+							   .filter(obj => obj.canUseWorker())
+							   .map(obj => obj.getWorkerData());
+
+						   profiler.increment('worker_batch_count');
+						   profiler.increment('worker_objects_processed');
+
+						   if (workerData.length > 0) {
+							   hybridWorkerManager.processObjectsBatch(workerData, camera)
+								   .then((result) => {
+									   profiler.endTiming('worker_processing');
+									   _this._workerBatchInProgress = false;
+									   if (result && result.shouldUpdate && result.modeChanges) {
+										   profiler.increment('worker_mode_changes');
+										   // Apply mode changes from worker
+										   result.modeChanges.forEach((change: any) => {
+											   const obj = _this._hybridObjects.get(change.id);
+											   if (obj && obj.mode !== change.newMode) {
+												   obj.switchMode(change.newMode);
+												   obj.updateFromWorkerResult(change, camera);
+												   _this._forceHybridTransformUpdate = true;
+											   }
+										   });
+									   }
+								   })
+								   .catch((error) => {
+									   profiler.endTiming('worker_processing');
+									   profiler.increment('worker_errors');
+									   console.warn('Worker processing failed, falling back to main thread:', error);
+									   _this._workerBatchInProgress = false;
+								   });
+						   } else {
+							   profiler.endTiming('worker_processing');
+							   _this._workerBatchInProgress = false;
+						   }
+					   }
+
 					   // Compute camera CSS transform for 3D mode
+					   profiler.startTiming('camera_transform_calc');
 					   let tx, ty;
 					   if (camera.isOrthographicCamera) {
 							   tx = - (camera.right + camera.left) / 2;
@@ -204,61 +348,83 @@ class CSSHybridRenderer {
 							   `scale( ${ scaleByViewOffset } )` + 'translateZ(' + fov + 'px)' + getCameraCSSMatrix(camera.matrixWorldInverse);
 					   const perspective = camera.isPerspectiveCamera ? 'perspective(' + fov + 'px) ' : '';
 					   const cameraTransform = perspective + cameraCSSMatrix + 'translate(' + _widthHalf + 'px,' + _heightHalf + 'px)';
+					   profiler.endTiming('camera_transform_calc');
 
-					   // Set camera transform on container for 3D mode, clear for 2D mode
-					   let has3D = false;
-					   scene.traverse(function (object) {
-							   if ((object as any).isCSSHybridObject && (object as any).mode === '3d') has3D = true;
-					   });
-					   const is3DMode = has3D;
-					   if (is3DMode) {
-							   hybridContainer.style.transform = cameraTransform;
-							   hybridContainer.style.transformStyle = 'preserve-3d';
-							   hybridContainer.style.perspective = '';
-					   } else {
-							   hybridContainer.style.transform = '';
-							   hybridContainer.style.transformStyle = '';
-							   hybridContainer.style.perspective = '';
-					   }
+				   // Set up container transforms based on what modes are being used
+				   profiler.startTiming('container_setup');
+				   let has3D = false;
+				   let has2D = false;
+				   scene.traverse(function (object) {
+						   if ((object as any).isCSSHybridObject) {
+								   if ((object as any).mode === '3d') has3D = true;
+								   if ((object as any).mode === '2d') has2D = true;
+						   }
+				   });
 
-					   // If a mode switch just happened, force transform update for all CSSHybridObjects in 3D mode
-					   if (this._forceHybridTransformUpdate && is3DMode) {
-						   scene.traverse(function (o) {
-							   const obj = o as any;
-							   if (obj.isCSSHybridObject && obj.mode === '3d') {
-								   let style;
-								   if (obj.rotation2D !== 0) {
-									   _matrix.copy(camera.matrixWorldInverse);
-									   _matrix.transpose();
-									   _matrix.multiply(_matrix2.makeRotationZ(obj.rotation2D));
-									   obj.matrixWorld.decompose(_position, _quaternion, _scale);
-									   _matrix.setPosition(_position);
-									   _matrix.scale(_scale);
-									   _matrix.elements[3] = 0;
-									   _matrix.elements[7] = 0;
-									   _matrix.elements[11] = 0;
-									   _matrix.elements[15] = 1;
-									   style = getObjectCSSMatrix(_matrix);
-								   } else {
-									   style = getObjectCSSMatrix(obj.matrixWorld);
-								   }
-								   obj.element.style.transform = style;
+				   // If we have both modes, use a compromise that works for both
+				   // If only one mode, optimize for that mode
+				   if (has3D && has2D) {
+						   // Mixed mode: Apply 3D transform but mark container for special 2D handling
+						   hybridContainer.style.transform = cameraTransform;
+						   hybridContainer.style.transformStyle = 'preserve-3d';
+						   hybridContainer.style.perspective = '';
+						   hybridContainer.setAttribute('data-mixed-mode', 'true');
+				   } else if (has3D) {
+						   // Pure 3D mode
+						   hybridContainer.style.transform = cameraTransform;
+						   hybridContainer.style.transformStyle = 'preserve-3d';
+						   hybridContainer.style.perspective = '';
+						   hybridContainer.removeAttribute('data-mixed-mode');
+				   } else {
+						   // Pure 2D mode
+						   hybridContainer.style.transform = '';
+						   hybridContainer.style.transformStyle = '';
+						   hybridContainer.style.perspective = '';
+						   hybridContainer.removeAttribute('data-mixed-mode');
+				   }
+				   profiler.endTiming('container_setup');
+
+				   // If a mode switch just happened, force transform update for all CSSHybridObjects in 3D mode
+				   if (this._forceHybridTransformUpdate) {
+					   profiler.startTiming('force_transform_update');
+					   scene.traverse(function (o) {
+						   const obj = o as any;
+						   if (obj.isCSSHybridObject && obj.mode === '3d') {
+							   let style;
+							   if (obj.rotation2D !== 0) {
+								   _matrix.copy(camera.matrixWorldInverse);
+								   _matrix.transpose();
+								   _matrix.multiply(_matrix2.makeRotationZ(obj.rotation2D));
+								   obj.matrixWorld.decompose(_position, _quaternion, _scale);
+								   _matrix.setPosition(_position);
+								   _matrix.scale(_scale);
+								   _matrix.elements[3] = 0;
+								   _matrix.elements[7] = 0;
+								   _matrix.elements[11] = 0;
+								   _matrix.elements[15] = 1;
+								   style = getObjectCSSMatrix(_matrix);
+							   } else {
+								   style = getObjectCSSMatrix(obj.matrixWorld);
 							   }
-						   });
-						   this._forceHybridTransformUpdate = false;
-					   }
+							   obj.element.style.transform = style;
+						   }
+					   });
+					   this._forceHybridTransformUpdate = false;
+					   profiler.endTiming('force_transform_update');
+				   }
 
-					   // Render all objects using a single container, passing mode info
-					   renderHybridObject(scene, scene, camera, hybridContainer, is3DMode);
-					   zOrder2D(scene, hybridContainer);
-			   };
+				   // Render all objects using a single container, supporting mixed modes
+				   profiler.startTiming('render_hybrid_objects');
+				   renderHybridObject(scene, scene, camera, hybridContainer, has3D, has2D);
+				   profiler.endTiming('render_hybrid_objects');
+
+				   profiler.endTiming('hybrid_render_total');
+ 			   };
 
 
 			   this.setSize = function (width, height) {
 					   _width = width;
 					   _height = height;
-					   _widthHalf = _width / 2;
-					   _heightHalf = _height / 2;
 
 					   domElement.style.width = width + 'px';
 					   domElement.style.height = height + 'px';
@@ -266,13 +432,19 @@ class CSSHybridRenderer {
 					   hybridContainer.style.height = height + 'px';
 			   };
 
-		// Set z-index priority mode
-		this.setZIndexMode = function(mode) {
-			_this.zIndexMode = mode;
-			if (_this.onZIndexChange) {
-				_this.onZIndexChange(mode);
-			}
-		};
+			   // Public method to invalidate cache when objects are added/removed
+			   this.invalidateCache = function() {
+					   _this._hybridObjects.clear();
+					   _this._pendingWorkerResults.clear();
+			   };
+
+			   // Cleanup method for disposing resources
+			   this.dispose = function() {
+					   _this._hybridObjects.clear();
+					   _this._pendingWorkerResults.clear();
+			   };
+
+	 
 
 		function epsilon(value) {
 			return Math.abs(value) < 1e-10 ? 0 : value;
@@ -322,133 +494,144 @@ class CSSHybridRenderer {
 			return 'translate(-50%,-50%)' + matrix3d;
 		}
 
-			   function renderHybridObject(object, scene, camera, container, is3DMode) {
-					   if ((object).isCSSHybridObject) {
-							   const distance = getDistanceTo(camera, object);
-							   // Debug logging for distance
-							   if (object.enableAutoSwitch && Math.random() < 0.01) {
-									   console.log(`🔄 Hybrid Object Distance: ${distance.toFixed(2)}, Threshold: ${object.zoomThreshold}, Current Mode: ${object.mode}`);
-							   }
-							   // Auto-switch mode based on distance
-							   if (object.enableAutoSwitch && !object.isTransitioning) {
-									   const shouldBe2D = distance < object.zoomThreshold;
-									   const newMode = shouldBe2D ? '2d' : '3d';
-									   if (object.mode !== newMode) {
-											   console.log(`🔄 Auto-switching from ${object.mode} to ${newMode} (distance: ${distance.toFixed(2)})`);
-											   object.switchMode(newMode);
-											   // Update z-index based on mode
-											   const currentZIndexMode = newMode === '2d' ? '2d-priority' : '3d-priority';
-											   if (_this.zIndexMode !== currentZIndexMode) {
-													   _this.setZIndexMode(currentZIndexMode);
-											   }
-											   // Set flag to force transform update in next render
-											   _this._forceHybridTransformUpdate = true;
-									   }
-							   }
+		// Original working render function with worker fallback
+		function renderHybridObject(object, scene, camera, container, has3D?, has2D?) {
+			if ((object).isCSSHybridObject) {
+				// For objects that can't use worker or worker failed, fall back to main thread
+				if (!object.canUseWorker() || !hybridWorkerManager.isAvailable()) {
+					// Use optimized distance calculation with reduced allocations
+					const distance = getDistanceToOptimized(camera, object);
+				 
+					// Auto-switch mode based on distance with hysteresis to prevent flickering
+					if (object.enableAutoSwitch && !object.isTransitioning) {
+						const threshold = object.zoomThreshold;
+						const hysteresis = object.hysteresis || 0.5;
+						
+						let shouldBe2D;
+						if (object.mode === '3d') {
+							shouldBe2D = distance < (threshold - hysteresis);
+						} else {
+							shouldBe2D = distance < (threshold + hysteresis);
+						}
+						
+						const newMode = shouldBe2D ? '2d' : '3d';
+						if (object.mode !== newMode) {
+							object.switchMode(newMode);
+							_this._forceHybridTransformUpdate = true;
+						}
+					}
+				}
 
-							   const visible = (object.visible === true) && (object.layers.test(camera.layers) === true);
-							   const element = object.element;
-							   let style;
+				const visible = (object.visible === true) && (object.layers.test(camera.layers) === true);
+				const element = object.element;
+				let style;
 
-							   // Always use the same container for both modes
-							   if (element.parentNode !== container) {
-									   container.appendChild(element);
-							   }
+				// Always use the same container for both modes
+				if (element.parentNode !== container) {
+					container.appendChild(element);
+				}
 
-							   if (object.mode === '3d' && is3DMode) {
-									   element.style.display = visible ? '' : 'none';
-									   if (visible) {
-											   object.onBeforeRender(_this, scene, camera);
-											   if (object.rotation2D !== 0) {
-													   // Sprite-like behavior
-													   _matrix.copy(camera.matrixWorldInverse);
-													   _matrix.transpose();
-													   _matrix.multiply(_matrix2.makeRotationZ(object.rotation2D));
-													   object.matrixWorld.decompose(_position, _quaternion, _scale);
-													   _matrix.setPosition(_position);
-													   _matrix.scale(_scale);
-													   _matrix.elements[3] = 0;
-													   _matrix.elements[7] = 0;
-													   _matrix.elements[11] = 0;
-													   _matrix.elements[15] = 1;
-													   style = getObjectCSSMatrix(_matrix);
-											   } else {
-													   style = getObjectCSSMatrix(object.matrixWorld);
-											   }
-											   const cachedObject = cache.objects.get(object);
-											   if (cachedObject === undefined || cachedObject.style !== style) {
-													   element.style.transform = style;
-													   cache.objects.set(object, { style: style });
-											   }
-											   object.onAfterRender(_this, scene, camera);
-									   }
-							   } else if (object.mode === '2d' && !is3DMode) {
-									   _vector.setFromMatrixPosition(object.matrixWorld);
-									   _vector.applyMatrix4(_viewProjectionMatrix);
-									   const visible2D = visible && (_vector.z >= -1 && _vector.z <= 1);
-									   element.style.display = visible2D ? '' : 'none';
-									   if (visible2D) {
-											   object.onBeforeRender(_this, scene, camera);
-											   style = 'translate(' + (-100 * object.center.x) + '%,' + (-100 * object.center.y) + '%)'
-													   + 'translate(' + (_vector.x * _widthHalf + _widthHalf) + 'px,' + (-_vector.y * _heightHalf + _heightHalf) + 'px)';
-											   element.style.transform = style;
-											   object.onAfterRender(_this, scene, camera);
-									   }
-							   } else {
-									   // Hide element if not in the current mode
-									   element.style.display = 'none';
-							   }
-							   // Cache distance for z-ordering
-							   const objectData = {
-									   distanceToCameraSquared: getDistanceToSquared(camera, object),
-									   distance: distance
-							   };
-							   cache.hybridObjects.set(object, objectData);
-					   }
-					   for (let i = 0, l = object.children.length; i < l; i++) {
-							   renderHybridObject(object.children[i], scene, camera, container, is3DMode);
-					   }
-			   }
-
-		function getDistanceTo(object1, object2) {
-			_a.setFromMatrixPosition(object1.matrixWorld);
-			_b.setFromMatrixPosition(object2.matrixWorld);
-			return _a.distanceTo(_b);
+				if (object.mode === '3d') {
+					element.style.display = visible ? '' : 'none';
+					if (visible) {
+						if (object.onBeforeRender) object.onBeforeRender(_this as any, scene as any, camera, null, null, null);
+						if (object.rotation2D !== 0) {
+							// Sprite-like behavior
+							_matrix.copy(camera.matrixWorldInverse);
+							_matrix.transpose();
+							_matrix.multiply(_matrix2.makeRotationZ(object.rotation2D));
+							object.matrixWorld.decompose(_position, _quaternion, _scale);
+							_matrix.setPosition(_position);
+							_matrix.scale(_scale);
+							_matrix.elements[3] = 0;
+							_matrix.elements[7] = 0;
+							_matrix.elements[11] = 0;
+							_matrix.elements[15] = 1;
+							style = getObjectCSSMatrix(_matrix);
+						} else {
+							style = getObjectCSSMatrix(object.matrixWorld);
+						}
+						// Apply transform without caching for now
+						element.style.transform = style;
+						if (object.onAfterRender) object.onAfterRender(_this as any, scene as any, camera, null, null, null);
+					}
+				} else if (object.mode === '2d') {
+					_vector.setFromMatrixPosition(object.matrixWorld);
+					_vector.applyMatrix4(_viewProjectionMatrix);
+					const visible2D = visible && (_vector.z >= -1 && _vector.z <= 1);
+					element.style.display = visible2D ? '' : 'none';
+					if (visible2D) {
+						if (object.onBeforeRender) object.onBeforeRender(_this as any, scene as any, camera, null, null, null);
+						
+						// Check if we're in mixed mode (both 2D and 3D elements exist)
+						const isMixedMode = container.getAttribute('data-mixed-mode') === 'true';
+						
+						if (isMixedMode && has3D && has2D) {
+							// In mixed mode, we need to counteract the 3D transform
+							const _widthHalf = _width / 2;
+							const _heightHalf = _height / 2;
+							const x = (_vector.x * _widthHalf + _widthHalf);
+							const y = (-_vector.y * _heightHalf + _heightHalf);
+							
+							style = 'translate(' + (-100 * object.center.x) + '%,' + (-100 * object.center.y) + '%)'
+								+ 'translate3d(' + x + 'px,' + y + 'px, 0px)'
+								+ 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)';
+							element.style.transformStyle = 'flat';
+						} else {
+							// Pure 2D mode
+							const _widthHalf = _width / 2;
+							const _heightHalf = _height / 2;
+							const x = (_vector.x * _widthHalf + _widthHalf);
+							const y = (-_vector.y * _heightHalf + _heightHalf);
+							style = 'translate(' + (-100 * object.center.x) + '%,' + (-100 * object.center.y) + '%)'
+								+ 'translate(' + x + 'px,' + y + 'px)';
+						}
+						
+						element.style.transform = style;
+						if (object.onAfterRender) object.onAfterRender(_this as any, scene as any, camera, null, null, null);
+					}
+				}
+				
+				// Cache distance for z-ordering
+			}
+			for (let i = 0, l = object.children.length; i < l; i++) {
+				renderHybridObject(object.children[i], scene, camera, container, has3D, has2D);
+			}
 		}
 
-		function getDistanceToSquared(object1, object2) {
-			_a.setFromMatrixPosition(object1.matrixWorld);
-			_b.setFromMatrixPosition(object2.matrixWorld);
-			return _a.distanceToSquared(_b);
+		// Optimized distance calculation with minimal vector allocations
+		function getDistanceToOptimized(camera, object) {
+			// Reuse global temp vectors instead of allocating new ones
+			_a.setFromMatrixPosition(camera.matrixWorld);
+			_b.setFromMatrixPosition(object.matrixWorld);
+			
+			// Reuse _objectNormal instead of creating new Vector3
+			_objectNormal.set(0, 0, 1);
+			_objectNormal.applyQuaternion(object.quaternion).normalize();
+			
+			// Reuse _objectToCamera instead of creating new Vector3
+			_objectToCamera.copy(_a).sub(_b);
+			
+			// Calculate orthogonal distance (dot product with normal)
+			const orthogonalDistance = Math.abs(_objectToCamera.dot(_objectNormal));
+			
+			// Check viewing angle - camera should be facing the element
+			_cameraForward.set(0, 0, -1); // Camera looks down negative Z
+			_cameraForward.applyQuaternion(camera.quaternion).normalize();
+			
+			// Calculate angle between camera forward and object normal
+			const viewingAngleCos = Math.abs(_cameraForward.dot(_objectNormal));
+			const viewingAngleThreshold = 0.9; // cos(25°) ≈ 0.9
+			
+			// If not facing the element properly, force 3D mode by returning large distance
+			if (viewingAngleCos < viewingAngleThreshold) {
+				return object.zoomThreshold * 2; // Force 3D mode
+			}
+			
+			return orthogonalDistance;
 		}
-
-			   function filterAndFlatten2D(scene) {
-					   const result = [];
-					   scene.traverse(function (object) {
-							   if (object.isCSSHybridObject && object.mode === '2d') {
-									   result.push(object);
-							   }
-					   });
-					   return result;
-			   }
-
-			   function zOrder2D(scene, container) {
-					   const sorted = filterAndFlatten2D(scene).sort(function (a, b) {
-							   if (a.renderOrder !== b.renderOrder) {
-									   return b.renderOrder - a.renderOrder;
-							   }
-							   const distanceA = cache.hybridObjects.get(a).distanceToCameraSquared;
-							   const distanceB = cache.hybridObjects.get(b).distanceToCameraSquared;
-							   return distanceA - distanceB;
-					   });
-
-					   const zMax = sorted.length;
-					   for (let i = 0, l = sorted.length; i < l; i++) {
-							   if (sorted[i].element.parentNode === container) {
-									   sorted[i].element.style.zIndex = zMax - i;
-							   }
-					   }
-			   }
+ 
+ 
 	}
 }
 
