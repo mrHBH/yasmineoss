@@ -719,7 +719,7 @@ class Main {
       new THREE.Vector3(1, 0, 0),
       -Math.PI / 2
     );
-    const hybridCodeEditor2 = new HybridCodeEditor(codeEditorSize, 11); // Switch at 12 unit distance
+    const hybridCodeEditor2 = new HybridCodeEditor(codeEditorSize, 20); // Switch at 12 unit distance
     await codeeditorentity2.AddComponent(hybridCodeEditor2);
     await this.entityManager.AddEntity(codeeditorentity2, "Hybrid Code Editor 2");
 //
